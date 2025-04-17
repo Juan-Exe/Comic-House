@@ -1,0 +1,504 @@
+body {
+    margin: 0;
+    font-family: Montserrat;
+}
+
+header {
+    display: flex;
+    flex-direction: column;
+}
+
+
+.search_bar {
+    background: #ce4646;
+    width: 100%;
+    height: 85px;
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.search_bar-r {
+    display: none
+}
+
+.busqueda-ctn {
+    display: flex;
+    flex-flow: row;
+}
+
+.search_button {
+    width: 58px;
+    height: 46px;
+    background: #fff;
+    border-top-right-radius: 13px;
+    border-bottom-right-radius: 13px;
+}
+
+.barra_de_busqueda {
+    width: 905px;
+    height: 46px;
+    border-top-left-radius: 13px;
+    border-bottom-left-radius: 13px;
+    padding: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+.card_busqueda {
+    position: absolute;
+    top: 80px;
+    width: 963px;
+    background: white;
+    border-radius: 10px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.navbar {
+    width: 100%;
+    height: 110px;
+    background-color: #ef4444;
+    color: white;
+    display: flex;
+    gap: 350px;
+    align-items: center;
+    z-index: 100;
+    position: relative;
+}
+
+.submenu,
+.user-menu {
+    min-width: 150px;
+    z-index: 100;
+    border-radius: 5px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.group:hover .submenu,
+.group:hover .user-menu {
+    display: block;
+}
+
+.navbar a {
+    font-size: 18px;
+    font-weight: 400;
+}
+
+.submenu a,
+.user-menu a {
+    text-decoration: none;
+    color: white;
+    padding: 8px 12px;
+    display: block;
+    transition: background-color 0.3s;
+}
+
+.submenu a:hover,
+.user-menu a:hover {
+    background-color: #b23a3a;
+}
+
+.logo-m {
+    position: relative;
+    width: 190px;
+    height: auto;
+    left: 100px;
+}
+
+.user {
+    position: relative;
+    left: 350px;
+}
+
+.user img {
+    vertical-align: middle;
+    position: relative;
+    top: -3px;
+}
+
+.Comics-titulo-2{
+    margin-top: 50px;
+    margin-bottom: 50px;
+    width: 100%;
+    display: flex;
+    justify-content: center; 
+}
+
+.titulo-comics-ctn-2 {
+    width: 1170px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.titulo-comics-ctn-2 h2{
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.Comics-base-2 {
+    width: 100%;
+    height: auto;
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+}
+
+.Comics-container-2 {
+    width: 1170px;
+    height: auto;
+    display: flex;
+    justify-content: start;  
+    flex-wrap: wrap;
+    gap: 30px;  
+}
+
+
+.Comics-btn-2 {
+    width: 210px;
+    height: 322px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    margin-bottom: 100px;
+}
+
+.Comics-btns-2 {
+    width: 100%;
+    height: 100%;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+
+
+.Comics-btn-2:hover {
+    transform: scale(1.05);
+}
+
+.title-c-2 {
+    font-size: 17px;
+    font-weight: bold;
+    color: #000000;
+    margin-top: 15px;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.description-c-2 {
+    font-size: 15px;
+    color: #000000;
+}
+
+.description-c-2 span {
+    font-size: 13px;
+    background: #CE4646;
+    border-radius: 3px;
+    padding: 4px;
+    margin-right: 2px;
+    color: #FFF;
+    font-weight: 700;
+}
+
+.title-c-2, .description-c-2 {
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.Comics-btn-2:hover .title-c-2, 
+.Comics-btn-2:hover .description-c-2 {
+    color: #CE4646; 
+}
+
+#sidebar-active,
+.open-sidebar-button,
+.close-sidebar-button {
+    display: none;
+}
+
+.links-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 3rem;
+    height: 110px;
+    z-index: 100;
+}
+
+@media screen and (min-width: 768px) {
+    .search_bar {
+        order: -1;
+        margin-bottom: 0;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .search_bar {
+        order: 1;
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .logo-m {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 1rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: max-content;
+        height: auto;
+    }
+
+    .sidebar-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .open-sidebar-button {
+        position: absolute;
+        left: 1rem;
+        top: 1rem;
+    }
+
+    .logo-m img {
+        max-width: 147px;
+        height: 68px;
+    }
+
+    .links-container {
+        transform: translateX(-100%);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        height: 100vh;
+        width: 300px;
+        background-color: #ef4444;
+        padding: 2rem;
+        gap: 1rem;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    #sidebar-active:checked~.links-container {
+        transform: translateX(0);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+
+    .menu {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .uah {
+        margin-left: 25px;
+    }
+
+    .menu li a {
+        display: block;
+        padding: 15px 20px;
+        width: 100%;
+        color: white;
+        text-decoration: none;
+    }
+
+    .submenu {
+        position: relative;
+        visibility: visible;
+        opacity: 1;
+        background-color: #dc2626;
+        width: 100%;
+    }
+
+    .submenu li a {
+        padding: 10px 20px;
+    }
+
+    .open-sidebar-button,
+    .close-sidebar-button {
+        display: block;
+        padding: 1rem;
+        cursor: pointer;
+    }
+
+    .user {
+        position: absolute;
+        left: 0;
+    }
+
+    .user img {
+        vertical-align: middle;
+        position: relative;
+        top: -3px;
+    }
+
+    .submenu {
+        display: none;
+        opacity: 0;
+        visibility: hidden;
+        max-height: 0;
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .submenu.open {
+        display: block;
+        opacity: 1;
+        visibility: visible;
+        max-height: 1000px;
+    }
+
+    .search_bar {
+        background: #EF4444;
+        width: 100%;
+        height: 75px;
+        display: flex;
+        flex-flow: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .busqueda-ctn {
+        display: flex;
+        flex-flow: row;
+    }
+
+    .search_button {
+        width: 48px;
+        height: 46px;
+        background: #fff;
+        border-top-right-radius: 13px;
+        border-bottom-right-radius: 13px;
+    }
+
+    .barra_de_busqueda {
+        width: 320px;
+        height: 46px;
+        border-top-left-radius: 13px;
+        border-bottom-left-radius: 13px;
+        padding: 15px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .card_busqueda {
+        position: absolute;
+        top: 80px;
+        width: 363px;
+        background: white;
+        border-radius: 10px;
+        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    .Comics-titulo-2{
+        margin-top: 10px;
+        margin-bottom: 10px;
+        width: 100%;
+        display: flex;
+        justify-content: center; 
+    }
+    
+
+    .Comics-info-2,
+    .title-c-2,
+    .description-c-2 {
+        display: none;
+    }
+
+
+    .Comics-titulo-2 {
+        margin-top: 15px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+
+
+    .titulo-comics-ctn-2 {
+        width: 100%;
+        max-width: 360px;
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .titulo-comics-ctn-2 h2 {
+        font-weight: bold;
+        font-size: 15px;
+    }
+
+    .Comics-base-2 {
+        width: 100%;
+        height: auto;
+        display: flex;
+        align-items: center;
+        align-content: center;
+        justify-content: center;
+    }
+
+    .Comics-container-2 {
+        width: 100%;
+        max-width: 360px;
+        height: auto;
+        display: flex;
+        justify-content: start;
+        flex-wrap: wrap;
+        row-gap: 10px;
+        column-gap: 15px;
+    }
+
+    .Comics-btn-2 {
+        width: 110px;
+        height: 167px;
+        background-size: cover;
+        background-position: center;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        margin: 0;
+    }
+
+    .Comics-btns-2 {
+        width: 100%;
+        height: 100%;
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+
+}

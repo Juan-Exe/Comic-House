@@ -1,0 +1,515 @@
+body {
+    margin: 0;
+    font-family: Montserrat;
+}
+
+header {
+    display: flex;
+    flex-direction: column;
+}
+
+.registro-ctn h1{
+    font-size: 30px;
+    font-weight: bold;
+    color: #CE4646;
+    margin-bottom: 20px;
+}
+
+.search_bar {
+    background: #ce4646;
+    width: 100%;
+    height: 85px;
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.search_bar-r {
+    display: none
+}
+
+.busqueda-ctn {
+    display: flex;
+    flex-flow: row;
+}
+
+.search_button {
+    width: 58px;
+    height: 46px;
+    background: #fff;
+    border-top-right-radius: 13px;
+    border-bottom-right-radius: 13px;
+}
+
+.barra_de_busqueda {
+    width: 905px;
+    height: 46px;
+    border-top-left-radius: 13px;
+    border-bottom-left-radius: 13px;
+    padding: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+.card_busqueda {
+    position: absolute;
+    top: 80px;
+    width: 963px;
+    background: white;
+    border-radius: 10px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.navbar {
+    width: 100%;
+    height: 110px;
+    background-color: #ef4444;
+    color: white;
+    display: flex;
+    gap: 350px;
+    align-items: center;
+    z-index: 100;
+    position: relative;
+}
+
+.submenu,
+.user-menu {
+    min-width: 150px;
+    z-index: 100;
+    border-radius: 5px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.group:hover .submenu,
+.group:hover .user-menu {
+    display: block;
+}
+
+.navbar a {
+    font-size: 18px;
+    font-weight: 400;
+}
+
+.submenu a,
+.user-menu a {
+    text-decoration: none;
+    color: white;
+    padding: 8px 12px;
+    display: block;
+    transition: background-color 0.3s;
+}
+
+.submenu a:hover,
+.user-menu a:hover {
+    background-color: #b23a3a;
+}
+
+.logo-m {
+    position: relative;
+    width: 190px;
+    height: auto;
+    left: 100px;
+}
+
+.user {
+    position: relative;
+    left: 350px;
+}
+
+.user img {
+    vertical-align: middle;
+    position: relative;
+    top: -3px;
+}
+
+.registro-ctn {
+
+    display: flex;
+    align-items: center;
+    align-content: center; 
+    justify-content: center;
+    flex-flow: column;
+    width: 100vw;
+    height: 100vh;
+}
+
+.registro {
+    border-radius: 10px;
+    width: 700px;
+    height: 550px;
+    background: #EE5454;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-content: center;
+    flex-flow: column;
+    gap: 20px;
+
+}
+
+.Email {
+    display: flex;
+    flex-flow: row;
+    gap: 20px;
+}
+
+.Contraseña{
+    display: flex;
+    flex-flow: row;
+    gap: 20px;
+}
+
+
+.lab{
+    display: flex;
+    flex-flow: column;
+}
+
+label{
+    margin-top: 10px;
+    margin-bottom: 10px;
+    color: #FFF;
+    font-weight: bold;
+}
+
+.coso{
+    width: 277px;
+    height: 63px;
+    background: #F18B8B;
+    border-radius: 10px;
+    border: #FFF solid 3px;
+    padding: 10px;
+    color: #FFF;
+    font-weight: bold;
+}
+
+.coso::placeholder{
+    color: #FFF;
+    font-weight: bold;
+}
+
+.sig{
+    width: 240px;
+    height: 60px;
+    background: #CE4646;
+    color: #FFF;
+    font-weight: bold;
+    border: #FFF 3px solid;
+    margin-top: 30px;
+    margin-right: 30px;
+    border-radius: 10px;
+}
+
+.accede{
+    font-weight: bold;
+    color: #720D0D;
+
+}
+
+#sidebar-active,
+.open-sidebar-button,
+.close-sidebar-button {
+    display: none;
+}
+
+.links-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 3rem;
+    height: 110px;
+    z-index: 100;
+}
+
+@media screen and (min-width: 768px) {
+    .search_bar {
+        order: -1;
+        margin-bottom: 0;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .search_bar {
+        order: 1;
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .logo-m {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 1rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: max-content;
+        height: auto;
+    }
+
+    .sidebar-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .open-sidebar-button {
+        position: absolute;
+        left: 1rem;
+        top: 1rem;
+    }
+
+    .logo-m img {
+        max-width: 147px;
+        height: 68px;
+    }
+
+    .links-container {
+        transform: translateX(-100%);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        height: 100vh;
+        width: 300px;
+        background-color: #ef4444;
+        padding: 2rem;
+        gap: 1rem;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    #sidebar-active:checked~.links-container {
+        transform: translateX(0);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+
+    .menu {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .uah {
+        margin-left: 25px;
+    }
+
+    .menu li a {
+        display: block;
+        padding: 15px 20px;
+        width: 100%;
+        color: white;
+        text-decoration: none;
+    }
+
+    .submenu {
+        position: relative;
+        visibility: visible;
+        opacity: 1;
+        background-color: #dc2626;
+        width: 100%;
+    }
+
+    .submenu li a {
+        padding: 10px 20px;
+    }
+
+    .open-sidebar-button,
+    .close-sidebar-button {
+        display: block;
+        padding: 1rem;
+        cursor: pointer;
+    }
+
+    .user {
+        position: absolute;
+        left: 0;
+    }
+
+    .user img {
+        vertical-align: middle;
+        position: relative;
+        top: -3px;
+    }
+
+    .submenu {
+        display: none;
+        opacity: 0;
+        visibility: hidden;
+        max-height: 0;
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .submenu.open {
+        display: block;
+        opacity: 1;
+        visibility: visible;
+        max-height: 1000px;
+    }
+
+    .search_bar {
+        background: #EF4444;
+        width: 100%;
+        height: 75px;
+        display: flex;
+        flex-flow: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .busqueda-ctn {
+        display: flex;
+        flex-flow: row;
+    }
+
+    .search_button {
+        width: 48px;
+        height: 46px;
+        background: #fff;
+        border-top-right-radius: 13px;
+        border-bottom-right-radius: 13px;
+    }
+
+    .barra_de_busqueda {
+        width: 320px;
+        height: 46px;
+        border-top-left-radius: 13px;
+        border-bottom-left-radius: 13px;
+        padding: 15px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .card_busqueda {
+        position: absolute;
+        top: 80px;
+        width: 363px;
+        background: white;
+        border-radius: 10px;
+        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    .registro-ctn {
+
+        display: flex;
+        align-items: center;
+        align-content: center; 
+        justify-content: center;
+        flex-flow: column;
+        width: 100vw;
+        height: 100vh;
+    }
+    
+    .registro {
+        border-radius: 0px;
+        width: 360px;
+        height: 630px;
+        background: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        align-content: center;
+        flex-flow: column;
+        gap: 20px;
+    
+    }
+    
+    .Email {
+        width: 100%;
+        display: flex;
+        flex-flow: column;
+    }
+    
+    .Contraseña{
+        margin-top: 20px;
+        margin-bottom: 20px;
+        width: 100%;
+        display: flex;
+        flex-flow: column;
+    }
+    
+    .Email label {
+        display: none;
+    }
+
+    .Contraseña label{
+        display: none;
+    }
+    
+    .lab label{
+        display: none;
+    }
+
+    
+    
+    label{
+        margin-top: 20px;
+        margin-bottom: 10px;
+        color: #000000;
+        font-weight: bold;
+    }
+    
+    .coso{
+        width: 100%;
+        height: 63px;
+        background: #F18B8B;
+        border-radius: 10px;
+        border: #EF4444 solid 3px;
+        padding: 10px;
+        color: #FFF;
+        font-weight: bold;
+    }
+    
+    .coso::placeholder{
+        color: #FFF;
+        font-weight: bold;
+    }
+    
+    .sig{
+        width: 240px;
+        height: 63px;
+        background: #CE4646;
+        color: #FFF;
+        font-weight: bold;
+        border: #FFF 3px solid;
+        margin-top: 30px;
+        margin-right: 30px;
+        border-radius: 10px;
+    }
+    
+    .accede{
+        font-weight: bold;
+        color: #720D0D;
+    }
+    
+    form{
+        display: flex;
+        flex-flow: column;
+        width: 360px;
+    }
+}

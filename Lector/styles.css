@@ -1,0 +1,279 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Montserrat;
+    background: #171616;
+    overflow-x: hidden;
+    /* <-- Esto es clave */
+}
+
+foot {
+    display: none;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.head-r {
+    display: none;
+}
+
+a {
+    text-decoration: none;
+    color: #fff;
+}
+
+.header {
+    position: fixed;
+    width: 100%;
+    height: 110px;
+    background-color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out;
+}
+
+.coso {
+    width: 100%;
+    height: 110px;
+}
+
+.left-section {
+    display: flex;
+    align-items: center;
+    width: 1254px;
+}
+
+.logo-m,
+img {
+    width: 190px;
+    height: auto;
+    margin-right: 30px;
+}
+
+.header h1 {
+    font-weight: 400;
+    font-size: 20px;
+    color: #fff;
+}
+
+h1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+span {
+    font-size: 20px;
+}
+
+.controls {
+    color: #fff;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.buttons {
+    transform: translateY(-2px);
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #fff;
+    font-size: 30px;
+}
+
+.comic-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.comic {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+
+.comic-page {
+    width: 898px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.comic-page.doble {
+    width: 1300px;
+}
+
+.buttons {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: rgb(255, 255, 255);
+    padding: 5px 10px;
+}
+
+.no-arrow {
+    color: #dfcdcd;
+    cursor: default;
+}
+
+.header.hide {
+    transform: translateY(-100%);
+}
+
+@media (max-width: 768px) {
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .header {
+        display: none;
+    }
+
+    .coso {
+        display: none;
+    }
+
+    .comic {
+        margin-top: 0px;
+        display: flex;
+        flex-direction: column;
+        gap: 0px;
+        align-items: center;
+    }
+
+    .comic-container {
+        width: auto;
+        height: auto;
+    }
+
+    .comic-page {
+        transform: translateX(4%);
+
+        width: 100vw;
+        height: auto;
+    }
+
+    .comic-page-wrapper {
+        width: 100vw;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .comic-page.doble {
+        width: 1150px;
+        height: auto;
+        transform: translateX(0%);
+    }
+
+    .head-r {
+        width: 100%;
+        height: 42px;
+        background: #ef4444;
+        display: block;
+        position: fixed;  
+        z-index: 999;
+        top: 0;            
+        left: 0;
+    }
+
+    
+
+    .head-r--cont {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .head-r--cont h1 {
+        font-size: 13px;
+        font-weight: 400;
+        color: #fff;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+    
+    .back-arrow {
+        position: absolute;
+        left: 20px;
+        font-size: 20px;
+        color: white;
+        text-decoration: none;
+        transition: transform 0.2s ease;
+    }
+    
+    .back-arrow:hover {
+        transform: translateX(-3px);
+    }
+    
+    .foot {
+        width: 100%;
+        height: 55px;
+        background: #ef4444;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .foot-cont {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: white;
+    }
+
+    /* Estados visibles */
+    #responsive-header,
+    #responsive-footer {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Estados ocultos */
+    #responsive-header.hidden,
+    #responsive-footer.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* Para que el header se deslice hacia arriba y el footer hacia abajo */
+    #responsive-header.hidden {
+        transform: translateY(-100%);
+    }
+
+    #responsive-footer.hidden {
+        transform: translateY(100%);
+    }
+}
