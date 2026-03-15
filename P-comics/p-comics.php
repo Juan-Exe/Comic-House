@@ -6,12 +6,16 @@ $generos = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'ma
 $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'Comic'");
 
 // Verificar si se seleccionó un género
-$generon = isset($_GET['genero']) ? $conexion->real_escape_string($_GET['genero']) : "";
+$generon    = isset($_GET['genero'])    ? $conexion->real_escape_string($_GET['genero'])    : "";
+$editorial  = isset($_GET['editorial']) ? $conexion->real_escape_string($_GET['editorial']) : "";
 
 // Construir la consulta SQL
-$sql = "SELECT * FROM comics WHERE tipo = 'Comic'";
+$sql = "SELECT * FROM comics WHERE 1=1";
 if (!empty($generon)) {
     $sql .= " AND genero = '$generon'";
+}
+if (!empty($editorial)) {
+    $sql .= " AND editorial = '$editorial'";
 }
 
 // Ejecutar la consulta correcta
@@ -170,7 +174,11 @@ $datos = $conexion->query($sql);
 
     <div class="Comics-titulo-2">
         <div class="titulo-comics-ctn-2">
-            <h2>Catálogo de Comics<?= !empty($generon) ? " - " . htmlspecialchars($generon) : "" ?></h2>
+            <h2><?php
+                if (!empty($editorial)) echo "Catálogo de " . htmlspecialchars($editorial);
+                elseif (!empty($generon)) echo "Catálogo de Comics — " . htmlspecialchars($generon);
+                else echo "Catálogo de Comics";
+            ?></h2>
         </div>
     </div>
 

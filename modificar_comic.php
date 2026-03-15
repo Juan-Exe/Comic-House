@@ -10,6 +10,7 @@ include("controlador/modificar.php");
 $id  = intval($_GET["id"] ?? 0);
 $sql = $conexion->query("SELECT * FROM comics WHERE id = $id");
 $datos = $sql->fetch_object();
+$editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC");
 if (!$datos) {
     header("Location: crud.php");
     exit();
@@ -147,6 +148,15 @@ if (!$datos) {
         .field textarea:focus,
         .field select:focus { border-color: #ef4444; }
         .field textarea { resize: none; min-height: 100px; overflow: hidden; }
+        .field select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 36px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            cursor: pointer;
+        }
         .field select option { background: #242426; }
 
         /* Portada */
@@ -303,7 +313,14 @@ if (!$datos) {
                     </div>
                     <div class="field">
                         <label>Editorial</label>
-                        <input type="text" name="editorial" value="<?= htmlspecialchars($datos->editorial) ?>">
+                        <select name="editorial">
+                            <option value="">— Seleccionar editorial —</option>
+                            <?php while ($ed = $editoriales->fetch_assoc()): ?>
+                                <option value="<?= htmlspecialchars($ed['nombre']) ?>" <?= $datos->editorial === $ed['nombre'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($ed['nombre']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
                     <div class="field">
                         <label>Tipo</label>

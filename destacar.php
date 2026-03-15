@@ -313,6 +313,14 @@ $msg = isset($_GET['ok']) ? 'Cambios guardados correctamente.' : '';
 </div>
 
 <script>
+document.querySelectorAll('.toast').forEach(t => {
+    setTimeout(() => {
+        t.style.transition = 'opacity 0.5s ease';
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 500);
+    }, 3000);
+});
+
 function previewUpload(input, lblId, prevId) {
     const lbl = document.getElementById(lblId);
     const prev = document.getElementById(prevId);

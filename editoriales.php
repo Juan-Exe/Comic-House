@@ -191,6 +191,15 @@ $error = isset($_GET['err']) ? 'Ocurrió un error.' : '';
 </div>
 
 <script>
+// Auto-dismiss toasts
+document.querySelectorAll('.toast-ok, .toast-err').forEach(t => {
+    setTimeout(() => {
+        t.style.transition = 'opacity 0.5s ease';
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 500);
+    }, 3000);
+});
+
 function prevEditorial(input) {
     const lbl = document.getElementById('lbl-editorial-img');
     const prev = document.getElementById('prev-editorial');
