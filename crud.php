@@ -1,3 +1,14 @@
+<?php
+session_start();
+include_once("modelo/conexion.php");
+if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
+    header("Location: index.php");
+    exit();
+}
+include("controlador/eliminar.php");
+include("controlador/registro_comcis.php");
+$comics = $conexion->query("SELECT * FROM comics ORDER BY id DESC");
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -19,18 +30,42 @@
 
 
     <h1 class="text-center p-3">Admin</h1>
+
     <?php
-
-    include("modelo/conexion.php");
-    include("controlador/eliminar.php");
-
+    $msgs = [
+        'ok'           => ['color' => '#198754', 'texto' => '✓ Cómic registrado correctamente'],
+        'error'        => ['color' => '#dc3545', 'texto' => '✕ Error al registrar el cómic'],
+        'upload_error' => ['color' => '#dc3545', 'texto' => '✕ Error al subir la imagen'],
+        'campos_vacios'=> ['color' => '#ffc107', 'texto' => '⚠ Alguno de los campos está vacío'],
+    ];
+    $msg = $_GET['msg'] ?? '';
+    if (isset($msgs[$msg])): $m = $msgs[$msg];
     ?>
+    <div id="toast-crud" style="
+        position:fixed; top:24px; right:24px; z-index:9999;
+        background:#1a1a1a; color:#fff; padding:14px 20px;
+        border-radius:8px; border-left:4px solid <?= $m['color'] ?>;
+        font-family:sans-serif; font-size:14px; font-weight:500;
+        box-shadow:0 4px 20px rgba(0,0,0,0.35);
+        animation: toastIn .3s ease;">
+        <?= $m['texto'] ?>
+    </div>
+    <style>
+        @keyframes toastIn { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+        .toast-hide { animation: toastOut .4s ease forwards !important; }
+        @keyframes toastOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(40px)} }
+    </style>
+    <script>
+        setTimeout(() => {
+            const t = document.getElementById('toast-crud');
+            if (t) { t.classList.add('toast-hide'); setTimeout(() => t.remove(), 400); }
+        }, 3500);
+    </script>
+    <?php endif; ?>
+
     <div class="container-fluid row">
         <form class="col-4 p-3" enctype="multipart/form-data" method="POST">
             <h3 class="text-center text-secondary">Registro de comic</h3>
-            <?php
-            include("controlador/registro_comcis.php");
-            ?>
             <div class="mb-3">
                 <label class="form-label">Titulo</label>
                 <input type="text" class="form-control" name="titulo">
@@ -71,13 +106,6 @@
                 <input type="file" class="form-control" accept="image/*" name="portada">
             </div>
             <button type="submit" class="btn btn-primary" name="btnregistrar" value="ok">Registrar</button>
-            <?php
-            session_start();
-            if (!isset($_SESSION['usuario'])) {
-                header("Location: index.php");
-                exit();
-            }
-            ?>
             <div class="container mt-3 mb-3">
                 <div class="d-flex justify-content-end gap-2">
                     <a href="subir_capitulo.php" class="btn btn-secondary">Ir a Subir Capítulo</a>
@@ -105,10 +133,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php
-                    include("modelo/conexion.php");
-                    $sql = $conexion->query("SELECT * FROM comics");
-                    while ($datos = $sql->fetch_object()) { ?>
+                    <?php while ($datos = $comics->fetch_object()) { ?>
                         <tr>
                             <th><?= $datos->id ?></th>
                             <td><?= $datos->titulo ?></td>
@@ -124,7 +149,7 @@
                             </td>
                             <td>
                                 <a href="modificar_comic.php?id=<?= $datos->id ?>" class="btn btn-warning btn-sm">Editar</a>
-                                <a onclick="return eliminar()" href="index.php?id=<?= $datos->id ?>"
+                                <a onclick="return eliminar()" href="crud.php?id=<?= $datos->id ?>"
                                     class="btn btn-danger btn-sm">Eliminar</a>
                             </td>
                         </tr>

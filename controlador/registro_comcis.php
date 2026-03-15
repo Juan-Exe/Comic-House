@@ -25,30 +25,26 @@ if (!empty($_POST["btnregistrar"])) {
         }
 
         if (move_uploaded_file($_FILES["portada"]["tmp_name"], $ruta_destino)) {
-            include("modelo/conexion.php");
+            include_once("modelo/conexion.php");
 
-            $sql = $conexion->query("INSERT INTO comics (titulo, clasificacion, descripcion, capitulos, anio, genero, portada, editorial, tipo) 
+            $sql = $conexion->query("INSERT INTO comics (titulo, clasificacion, descripcion, capitulos, anio, genero, portada, editorial, tipo)
                             VALUES ('$titulo', '$clasificacion', '$descripcion', '$capitulos', '$anio', '$genero', '$portada', '$editorial', '$tipo')");
 
-
-
             if ($sql) {
-                echo "Comic registrado correctamente";
+                header("Location: crud.php?msg=ok");
             } else {
-                echo "Error al registrar el comic";
+                header("Location: crud.php?msg=error");
             }
+            exit();
         } else {
-            echo "Error al subir la imagen.";
+            header("Location: crud.php?msg=upload_error");
+            exit();
         }
 
     } else {
-        echo "Alguno de los campos está vacío";
-    } ?>
-
-    <script>
-        history.replaceState(nul, nul, location.pathname)
-    </script>
-
-<?php }
+        header("Location: crud.php?msg=campos_vacios");
+        exit();
+    }
+}
 
 ?>
