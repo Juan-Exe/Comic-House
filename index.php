@@ -311,25 +311,17 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
         .swiper-button-prev,
         .swiper-button-next {
             color: #CE4646;
-            padding: 10px;
-            transition: background-color 0.3s, transform 0.3s;
             position: absolute;
             top: 50%;
-            transform: translateZ(-50%);
             z-index: 5;
         }
 
         .swiper-button-prev {
-            left: 70px;
+            left: calc((100% - 1170px) / 4);
         }
 
         .swiper-button-next {
-            right: 70px;
-        }
-
-        .swiper-button-prev:hover,
-        .swiper-button-next:hover {
-            transform: scale(1.5);
+            right: calc((100% - 1170px) / 4);
         }
 
         .degradado-izquierdo,
