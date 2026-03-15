@@ -236,7 +236,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 
                 <?php if (!empty($error)): ?>
-                    <p style="color: red;"><?= $error ?></p>
+                    <div id="toast-error" class="toast-notif">
+                        <span class="toast-icon">✕</span>
+                        <span><?= htmlspecialchars($error) ?></span>
+                    </div>
+                    <script>
+                        setTimeout(() => {
+                            const t = document.getElementById('toast-error');
+                            if (t) t.classList.add('toast-hide');
+                        }, 3500);
+                    </script>
                 <?php endif; ?>
 
         </form>

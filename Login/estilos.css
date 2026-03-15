@@ -516,6 +516,55 @@ label{
         color: #CE4646;
         margin-bottom: 0px;
     }
-    
+
+}
+
+.toast-notif {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    background: #1a1a1a;
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px;
+    border-left: 4px solid #ef4444;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: Montserrat, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    z-index: 9999;
+    animation: toast-in 0.3s ease;
+}
+
+.toast-notif .toast-icon {
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.toast-hide {
+    animation: toast-out 0.4s ease forwards;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toast-out {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(40px); }
+}
+
 
 }
