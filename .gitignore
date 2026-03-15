@@ -1,1 +1,5 @@
 .env
+
+# Uploads - archivos generados por usuarios
+uploads/*
+!uploads/.gitkeep
