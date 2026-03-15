@@ -164,6 +164,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </a>
                             <ul
                                 class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+                                <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+                                <li>
+                                    <a href="../dashboard.php" class="block px-4 py-2 hover:bg-red-700">Panel de Admin</a>
+                                </li>
+                                <?php endif; ?>
                                 <li>
                                     <a href="../logout.php" class="block px-4 py-2 hover:bg-red-700">Cerrar sesión</a>
                                 </li>

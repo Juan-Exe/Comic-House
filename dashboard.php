@@ -23,7 +23,7 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: Montserrat, sans-serif;
-            background: #111;
+            background: #1a1a1a;
             color: #f0f0f0;
             min-height: 100vh;
             display: flex;
@@ -33,25 +33,38 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
         /* TOPBAR */
         .topbar {
             background: #ef4444;
-            height: 64px;
-            display: flex;
+            height: 72px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .topbar-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-        .topbar-brand img { height: 38px; }
-        .topbar-brand span {
-            color: #fff; font-size: 13px; font-weight: 600;
-            letter-spacing: 1px; text-transform: uppercase; opacity: .85;
+        .topbar-brand {
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none; justify-self: start;
+        }
+        .topbar-brand img { height: 48px; }
+        .topbar-title {
+            justify-self: center;
+            color: #fff; font-size: 14px; font-weight: 700;
+            letter-spacing: 2px; text-transform: uppercase; opacity: .9;
+        }
+        .topbar-actions {
+            justify-self: end; display: flex; gap: 10px;
         }
         .btn-top {
-            padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+            padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
             font-family: Montserrat, sans-serif; text-decoration: none;
             display: flex; align-items: center; gap: 6px; transition: opacity .2s;
-            background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3);
         }
         .btn-top:hover { opacity: .8; }
+        .btn-top-ghost {
+            background: rgba(255,255,255,.15); color: #fff;
+            border: 1px solid rgba(255,255,255,.35);
+        }
 
         /* MAIN */
         .dash-main {
@@ -60,8 +73,8 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 48px 24px;
-            gap: 40px;
+            padding: 32px 24px;
+            gap: 24px;
         }
 
         .welcome {
@@ -78,33 +91,33 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
 
         /* STATS */
         .stats {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(3, 140px);
+            gap: 12px;
             justify-content: center;
         }
         .stat-card {
-            background: #1a1a1a;
+            background: #242426;
             border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 24px 32px;
+            border-radius: 10px;
+            padding: 16px 24px;
             text-align: center;
-            min-width: 140px;
+            width: 140px;
         }
         .stat-card i {
-            font-size: 28px;
+            font-size: 22px;
             color: #ef4444;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             display: block;
         }
         .stat-num {
-            font-size: 32px;
+            font-size: 26px;
             font-weight: 800;
             color: #fff;
             line-height: 1;
         }
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: .8px;
@@ -114,38 +127,43 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
 
         /* ACTIONS */
         .dash-actions {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(5, 140px);
+            gap: 12px;
             justify-content: center;
         }
         .action-card {
-            background: #1a1a1a;
+            background: #242426;
             border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 28px 36px;
+            border-radius: 10px;
+            padding: 18px 10px;
             text-align: center;
             text-decoration: none;
             color: #fff;
             transition: border-color .2s, transform .2s;
-            min-width: 180px;
+            width: 140px;
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .action-card:hover {
             border-color: #ef4444;
-            transform: translateY(-3px);
+            transform: translateY(-2px);
             color: #fff;
         }
         .action-card i {
-            font-size: 32px;
+            font-size: 24px;
             color: #ef4444;
-            display: block;
-            margin-bottom: 12px;
         }
         .action-card span {
-            font-size: 13px;
+            font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: .8px;
+            letter-spacing: .6px;
+            line-height: 1.3;
         }
 
         .btn-logout {
@@ -171,11 +189,13 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
 <div class="topbar">
     <a href="index.php" class="topbar-brand">
         <img src="Imagenes/Logo-Comic-Huse.png" alt="Comic House">
-        <span>Panel de administración</span>
     </a>
-    <a href="index.php" class="btn-top">
-        <i class="bi bi-house"></i> Ver sitio
-    </a>
+    <span class="topbar-title">Panel de administración</span>
+    <div class="topbar-actions">
+        <a href="index.php" class="btn-top btn-top-ghost">
+            <i class="bi bi-house"></i> Ver sitio
+        </a>
+    </div>
 </div>
 
 <div class="dash-main">
@@ -204,9 +224,21 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
     </div>
 
     <div class="dash-actions">
+        <a href="index.php" class="action-card">
+            <i class="bi bi-house"></i>
+            <span>Ingresar al sitio</span>
+        </a>
         <a href="crud.php" class="action-card">
             <i class="bi bi-grid-3x3-gap"></i>
-            <span>Gestionar cómics</span>
+            <span>Registrar y gestionar cómics</span>
+        </a>
+        <a href="destacar.php" class="action-card">
+            <i class="bi bi-star"></i>
+            <span>Destacar cómics</span>
+        </a>
+        <a href="editoriales.php" class="action-card">
+            <i class="bi bi-building"></i>
+            <span>Editoriales</span>
         </a>
         <a href="subir_capitulo.php" class="action-card">
             <i class="bi bi-upload"></i>

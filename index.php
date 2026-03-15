@@ -1,11 +1,11 @@
 <?php include("modelo/conexion.php");
 session_start();
-$destacados = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 5");
-$catalogo = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 100 OFFSET 5");
-$generos = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'manga'");
-$generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'Comic'");
-
-
+$slider      = $conexion->query("SELECT * FROM comics WHERE destacado = 1 ORDER BY id ASC");
+$destacados  = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 5");
+$catalogo    = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 100 OFFSET 5");
+$generos     = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'manga'");
+$generosn    = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'Comic'");
+$editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC");
 ?>
 
 
@@ -115,6 +115,11 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
                             </a>
                             <ul
                                 class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+                                <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+                                <li>
+                                    <a href="dashboard.php" class="block px-4 py-2 hover:bg-red-700">Panel de Admin</a>
+                                </li>
+                                <?php endif; ?>
                                 <li>
                                     <a href="logout.php" class="block px-4 py-2 hover:bg-red-700">Cerrar sesión</a>
                                 </li>
@@ -159,46 +164,32 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
     <div class="carousel-container">
         <div class="swiper mySwiper">
             <div class="swiper-wrapper">
-                <div class="swiper-slide">
-                    <a href="Comics/comics.php?id=13" class="slide-link">
-                        <div class="sly-content"
-                            style="background-image: url('https://images8.alphacoders.com/418/thumb-1920-418849.jpg');">
-                            <img src="Logos/House_of_M_Vol_2_Logo.png" alt="Logo" class="logo">
-                            <div class="info-box">
-                                <p class="Title">Publicacion Terminada</p>
-                                <p class="description"><span>+13</span>2005 · crossover ficcional</p>
+                <?php if ($slider->num_rows > 0): ?>
+                    <?php while ($s = $slider->fetch_assoc()): ?>
+                    <div class="swiper-slide">
+                        <a href="Comics/comics.php?id=<?= $s['id'] ?>" class="slide-link">
+                            <div class="sly-content"
+                                style="background-image: url('uploads/<?= htmlspecialchars($s['imagen_slider'] ?: $s['portada']) ?>');">
+                                <?php if ($s['logo_slider']): ?>
+                                    <img src="uploads/<?= htmlspecialchars($s['logo_slider']) ?>" alt="Logo" class="logo">
+                                <?php else: ?>
+                                    <p class="logo-text"><?= htmlspecialchars($s['titulo']) ?></p>
+                                <?php endif; ?>
+                                <div class="info-box">
+                                    <p class="Title"><?= htmlspecialchars($s['estado_publicacion']) ?></p>
+                                    <p class="description"><span><?= htmlspecialchars($s['clasificacion']) ?></span><?= htmlspecialchars($s['anio']) ?> · <?= htmlspecialchars($s['genero']) ?></p>
+                                </div>
                             </div>
+                        </a>
+                    </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <div class="swiper-slide">
+                        <div class="sly-content" style="background: #1a1a1a; display:flex; align-items:center; justify-content:center;">
+                            <p style="color:#555; font-size:16px; font-weight:600;">No hay cómics destacados aún.<br><span style="font-size:13px;font-weight:400;">Ve al panel de admin → Destacar cómics.</span></p>
                         </div>
-                    </a>
-                </div>
-
-                <div class="swiper-slide">
-                    <a href="Comics/comics.php?id=7" class="slide-link">
-                        <div class="sly-content"
-                            style="background-image: url('https://images7.alphacoders.com/666/thumb-1920-666343.jpg');">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/f/f1/Berserk_anime_logo.png"
-                                alt="Logo" class="logo">
-                            <div class="info-box">
-                                <p class="Title">Publicandose...</p>
-                                <p class="description"><span>+18</span>1989 · Fantasia oscura</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="swiper-slide">
-                    <a href="Comics/comics.php?id=11" class="slide-link">
-                        <div class="sly-content"
-                            style="background-image: url('https://es.gizmodo.com/app/uploads/2019/11/ciplqnpuxlqxvbeg5eev.jpg');">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/f/f3/Dragon_Ball_anime_logo.png"
-                                alt="Logo" class="logo">
-                            <div class="info-box">
-                                <p class="Title">Publicacion Terminada</p>
-                                <p class="description"><span>+13</span>1984 · accion, fantasia</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="swiper-button-next"></div>
@@ -515,21 +506,17 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
 
     <div class="editoriales-btn">
         <div class="editoriales-container">
-            <div class="editoriales-btns">
-                <button class="editorial-btnss" onclick="location.href='Marvel/index.php'"></button>
-            </div>
-            <div class="editoriales-btns">
-                <button class="editorial-btnss" onclick="location.href='Dc/index.php'"></button>
-            </div>
-            <div class="editoriales-btns">
-                <button class="editorial-btnss" onclick="location.href='Image/index.php'"></button>
-            </div>
-            <div class="editoriales-btns">
-                <button class="editorial-btnss" onclick="location.href='Shonen/index.php'"></button>
-            </div>
-            <div class="editoriales-btns">
-                <button class="editorial-btnss" onclick="location.href='Young Animal/index.php'"></button>
-            </div>
+            <?php if ($editoriales_q->num_rows > 0): ?>
+                <?php while ($ed = $editoriales_q->fetch_assoc()): ?>
+                <div class="editoriales-btns">
+                    <button class="editorial-btnss" onclick="location.href='P-comics/p-comics.php?editorial=<?= urlencode($ed['nombre']) ?>'">
+                        <img src="uploads/<?= htmlspecialchars($ed['imagen']) ?>" alt="<?= htmlspecialchars($ed['nombre']) ?>" class="editorial-logo-img">
+                    </button>
+                </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <p style="color:#aaa; font-size:13px; text-align:center; width:100%; padding:20px 0;">No hay editoriales registradas. Ve al panel de admin → Editoriales.</p>
+            <?php endif; ?>
         </div>
     </div>
 
