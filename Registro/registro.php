@@ -144,26 +144,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </ul>
                         </li>
                         <li><a href="Biblioteca/index.php" class="hover:text-gray-200">Mi biblioteca</a></li>
-                        <li class="relative group list-none user cursor-pointer">
-                            <?php if (isset($_SESSION['usuario'])): ?>
-                                <a href="#" class="dropdown-toggle hover:text-gray-200 flex items-center">
-                                    <img src="../Imagenes/pngegg.png" alt="Usuario" class="w-6 h-6 inline">
-                                    <span class="ml-2"><?php echo htmlspecialchars($_SESSION['usuario']); ?> ▾</span>
-                                </a>
-                                <ul
-                                    class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
-                                    <li>
-                                        <a href="../logout.php" class="block px-4 py-2 hover:bg-red-700">Cerrar sesión</a>
-                                    </li>
-                                </ul>
-                            <?php else: ?>
-                                <a href="../Login/login.php" class="flex items-center hover:text-gray-200">
-                                    <img src="../Imagenes/pngegg.png" alt="Usuario" class="w-6 h-6 inline">
-                                    <span class="ml-2">Ingresar</span>
-                                </a>
-                            <?php endif; ?>
-                        </li>
                     </ul>
+                    <div class="navbar-user relative group list-none user cursor-pointer">
+                        <?php if (isset($_SESSION['usuario'])): ?>
+                            <a href="#" class="dropdown-toggle hover:text-gray-200 flex items-center">
+                                <img src="../Imagenes/pngegg.png" alt="Usuario" class="w-6 h-6 inline">
+                                <span class="ml-2"><?php echo htmlspecialchars($_SESSION['usuario']); ?> ▾</span>
+                            </a>
+                            <ul
+                                class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+                                <li>
+                                    <a href="../logout.php" class="block px-4 py-2 hover:bg-red-700">Cerrar sesión</a>
+                                </li>
+                            </ul>
+                        <?php else: ?>
+                            <a href="../Login/login.php" class="flex items-center hover:text-gray-200">
+                                <img src="../Imagenes/pngegg.png" alt="Usuario" class="w-6 h-6 inline">
+                                <span class="ml-2">Ingresar</span>
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </nav>

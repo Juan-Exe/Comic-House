@@ -69,11 +69,25 @@ header {
     height: 110px;
     background-color: #ef4444;
     color: white;
-    display: flex;
-    gap: 350px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
+    padding: 0 40px;
     z-index: 100;
     position: relative;
+    box-sizing: border-box;
+}
+
+.navbar .logo-m {
+    justify-self: start;
+}
+
+.navbar .sidebar-container {
+    justify-self: center;
+}
+
+.navbar .navbar-user {
+    justify-self: end;
 }
 
 .submenu,
