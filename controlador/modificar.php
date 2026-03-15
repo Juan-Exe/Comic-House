@@ -7,7 +7,7 @@ if (!empty($_POST["btnmodificar"])) {
     ) {
 
 
-        include("modelo/conexion.php");
+        include_once("modelo/conexion.php");
 
         $id = $_POST["id"];
         $titulo = $_POST["titulo"];
