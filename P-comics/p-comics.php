@@ -162,10 +162,8 @@ else                        $titulo = "Catálogo";
             <p style="color:#888; padding: 20px;">No se encontraron resultados.</p>
         <?php else: ?>
             <?php while ($comic = $datos->fetch_object()): ?>
-                <div class="Comics-btn-2">
-                    <button class="Comics-btns-2" onclick="location.href='../Comics/comics.php?id=<?= $comic->id ?>'"
-                        style="background-image: url('../uploads/<?= htmlspecialchars($comic->portada) ?>');">
-                    </button>
+                <div class="Comics-btn-2" onclick="location.href='../Comics/comics.php?id=<?= $comic->id ?>'">
+                    <img class="Comics-btns-2" src="../uploads/<?= htmlspecialchars($comic->portada) ?>" alt="<?= htmlspecialchars($comic->titulo) ?>">
                     <div class="Comics-info-2">
                         <p class="title-c-2"><?= htmlspecialchars($comic->titulo) ?></p>
                         <p class="description-c-2">

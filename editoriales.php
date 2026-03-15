@@ -11,17 +11,16 @@ $error = ''; $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
     if ($_POST['accion'] === 'crear') {
         $nombre = trim($conexion->real_escape_string($_POST['nombre']));
-        $slug   = trim($conexion->real_escape_string($_POST['slug']));
         $imagen = '';
 
         if (!empty($_FILES['imagen']['name'])) {
             $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-            $imagen = 'editorial_' . $slug . '.' . $ext;
+            $imagen = 'editorial_' . time() . '.' . $ext;
             move_uploaded_file($_FILES['imagen']['tmp_name'], "uploads/" . $imagen);
         }
 
-        if ($nombre && $slug && $imagen) {
-            $conexion->query("INSERT INTO editoriales (nombre, imagen, slug) VALUES ('$nombre','$imagen','$slug')");
+        if ($nombre && $imagen) {
+            $conexion->query("INSERT INTO editoriales (nombre, imagen) VALUES ('$nombre','$imagen')");
             $msg = 'Editorial registrada correctamente.';
         } else {
             $error = 'Completa todos los campos e imagen.';
@@ -144,11 +143,7 @@ $error = isset($_GET['err']) ? 'Ocurrió un error.' : '';
                 <label>Nombre</label>
                 <input type="text" name="nombre" placeholder="Ej. Marvel Comics" required>
             </div>
-            <div class="field">
-                <label>Slug (identificador)</label>
-                <input type="text" name="slug" placeholder="Ej. marvel" required>
-                <small>Sin espacios, en minúsculas. Ej: dc, marvel, image</small>
-            </div>
+
             <div class="field">
                 <label>Imagen del logo</label>
                 <label class="upload-btn" id="lbl-editorial-img">
@@ -176,7 +171,6 @@ $error = isset($_GET['err']) ? 'Ocurrió un error.' : '';
                     <img src="uploads/<?= htmlspecialchars($ed['imagen']) ?>" alt="<?= htmlspecialchars($ed['nombre']) ?>" class="ed-logo">
                     <div class="ed-info">
                         <p class="ed-nombre"><?= htmlspecialchars($ed['nombre']) ?></p>
-                        <p class="ed-slug">slug: <?= htmlspecialchars($ed['slug']) ?></p>
                     </div>
                     <form method="POST" onsubmit="return confirm('¿Eliminar esta editorial?')">
                         <input type="hidden" name="accion" value="eliminar">

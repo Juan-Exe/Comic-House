@@ -183,10 +183,8 @@ $datos = $stmt->get_result();
     <div class="Comics-base-2">
         <div class="Comics-container-2">
             <?php while ($comic = $datos->fetch_object()) { ?>
-                <div class="Comics-btn-2">
-                    <button class="Comics-btns-2" onclick="location.href='../Comics/comics.php?id=<?= $comic->id ?>'"
-                        style="background-image: url('../uploads/<?= htmlspecialchars($comic->portada) ?>');">
-                    </button>
+                <div class="Comics-btn-2" onclick="location.href='../Comics/comics.php?id=<?= $comic->id ?>'">
+                    <img class="Comics-btns-2" src="../uploads/<?= htmlspecialchars($comic->portada) ?>" alt="<?= htmlspecialchars($comic->titulo) ?>">
                     <div class="Comics-info-2">
                         <p class="title-c-2"><?= htmlspecialchars($comic->titulo) ?></p>
                         <p class="description-c-2"><span><?= htmlspecialchars($comic->clasificacion) ?></span>

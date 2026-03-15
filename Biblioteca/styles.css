@@ -177,22 +177,17 @@ header {
 
 .Comics-btn-2 {
     width: 210px;
-    height: 322px;
-    background-size: cover;
-    background-position: center;
     cursor: pointer;
     transition: transform 0.3s ease;
-    margin-bottom: 100px;
+    margin-bottom: 5px;
 }
 
 .Comics-btns-2 {
-    width: 100%;
-    height: 100%;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: transform 0.3s ease;
+    width: 210px;
+    height: 322px;
+    object-fit: cover;
+    display: block;
+    border-radius: 4px;
 }
 
 
@@ -502,22 +497,17 @@ header {
 
     .Comics-btn-2 {
         width: 110px;
-        height: 167px;
-        background-size: cover;
-        background-position: center;
         cursor: pointer;
         transition: transform 0.3s ease;
         margin: 0;
     }
 
     .Comics-btns-2 {
-        width: 100%;
-        height: 100%;
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-        cursor: pointer;
-        transition: transform 0.3s ease;
+        width: 110px;
+        height: 167px;
+        object-fit: cover;
+        display: block;
+        border-radius: 4px;
     }
 
 

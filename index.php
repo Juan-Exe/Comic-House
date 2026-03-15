@@ -531,10 +531,8 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
     <div class="Comics-slider-wrapper">
         <div class="Comics-container">
             <?php while ($datos = $destacados->fetch_object()): ?>
-                <div class="Comics-btn">
-                    <button class="Comics-btns" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'"
-                        style="background-image: url('uploads/<?= $datos->portada ?>');">
-                    </button>
+                <div class="Comics-btn" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'">
+                    <img class="Comics-btns" src="uploads/<?= htmlspecialchars($datos->portada) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
                     <div class="Comics-info">
                         <p class="title-c"><?= htmlspecialchars($datos->titulo) ?></p>
                         <p class="description-c"><span><?= htmlspecialchars($datos->clasificacion) ?></span>
@@ -559,10 +557,8 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
     <div class="Comics-base-2">
         <div class="Comics-container-2">
             <?php while ($datos = $catalogo->fetch_object()) { ?>
-                <div class="Comics-btn-2">
-                    <button class="Comics-btns-2" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'"
-                        style="background-image: url('uploads/<?= $datos->portada ?>');">
-                    </button>
+                <div class="Comics-btn-2" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'">
+                    <img class="Comics-btns-2" src="uploads/<?= htmlspecialchars($datos->portada) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
                     <div class="Comics-info-2">
                         <p class="title-c-2"><?= htmlspecialchars($datos->titulo) ?></p>
                         <p class="description-c-2"><span><?= htmlspecialchars($datos->clasificacion) ?></span>
