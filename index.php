@@ -1,8 +1,8 @@
 <?php include("modelo/conexion.php");
 session_start();
 $slider      = $conexion->query("SELECT * FROM comics WHERE destacado = 1 ORDER BY id ASC");
-$destacados  = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 5");
-$catalogo    = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 100 OFFSET 5");
+$destacados  = $conexion->query("SELECT * FROM comics WHERE imprescindible = 1 ORDER BY id ASC LIMIT 4");
+$catalogo    = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 100");
 $generos     = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'manga'");
 $generosn    = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'Comic'");
 $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC");
@@ -76,13 +76,13 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
                     </label>
                     <ul class="menu flex space-x-6 relative">
                         <li class="uah relative group">
-                            <a href="P-comics/p-comics.php" class="dropdown-toggle hover:text-gray-200">Comics
+                            <a href="P-comics/p-comics.php?tipo=Comic" class="dropdown-toggle hover:text-gray-200">Comics
                                 <span>▾</span></a>
                             <ul
                                 class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
                                 <?php while ($gen = $generosn->fetch_object()) { ?>
                                     <li>
-                                        <a href="P-comics/p-comics.php?genero=<?= urlencode($gen->genero) ?>"
+                                        <a href="P-comics/p-comics.php?tipo=Comic&genero=<?= urlencode($gen->genero) ?>"
                                             class="block px-4 py-2 hover:bg-red-700">
                                             <?= htmlspecialchars($gen->genero) ?>
                                         </a>
@@ -91,13 +91,13 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
                             </ul>
                         </li>
                         <li class="relative group">
-                            <a href="P-Mangas/mangas.php" class="dropdown-toggle hover:text-gray-200">Mangas
+                            <a href="P-comics/p-comics.php?tipo=manga" class="dropdown-toggle hover:text-gray-200">Mangas
                                 <span>▾</span></a>
                             <ul
                                 class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
                                 <?php while ($gen = $generos->fetch_object()) { ?>
                                     <li>
-                                        <a href="P-Mangas/mangas.php?genero=<?= urlencode($gen->genero) ?>"
+                                        <a href="P-comics/p-comics.php?tipo=manga&genero=<?= urlencode($gen->genero) ?>"
                                             class="block px-4 py-2 hover:bg-red-700">
                                             <?= htmlspecialchars($gen->genero) ?>
                                         </a>
@@ -520,16 +520,17 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
         </div>
     </div>
 
+    <?php if ($destacados->num_rows > 0): ?>
     <div class="Comics-titulo">
         <div class="titulo-comics-ctn">
-            <h2>Comics Imprecindibles</h2>
+            <h2>Comics Imprescindibles</h2>
         </div>
     </div>
 
     <div class="Comics-base">
     <div class="Comics-slider-wrapper">
         <div class="Comics-container">
-            <?php while ($datos = $destacados->fetch_object()) { ?>
+            <?php while ($datos = $destacados->fetch_object()): ?>
                 <div class="Comics-btn">
                     <button class="Comics-btns" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'"
                         style="background-image: url('uploads/<?= $datos->portada ?>');">
@@ -540,10 +541,11 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
                             n°.<?= htmlspecialchars($datos->capitulos) ?></p>
                     </div>
                 </div>
-            <?php } ?>
+            <?php endwhile; ?>
         </div>
     </div>
-</div>
+    </div>
+    <?php endif; ?>
 
 
 

@@ -101,6 +101,8 @@ $total_paginas = $paginas->num_rows;
         <button class="buttons no-arrow">▶</button>
       <?php endif; ?>
     </div>
+
+    <div></div><!-- Columna derecha del grid para balance -->
   </div>
 
   <div class="head-r" id="responsive-header">
@@ -117,15 +119,12 @@ $total_paginas = $paginas->num_rows;
     <div class="comic" id="comic-pages">
       <?php while ($pagina = $paginas->fetch_assoc()): ?>
         <?php
-        $url = htmlspecialchars($pagina['imagen_url']);
-        $nombre_archivo = basename($url);
-        $es_doble = preg_match('/_\d+_\d+_\d+\./', $nombre_archivo);
-        $clase_extra = $es_doble ? ' doble' : '';
+        $url      = htmlspecialchars($pagina['imagen_url']);
+        $es_doble = !empty($pagina['es_doble']);
         ?>
-
         <?php if ($es_doble): ?>
           <div class="comic-page-wrapper">
-            <img loading="lazy" class="comic-page<?= $clase_extra ?>" src="../<?= $url ?>" alt="Página del cómic" />
+            <img loading="lazy" class="comic-page doble" src="../<?= $url ?>" alt="Página del cómic" />
           </div>
         <?php else: ?>
           <img loading="lazy" class="comic-page" src="../<?= $url ?>" alt="Página del cómic" />

@@ -18,6 +18,7 @@ header {
     align-items: center;
     justify-content: center;
     position: relative;
+    z-index: 200;
 }
 
 .search_bar-r {
@@ -56,6 +57,7 @@ header {
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
     opacity: 0;
     visibility: hidden;
+    z-index: 500;
 }
 
 .navbar {
@@ -137,21 +139,54 @@ header {
 
 .Comics-titulo-2{
     margin-top: 50px;
-    margin-bottom: 50px;
+    margin-bottom: 30px;
     width: 100%;
     display: flex;
-    justify-content: center; 
+    justify-content: center;
 }
 
 .titulo-comics-ctn-2 {
     width: 1170px;
     display: flex;
-    justify-content: flex-start;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .titulo-comics-ctn-2 h2{
     font-weight: bold;
     font-size: 20px;
+}
+
+.filtros-ctn {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filtro-btn {
+    padding: 6px 18px;
+    border-radius: 20px;
+    border: 2px solid #CE4646;
+    color: #CE4646;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+
+.filtro-btn:hover, .filtro-btn.activo {
+    background: #CE4646;
+    color: #fff;
+}
+
+.filtro-clear {
+    border-color: #999;
+    color: #666;
+}
+
+.filtro-clear:hover {
+    background: #999;
+    color: #fff;
 }
 
 .Comics-base-2 {
@@ -253,6 +288,7 @@ header {
     .search_bar {
         order: -1;
         margin-bottom: 0;
+        z-index: 200;
     }
 }
 
@@ -260,6 +296,7 @@ header {
     .search_bar {
         order: 1;
         margin-top: 0;
+        z-index: 200;
     }
 }
 
@@ -401,6 +438,7 @@ header {
         align-items: center;
         justify-content: center;
         position: relative;
+        z-index: 200;
     }
 
     .busqueda-ctn {
@@ -435,6 +473,7 @@ header {
         transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
         opacity: 0;
         visibility: hidden;
+        z-index: 500;
     }
 
     .Comics-titulo-2{

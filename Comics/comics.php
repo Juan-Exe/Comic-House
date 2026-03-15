@@ -106,13 +106,13 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
                     </label>
                     <ul class="menu flex space-x-6 relative">
                         <li class="uah relative group">
-                            <a href="../P-comics/p-comics.php" class="dropdown-toggle hover:text-gray-200">Comics
+                            <a href="../P-comics/p-comics.php?tipo=Comic" class="dropdown-toggle hover:text-gray-200">Comics
                                 <span>▾</span></a>
                             <ul
                                 class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
                                 <?php while ($gen = $generosn->fetch_object()) { ?>
                                     <li>
-                                        <a href="../P-comics/p-comics.php?genero=<?= urlencode($gen->genero) ?>"
+                                        <a href="../P-comics/p-comics.php?tipo=Comic&genero=<?= urlencode($gen->genero) ?>"
                                             class="block px-4 py-2 hover:bg-red-700">
                                             <?= htmlspecialchars($gen->genero) ?>
                                         </a>
@@ -121,13 +121,13 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
                             </ul>
                         </li>
                         <li class="relative group">
-                            <a href="../P-Mangas/mangas.php" class="dropdown-toggle hover:text-gray-200">Mangas
+                            <a href="../P-comics/p-comics.php?tipo=manga" class="dropdown-toggle hover:text-gray-200">Mangas
                                 <span>▾</span></a>
                             <ul
                                 class="submenu absolute bg-red-600 text-white invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
                                 <?php while ($gen = $generos->fetch_object()) { ?>
                                     <li>
-                                        <a href="../P-Mangas/mangas.php?genero=<?= urlencode($gen->genero) ?>"
+                                        <a href="../P-comics/p-comics.php?tipo=manga&genero=<?= urlencode($gen->genero) ?>"
                                             class="block px-4 py-2 hover:bg-red-700">
                                             <?= htmlspecialchars($gen->genero) ?>
                                         </a>
@@ -228,7 +228,7 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
                     <a href="../Lector/lector.php?capitulo_id=<?= $cap['id'] ?>" data-capitulo="<?= $cap['id'] ?>">
                         <span><?= htmlspecialchars($comic['titulo']) ?>: <?= $cap['titulo'] ?>     <?= $cap['numero'] ?></span>
                         <span class="fecha">
-                            <?= strftime("%e %B %Y", strtotime($cap['fecha_publicacion'])) ?>
+                            <?= $cap['fecha_publicacion'] ? date('d/m/Y', strtotime($cap['fecha_publicacion'])) : '' ?>
                         </span>
                     </a>
                 <?php endwhile; ?>

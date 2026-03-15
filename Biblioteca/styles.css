@@ -18,6 +18,7 @@ header {
     align-items: center;
     justify-content: center;
     position: relative;
+    z-index: 200;
 }
 
 .search_bar-r {
@@ -56,6 +57,7 @@ header {
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
     opacity: 0;
     visibility: hidden;
+    z-index: 500;
 }
 
 .navbar {
@@ -253,6 +255,7 @@ header {
     .search_bar {
         order: -1;
         margin-bottom: 0;
+        z-index: 200;
     }
 }
 
@@ -260,6 +263,7 @@ header {
     .search_bar {
         order: 1;
         margin-top: 0;
+        z-index: 200;
     }
 }
 
@@ -401,6 +405,7 @@ header {
         align-items: center;
         justify-content: center;
         position: relative;
+        z-index: 200;
     }
 
     .busqueda-ctn {
@@ -435,6 +440,7 @@ header {
         transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
         opacity: 0;
         visibility: hidden;
+        z-index: 500;
     }
 
     .Comics-titulo-2{

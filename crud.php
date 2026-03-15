@@ -303,6 +303,19 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             font-size: 12px;
         }
         .actions-cell { display: flex; gap: 6px; white-space: nowrap; }
+        .btn-imprescindible {
+            background: rgba(100,100,110,.15);
+            color: #555;
+            border: 1px solid rgba(100,100,110,.25);
+            border-radius: 5px;
+            padding: 5px 9px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .btn-imprescindible:hover { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,.1); }
+        .btn-imprescindible.active { background: rgba(245,158,11,.15); color: #f59e0b; border-color: rgba(245,158,11,.4); }
+        .btn-imprescindible.active:hover { background: rgba(239,68,68,.15); color: #ef4444; border-color: rgba(239,68,68,.4); }
         .btn-action {
             padding: 5px 10px;
             border-radius: 5px;
@@ -517,6 +530,7 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                     <th>Año</th>
                     <th>Género</th>
                     <th>Descripción</th>
+                    <th>Imprescind.</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -541,6 +555,13 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                     <td><?= htmlspecialchars($datos->genero) ?></td>
                     <td class="desc-cell" title="<?= htmlspecialchars($datos->descripcion) ?>">
                         <?= htmlspecialchars($datos->descripcion) ?>
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="btn-imprescindible <?= $datos->imprescindible ? 'active' : '' ?>"
+                            onclick="toggleImprescindible(this, <?= $datos->id ?>)"
+                            title="<?= $datos->imprescindible ? 'Quitar de imprescindibles' : 'Marcar como imprescindible' ?>">
+                            <i class="bi bi-star<?= $datos->imprescindible ? '-fill' : '' ?>"></i>
+                        </button>
                     </td>
                     <td>
                         <div class="actions-cell">
@@ -583,6 +604,26 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
         icon.style.display  = 'none';
         label.style.display = 'none';
     });
+
+    // Toggle imprescindible
+    function toggleImprescindible(btn, id) {
+        fetch('controlador/toggle_imprescindible.php?id=' + id)
+            .then(r => r.json())
+            .then(res => {
+                if (res.ok) {
+                    const activo = res.imprescindible == 1;
+                    btn.classList.toggle('active', activo);
+                    btn.querySelector('i').className = activo ? 'bi bi-star-fill' : 'bi bi-star';
+                    btn.title = activo ? 'Quitar de imprescindibles' : 'Marcar como imprescindible';
+                    if (activo && res.total > 4) {
+                        alert('Máximo 4 cómics imprescindibles. Quita uno antes de añadir otro.');
+                        // Revertir visualmente
+                        btn.classList.remove('active');
+                        btn.querySelector('i').className = 'bi bi-star';
+                    }
+                }
+            });
+    }
 
     // Modal eliminar
     function abrirModal(url) {

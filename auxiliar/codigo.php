@@ -20,8 +20,8 @@ if ($_POST["dato"] == "busca" && !empty($_POST["busqueda"])) {
     echo '<table class="col-12 m-0 p-0"><tbody>';
 
     while ($row = mysqli_fetch_assoc($row_sql)) {
-        $comicUrl = "/Sexto_Semestre/Comics-House/Comics/comics.php?id=" . htmlspecialchars($row["id"]);
-        $imageUrl = "/Sexto_Semestre/Comics-House/uploads/" . htmlspecialchars($row["portada"]);
+        $comicUrl = "/Comics/comics.php?id=" . htmlspecialchars($row["id"]);
+        $imageUrl = "/uploads/" . htmlspecialchars($row["portada"]);
 
         echo "<tr data-id='" . htmlspecialchars($row["id"]) . "' onclick=\"window.location.href='$comicUrl'\" 
                  style=\"display: flex; align-items: center; padding: 10px; cursor: pointer;\">
