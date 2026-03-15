@@ -1,5 +1,7 @@
 .env
 
-# Uploads - archivos generados por usuarios
+# Archivos generados por usuarios (uploads e imágenes de capítulos)
 uploads/*
 !uploads/.gitkeep
+paginas/*
+!paginas/.gitkeep
