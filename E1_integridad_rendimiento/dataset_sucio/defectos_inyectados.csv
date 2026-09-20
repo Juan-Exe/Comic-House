@@ -1,0 +1,14 @@
+registro_id,columna,defecto,valor_sucio
+1,tipo,formato_mayusculas_espacios, MANGA 
+2,tipo,formato_minusculas,comic
+4,tipo,formato_mayusculas_espacios,COMIC 
+3,genero,formato_espacios,  Superheroes  
+9,estado_publicacion,typo_dominio_cerrado,En publicacionn
+10,clasificacion,dominio_invalido,18+
+2,anio,anio_futuro,2099
+11,editorial_id,fk_inexistente,999
+6,titulo,not_null_violado,(vacio)
+7,destacado,booleano_invalido,5
+3,id,pk_duplicada,3 (segunda ocurrencia)
+8,titulo,duplicado_logico_case,berserk
+-4,id,pk_negativa,-4

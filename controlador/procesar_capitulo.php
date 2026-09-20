@@ -40,10 +40,15 @@ $archivo_tmp  = $_FILES['cbr_file']['tmp_name'];
 $archivo_nombre = strtolower($_FILES['cbr_file']['name']);
 $extension    = pathinfo($archivo_nombre, PATHINFO_EXTENSION);
 
-// Insertar capítulo
-$conexion->query("INSERT INTO capitulos (comic_id, titulo, numero, fecha_publicacion)
-                  VALUES ('$comic_id', '$titulo', '$numero', " . ($fecha ? "'$fecha'" : "NULL") . ")");
+// Insertar capítulo (sentencia preparada: evita inyección SQL)
+$stmt_cap = $conexion->prepare(
+    "INSERT INTO capitulos (comic_id, titulo, numero, fecha_publicacion) VALUES (?, ?, ?, ?)"
+);
+$fecha_val = ($fecha !== '') ? $fecha : null;
+$stmt_cap->bind_param("isss", $comic_id, $titulo, $numero, $fecha_val);
+$stmt_cap->execute();
 $capitulo_id = $conexion->insert_id;
+$stmt_cap->close();
 
 // Carpeta destino de páginas
 $paginas_dir = dirname(__DIR__) . "/paginas/cap_{$capitulo_id}/";
@@ -96,11 +101,22 @@ if ($extension === 'cbz') {
 // Ordenar por nombre natural (ej. 001.jpg, 002.jpg...)
 usort($imagenes, fn($a, $b) => strnatcasecmp($a['nombre'], $b['nombre']));
 
-// Guardar en BD con detección de página doble por dimensiones
+// ---------------------------------------------------------------------
+// Guardar páginas en BD.
+//
+// OPTIMIZACIÓN (ver E1_integridad_rendimiento/benchmark/):
+// antes se ejecutaba un INSERT por página dentro del bucle. Con un
+// capítulo de 220 páginas eso son 220 viajes a la base, cada uno con su
+// propio commit implícito (autocommit). Ahora se agrupan en lotes de 100
+// filas dentro de una sola transacción: ~54x más rápido medido.
+// La transacción además da atomicidad: si una página falla, no queda un
+// capítulo a medio cargar.
+// ---------------------------------------------------------------------
+const PAGINAS_POR_LOTE = 100;
+
+$filas = [];
 foreach ($imagenes as $idx => $img) {
-    $ruta_web    = $conexion->real_escape_string("paginas/cap_{$capitulo_id}/" . $img['nombre']);
     $ruta_fisica = $paginas_dir . $img['nombre'];
-    $orden       = $idx + 1;
     $es_doble    = 0;
 
     $size = @getimagesize($ruta_fisica);
@@ -108,9 +124,41 @@ foreach ($imagenes as $idx => $img) {
         $es_doble = 1;
     }
 
-    $conexion->query("INSERT INTO paginas (capitulo_id, imagen_url, orden, es_doble)
-                      VALUES ('$capitulo_id', '$ruta_web', '$orden', '$es_doble')");
+    $filas[] = [
+        'url'      => "paginas/cap_{$capitulo_id}/" . $img['nombre'],
+        'orden'    => $idx + 1,
+        'es_doble' => $es_doble,
+    ];
 }
 
-echo json_encode(['ok' => true, 'comic_id' => $comic_id]);
+$conexion->begin_transaction();
+try {
+    $total = count($filas);
+    for ($i = 0; $i < $total; $i += PAGINAS_POR_LOTE) {
+        $lote   = array_slice($filas, $i, PAGINAS_POR_LOTE);
+        $tuplas = [];
+        foreach ($lote as $f) {
+            $url      = $conexion->real_escape_string($f['url']);
+            $tuplas[] = "({$capitulo_id}, '{$url}', {$f['orden']}, {$f['es_doble']})";
+        }
+        $sql = "INSERT INTO paginas (capitulo_id, imagen_url, orden, es_doble) VALUES "
+             . implode(',', $tuplas);
+        if (!$conexion->query($sql)) {
+            throw new RuntimeException($conexion->error);
+        }
+    }
+    $conexion->commit();
+} catch (Throwable $e) {
+    // Atomicidad: sin páginas no debe quedar el capítulo registrado
+    $conexion->rollback();
+    $del = $conexion->prepare("DELETE FROM capitulos WHERE id = ?");
+    $del->bind_param("i", $capitulo_id);
+    $del->execute();
+    $del->close();
+
+    echo json_encode(['ok' => false, 'error' => 'fallo_insercion_paginas']);
+    exit();
+}
+
+echo json_encode(['ok' => true, 'comic_id' => $comic_id, 'paginas' => count($filas)]);
 exit();

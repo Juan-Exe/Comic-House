@@ -5,3 +5,13 @@ uploads/*
 !uploads/.gitkeep
 paginas/*
 !paginas/.gitkeep
+
+# Material de clase (no es codigo del proyecto)
+S04_integridad_rendimiento_colab.ipynb
+pedidos_s04_integridad_rendimiento.csv
+Integridad y rendimiento.html
+*.rar
+
+# Export de la BD: usuarios.csv contiene hashes de contrasenas
+E1_integridad_rendimiento/export_csv/
+export_csv/
