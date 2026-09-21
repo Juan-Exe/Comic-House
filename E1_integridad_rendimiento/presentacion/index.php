@@ -248,16 +248,6 @@ $BASE = '../..';
         .pista.arrastrando { transition: none; cursor: grabbing; }
         .pagina { cursor: grab; user-select: none; }
         .pagina.sin-cursor { cursor: default; }
-
-        .ayuda {
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-            background: var(--tinta); color: #fff; font-size: 11px;
-            padding: 5px 16px; border-radius: 8px 8px 0 0; z-index: 300;
-        }
-        kbd {
-            background: #fff; color: var(--tinta); border-radius: 3px;
-            padding: 1px 6px; font-size: 10px; font-weight: 800; font-family: Montserrat;
-        }
     </style>
 </head>
 
@@ -801,7 +791,6 @@ try {
     </div>
 </div>
 
-<div class="ayuda">Desliza o usa <kbd>←</kbd> <kbd>→</kbd> · <kbd>Enter</kbd> ejecutar · <kbd>F</kbd> pantalla completa</div>
 
 <script>
 const pista   = document.getElementById('pista');
