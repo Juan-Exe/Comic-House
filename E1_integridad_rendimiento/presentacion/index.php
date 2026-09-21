@@ -1,11 +1,14 @@
 <?php
 /**
- * index.php - Presentacion E1 con estetica de Comic House.
+ * index.php - Presentacion E1.
  *
- * Cada "pagina" es una vineta de comic. Los comandos se ejecutan de verdad
- * contra ejecutar.php, que corre docker/git/mariadb en esta maquina.
+ * Reutiliza la estetica REAL de Comic House: el header rojo con buscador,
+ * la navbar #ef4444, el fondo blanco, los titulos en mayusculas con lineas
+ * rojas a los lados y las tarjetas con borde rojo de 3px.
+ *
+ * Los comandos se ejecutan de verdad contra ejecutar.php.
  */
-$BASE = '../..';   // raiz del proyecto, para reutilizar sus assets
+$BASE = '../..';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -16,383 +19,539 @@ $BASE = '../..';   // raiz del proyecto, para reutilizar sus assets
     <title>Comic House · Rendimiento medible</title>
     <link rel="stylesheet" href="<?= $BASE ?>/fonts.css">
     <link rel="icon" href="<?= $BASE ?>/ico.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
+        /* ===== paleta tomada de styles.css ===== */
         :root {
-            --rojo: #ce4646;
-            --rojo-vivo: #ef4444;
-            --rojo-hondo: #c8102e;
-            --tinta: #1a1a1a;
-            --papel: #f4f1ea;
-            --borde: #1a1a1a;
+            --busqueda: #ce4646;   /* .search_bar   */
+            --navbar:   #ef4444;   /* .navbar       */
+            --acento:   #c8102e;
+            --tinta:    #1a1a1a;
+            --gris:     #6b6b74;
+            --linea:    #e4e4ea;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { box-sizing: border-box; }
 
         body {
+            margin: 0;
             font-family: Montserrat, system-ui, sans-serif;
-            background: var(--tinta);
+            background: #fff;
             color: var(--tinta);
             overflow: hidden;
             height: 100vh;
         }
 
-        /* ---------- barra superior ---------- */
-        .barra {
-            position: fixed; top: 0; left: 0; right: 0; height: 58px;
-            background: var(--rojo);
-            display: flex; align-items: center; gap: 22px;
-            padding: 0 22px; z-index: 50;
-            border-bottom: 3px solid var(--tinta);
+        /* ===== header identico al de la app ===== */
+        .search_bar {
+            background: var(--busqueda);
+            width: 100%; height: 66px;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; z-index: 200;
         }
-        .logo { display: flex; align-items: center; gap: 10px; }
-        .logo img { height: 34px; }
-        .logo span {
-            color: #fff; font-weight: 800; font-size: 15px;
-            letter-spacing: .5px; line-height: 1.05;
+        .busqueda-ctn { display: flex; }
+        .barra_de_busqueda {
+            width: 620px; height: 40px;
+            border-top-left-radius: 13px; border-bottom-left-radius: 13px;
+            padding: 12px 15px;
+            background: #fff; border: 1px solid #d0d0d0; border-right: none;
+            color: var(--tinta); font-size: 14px; font-family: Montserrat;
+            outline: none;
         }
-        .progreso { flex: 1; display: flex; gap: 5px; align-items: center; }
-        .pip {
-            height: 7px; flex: 1; background: rgba(0,0,0,.28);
-            border-radius: 4px; cursor: pointer; transition: background .2s;
-        }
-        .pip.visto { background: rgba(255,255,255,.55); }
-        .pip.actual { background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.35); }
-        .contador {
-            color: #fff; font-weight: 700; font-size: 13px;
-            min-width: 62px; text-align: right;
+        .search_button {
+            width: 52px; height: 40px; background: #fff;
+            border-top-right-radius: 13px; border-bottom-right-radius: 13px;
+            border: 1px solid #d0d0d0; border-left: none;
+            color: var(--tinta); cursor: pointer;
         }
 
-        /* ---------- lienzo ---------- */
-        .lienzo {
-            position: absolute; top: 58px; bottom: 0; left: 0; right: 0;
-            overflow: hidden;
+        .navbar {
+            width: 100%; height: 72px;
+            background: var(--navbar); color: #fff;
+            display: grid; grid-template-columns: 1fr auto 1fr;
+            align-items: center; padding: 0 34px;
+            position: relative; z-index: 100;
         }
-        .pista { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
+        .navbar .logo-m img { height: 44px; display: block; }
+        .navbar .centro {
+            display: flex; gap: 10px; align-items: center;
+        }
+        .navbar .paso {
+            font-weight: 700; font-size: 13px; letter-spacing: .4px;
+            opacity: .82;
+        }
+        .navbar .derecha { justify-self: end; display: flex; align-items: center; gap: 14px; }
+        .navbar .contador { font-weight: 800; font-size: 15px; }
+
+        /* pips de progreso */
+        .pips { display: flex; gap: 4px; }
+        .pip {
+            width: 26px; height: 5px; border-radius: 3px;
+            background: rgba(255,255,255,.34); cursor: pointer;
+            transition: background .2s;
+        }
+        .pip.visto  { background: rgba(255,255,255,.7); }
+        .pip.actual { background: #fff; width: 38px; }
+
+        /* ===== lienzo ===== */
+        .lienzo { position: absolute; top: 138px; bottom: 0; left: 0; right: 0; overflow: hidden; }
+        .pista  { display: flex; height: 100%; transition: transform .42s cubic-bezier(.4,0,.2,1); }
 
         .pagina {
             min-width: 100%; height: 100%;
-            padding: 26px 46px;
-            display: flex; flex-direction: column; gap: 14px;
-            overflow-y: auto;
-            background:
-                radial-gradient(circle at 12% 12%, rgba(255,255,255,.05) 0 2px, transparent 2px) 0 0/16px 16px,
-                var(--tinta);
+            padding: 26px 54px 34px;
+            overflow-y: auto; background: #fff;
+            display: flex; flex-direction: column; gap: 16px;
         }
-        .pagina::-webkit-scrollbar { width: 10px; }
-        .pagina::-webkit-scrollbar-thumb { background: var(--rojo); border-radius: 5px; }
+        .pagina::-webkit-scrollbar { width: 9px; }
+        .pagina::-webkit-scrollbar-thumb { background: var(--navbar); border-radius: 5px; }
 
-        /* ---------- vinetas ---------- */
-        .vineta {
-            background: var(--papel);
-            border: 3px solid var(--borde);
-            border-radius: 3px;
-            box-shadow: 7px 7px 0 rgba(0,0,0,.55);
-            padding: 20px 24px;
+        /* ===== titulo de seccion, como .editoriales de la app ===== */
+        .titulo-seccion {
+            display: flex; align-items: center; justify-content: center;
+            gap: 22px; margin: 2px 0 6px;
         }
-        .vineta.ancha { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .titulo-seccion .raya { flex: 1; height: 3px; background: var(--navbar); }
+        .titulo-seccion h2 {
+            margin: 0; font-size: 23px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .5px; text-align: center;
+        }
 
-        .rotulo {
-            /* align-self evita que el flex de .vineta.ancha lo estire a todo el ancho */
-            display: inline-block; align-self: flex-start; width: fit-content;
-            background: var(--rojo-hondo); color: #fff;
-            font-weight: 800; font-size: 10.5px; letter-spacing: 1.4px;
-            padding: 4px 11px; border: 2px solid var(--borde);
-            transform: rotate(-1.5deg); margin-bottom: 11px;
+        .kicker {
+            text-align: center; color: var(--acento);
+            font-size: 11.5px; font-weight: 800; letter-spacing: 2px;
+            text-transform: uppercase; margin-bottom: 2px;
         }
+
         h1 {
-            font-size: 31px; line-height: 1.12; font-weight: 800;
-            margin-bottom: 9px; letter-spacing: -.5px;
+            font-size: 40px; font-weight: 800; line-height: 1.1;
+            margin: 0 0 12px; letter-spacing: -.8px; text-align: center;
         }
-        h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
-        p  { font-size: 14.5px; line-height: 1.62; margin-bottom: 9px; }
-        .apunte, .apunta { font-size: 13px; color: #55505c; font-style: italic; }
-        strong { font-weight: 800; }
+        h3 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+        p  { font-size: 14.5px; line-height: 1.65; margin: 0 0 10px; color: #33333c; }
+        .centrado { text-align: center; }
+        .apunte { font-size: 12.8px; color: var(--gris); font-style: italic; }
+        strong { font-weight: 800; color: var(--tinta); }
 
-        /* globo de dialogo */
-        .globo {
-            position: relative; background: #fff; border: 3px solid var(--borde);
-            border-radius: 20px; padding: 15px 20px; margin: 13px 0;
-            font-size: 15px; line-height: 1.55;
+        /* ===== tarjeta, como .sly-content: borde rojo 3px radio 10 ===== */
+        .tarjeta {
+            border: 3px solid var(--busqueda); border-radius: 10px;
+            padding: 20px 24px; background: #fff;
         }
-        .globo::after {
-            content: ''; position: absolute; bottom: -17px; left: 42px;
-            border: 9px solid transparent; border-top-color: var(--borde);
+        .tarjeta.gris { background: #fafafc; border-color: var(--linea); }
+        .tarjeta.ancha { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+        .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .dos.crece { flex: 1; min-height: 0; }
+        @media (max-width: 950px) { .dos { grid-template-columns: 1fr; } }
+
+        /* ===== cifras ===== */
+        .cifras { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+        .cifra {
+            border: 3px solid var(--busqueda); border-radius: 10px;
+            padding: 14px 22px; min-width: 132px; text-align: center; background: #fff;
         }
-        .globo::before {
-            content: ''; position: absolute; bottom: -12px; left: 45px;
-            border: 7px solid transparent; border-top-color: #fff; z-index: 1;
+        .cifra.fuerte { background: var(--busqueda); border-color: var(--busqueda); }
+        .cifra .n { font-size: 30px; font-weight: 800; color: var(--acento); line-height: 1; }
+        .cifra.fuerte .n { color: #fff; }
+        .cifra .r {
+            font-size: 10.5px; font-weight: 700; letter-spacing: .7px;
+            text-transform: uppercase; color: var(--gris); margin-top: 6px;
+        }
+        .cifra.fuerte .r { color: rgba(255,255,255,.92); }
+
+        .flecha-cifra { align-self: center; font-size: 24px; color: var(--navbar); font-weight: 800; }
+
+        /* ===== lista con vinetas rojas ===== */
+        ul.puntos { list-style: none; padding: 0; margin: 6px 0; }
+        ul.puntos li {
+            position: relative; padding-left: 22px; margin-bottom: 8px;
+            font-size: 14px; line-height: 1.55; color: #33333c;
+        }
+        ul.puntos li::before {
+            content: ''; position: absolute; left: 4px; top: 8px;
+            width: 8px; height: 8px; background: var(--navbar); border-radius: 2px;
         }
 
-        /* onomatopeya */
-        .pow {
-            font-size: 44px; font-weight: 900; color: var(--rojo-hondo);
-            -webkit-text-stroke: 2.5px var(--tinta);
-            transform: rotate(-4deg); letter-spacing: -1.5px; line-height: 1;
-        }
-
-        /* ---------- consola ---------- */
-        .consola { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        /* ===== consola ===== */
+        .consola { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 4px; }
         .cmd-fila {
-            display: flex; align-items: center; gap: 11px;
-            background: var(--tinta); border: 3px solid var(--borde);
-            padding: 10px 13px; flex-wrap: wrap;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            background: #23232b; border-radius: 10px 10px 0 0;
+            padding: 11px 15px;
         }
         .cmd-txt {
-            font-family: 'Courier New', monospace; color: #7ee787;
-            font-size: 13px; flex: 1; min-width: 210px; word-break: break-all;
+            font-family: 'Courier New', monospace; color: #8ef0a3;
+            font-size: 12.8px; flex: 1; min-width: 200px; word-break: break-all;
         }
-        .cmd-txt::before { content: '$ '; color: var(--rojo-vivo); font-weight: 700; }
+        .cmd-txt::before { content: '$ '; color: #ff8080; font-weight: 700; }
 
         .boton {
-            background: var(--rojo-hondo); color: #fff; border: 2px solid #fff;
-            font-family: Montserrat, sans-serif; font-weight: 800; font-size: 12px;
-            letter-spacing: .6px; padding: 8px 17px; cursor: pointer;
-            text-transform: uppercase; white-space: nowrap;
-            transition: transform .12s, background .2s;
+            background: var(--acento); color: #fff; border: none; border-radius: 6px;
+            font-family: Montserrat; font-weight: 800; font-size: 11.5px;
+            letter-spacing: .6px; padding: 9px 18px; cursor: pointer;
+            text-transform: uppercase; white-space: nowrap; transition: background .18s;
         }
-        .boton:hover:not(:disabled) { background: var(--rojo-vivo); transform: translateY(-2px); }
-        .boton:disabled { opacity: .55; cursor: wait; }
+        .boton:hover:not(:disabled) { background: #e01235; }
+        .boton:disabled { opacity: .5; cursor: wait; }
+
+        .estado {
+            font-size: 11.5px; font-weight: 700; padding: 4px 11px; border-radius: 20px;
+            background: #3a3a45; color: #c8c8d4;
+        }
+        .estado.ok  { background: #1b7f4f; color: #fff; }
+        .estado.mal { background: var(--acento); color: #fff; }
 
         .salida {
-            flex: 1; min-height: 120px; margin-top: 0;
-            background: #0d0d14; border: 3px solid var(--borde); border-top: none;
-            padding: 14px 16px; overflow: auto;
-            font-family: 'Courier New', monospace; font-size: 12.4px;
-            line-height: 1.55; color: #e6e6ef; white-space: pre-wrap;
+            flex: 1; min-height: 96px; max-height: 340px;
+            background: #16161d; border-radius: 0 0 10px 10px;
+            padding: 15px 17px; overflow: auto;
+            font-family: 'Courier New', monospace; font-size: 12.3px;
+            line-height: 1.58; color: #e6e6ef; white-space: pre-wrap;
         }
-        .salida::-webkit-scrollbar { width: 10px; height: 10px; }
-        .salida::-webkit-scrollbar-thumb { background: #3a3a48; border-radius: 5px; }
+        /* la consola no debe empujar el contenido: crece solo si hace falta */
+        .tarjeta.ancha { flex: 0 1 auto; }
+        .dos.crece .tarjeta.ancha { flex: 1; }
+        .salida::-webkit-scrollbar { width: 9px; height: 9px; }
+        .salida::-webkit-scrollbar-thumb { background: #41414f; border-radius: 5px; }
         .salida .vacio { color: #6a6a7a; font-style: italic; }
 
-        /* coloreado */
-        .ln-add { color: #56d364; }
-        .ln-del { color: #f85149; }
+        .ln-add { color: #56d364; } .ln-del { color: #f85149; }
         .ln-hdr { color: #79c0ff; font-weight: 700; }
         .ln-ok  { color: #56d364; font-weight: 700; }
         .ln-err { color: #ff7b72; font-weight: 700; }
-        .ln-num { color: #ffa657; }
-        .ln-key { color: #d2a8ff; }
+        .ln-num { color: #ffa657; } .ln-key { color: #d2a8ff; }
 
-        .estado {
-            display: inline-flex; align-items: center; gap: 7px;
-            font-size: 12px; font-weight: 700; padding: 3px 11px;
-            border: 2px solid var(--borde);
+        /* ===== tabla ===== */
+        table.t { width: 100%; border-collapse: collapse; font-size: 13.2px; }
+        table.t th {
+            background: var(--busqueda); color: #fff; text-align: left;
+            padding: 9px 12px; font-size: 11px; letter-spacing: .6px; text-transform: uppercase;
         }
-        .estado.ok   { background: #1b7f4f; color: #fff; }
-        .estado.mal  { background: var(--rojo-hondo); color: #fff; }
-        .estado.espera { background: #4a4a58; color: #fff; }
+        table.t th:first-child { border-top-left-radius: 8px; }
+        table.t th:last-child  { border-top-right-radius: 8px; }
+        table.t td { padding: 8px 12px; border-bottom: 1px solid var(--linea); }
+        table.t tr:last-child td { border-bottom: none; }
+        table.t .destaca { background: #fdf0f2; font-weight: 800; }
+        table.t .num { font-family: 'Courier New', monospace; }
 
-        /* metricas */
-        .cifras { display: flex; gap: 13px; flex-wrap: wrap; margin: 11px 0; }
-        .cifra {
-            background: #fff; border: 3px solid var(--borde);
-            box-shadow: 4px 4px 0 rgba(0,0,0,.5);
-            padding: 11px 17px; min-width: 122px;
+        /* ===== bloque de codigo ===== */
+        pre.codigo {
+            background: #16161d; color: #e6e6ef; border-radius: 10px;
+            padding: 14px 16px; font-family: 'Courier New', monospace;
+            font-size: 12.3px; line-height: 1.55; overflow: auto; margin: 6px 0;
         }
-        .cifra .n { font-size: 26px; font-weight: 900; color: var(--rojo-hondo); line-height: 1; }
-        .cifra .r { font-size: 10.5px; font-weight: 700; letter-spacing: .6px;
-                    text-transform: uppercase; color: #55505c; margin-top: 5px; }
+        pre.codigo .mal { color: #ff7b72; }
+        pre.codigo .bien { color: #56d364; }
+        pre.codigo .com { color: #7a7a8c; font-style: italic; }
 
-        table.datos { width: 100%; border-collapse: collapse; font-size: 13px; margin: 9px 0; }
-        table.datos th {
-            background: var(--tinta); color: #fff; text-align: left;
-            padding: 7px 10px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;
+        .cita {
+            border-left: 5px solid var(--navbar); background: #fdf0f2;
+            padding: 13px 18px; border-radius: 0 8px 8px 0;
+            font-size: 14.5px; line-height: 1.6; margin: 8px 0;
         }
-        table.datos td { padding: 6px 10px; border-bottom: 1px solid #ddd6c8; }
-        table.datos tr:nth-child(even) td { background: rgba(0,0,0,.03); }
 
-        /* navegacion */
+        /* ===== navegacion ===== */
         .flecha {
-            position: fixed; top: 50%; transform: translateY(-50%);
-            width: 46px; height: 76px; background: var(--rojo);
-            border: 3px solid var(--tinta); color: #fff;
-            font-size: 26px; font-weight: 900; cursor: pointer; z-index: 40;
+            position: fixed; top: 55%; transform: translateY(-50%);
+            width: 42px; height: 66px; background: var(--navbar);
+            border: none; color: #fff; font-size: 24px; cursor: pointer; z-index: 300;
             display: flex; align-items: center; justify-content: center;
         }
-        .flecha:hover { background: var(--rojo-vivo); }
-        .flecha.izq { left: 8px; }
-        .flecha.der { right: 8px; }
-        .flecha:disabled { opacity: .25; cursor: default; }
+        .flecha:hover:not(:disabled) { background: var(--acento); }
+        .flecha.izq { left: 0; border-radius: 0 8px 8px 0; }
+        .flecha.der { right: 0; border-radius: 8px 0 0 8px; }
+        .flecha:disabled { opacity: .2; cursor: default; }
 
         .ayuda {
-            position: fixed; bottom: 11px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,.72); color: #fff; font-size: 11px;
-            padding: 5px 14px; border-radius: 13px; z-index: 40;
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            background: var(--tinta); color: #fff; font-size: 11px;
+            padding: 5px 16px; border-radius: 8px 8px 0 0; z-index: 300;
         }
         kbd {
             background: #fff; color: var(--tinta); border-radius: 3px;
-            padding: 1px 5px; font-size: 10px; font-weight: 700;
-            font-family: Montserrat, sans-serif;
+            padding: 1px 6px; font-size: 10px; font-weight: 800; font-family: Montserrat;
         }
-
-        .dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1; min-height: 0; }
-        @media (max-width: 900px) { .dos-col { grid-template-columns: 1fr; } }
     </style>
 </head>
 
 <body>
 
-<div class="barra">
-    <div class="logo">
-        <img src="<?= $BASE ?>/Imagenes/Logo-Comic-Huse.png" alt="Comic House">
-        <span>COMIC&nbsp;HOUSE.<br><small style="font-weight:600;font-size:10px;opacity:.85">RENDIMIENTO MEDIBLE</small></span>
+<header>
+    <div class="search_bar">
+        <div class="busqueda-ctn">
+            <input class="barra_de_busqueda" type="search"
+                   placeholder="Optativa II · E1 · Núcleo de datos del proyecto" readonly>
+            <button class="search_button"><i class="bi bi-search"></i></button>
+        </div>
     </div>
-    <div class="progreso" id="progreso"></div>
-    <div class="contador" id="contador">1 / 12</div>
-</div>
+
+    <nav class="navbar">
+        <div class="logo-m"><img src="<?= $BASE ?>/Imagenes/Logo-Comic-Huse.png" alt="Comic House"></div>
+        <div class="centro"><div class="pips" id="pips"></div></div>
+        <div class="derecha">
+            <span class="paso" id="paso">Portada</span>
+            <span class="contador" id="contador">1/14</span>
+        </div>
+    </nav>
+</header>
 
 <div class="lienzo">
     <div class="pista" id="pista">
 
-        <!-- ========== 1 · PORTADA ========== -->
-        <section class="pagina">
-            <div class="vineta" style="text-align:center;padding:40px 24px">
-                <div class="rotulo">G11 · COMIC HOUSE · TEMA 7</div>
-                <h1 style="font-size:46px">Rendimiento medible</h1>
-                <p style="font-size:17px;max-width:660px;margin:0 auto 6px">
-                    Cómo la subida de un capítulo pasó de <strong>206 ms a 2.9 ms</strong>
-                    sin cambiar una sola imagen.
-                </p>
-                <div class="pow" style="margin-top:14px">¡71× MÁS RÁPIDO!</div>
+        <!-- ============ 1 · PORTADA ============ -->
+        <section class="pagina" data-paso="Portada" style="justify-content:center">
+            <div class="kicker">Optativa II · Ingeniería de Sistemas · 2026-II</div>
+            <h1>Rendimiento medible</h1>
+            <p class="centrado" style="font-size:17px;max-width:720px;margin:0 auto 20px">
+                Cómo la subida de un capítulo en <strong>Comic House</strong> pasó de
+                <strong>206 ms a 2.9 ms</strong> — sin tocar una sola imagen.
+            </p>
+
+            <div class="cifras">
+                <div class="cifra"><div class="n">206 ms</div><div class="r">antes</div></div>
+                <div class="flecha-cifra">→</div>
+                <div class="cifra fuerte"><div class="n">2.9 ms</div><div class="r">después</div></div>
+                <div class="flecha-cifra">=</div>
+                <div class="cifra"><div class="n">71×</div><div class="r">más rápido</div></div>
             </div>
 
-            <div class="vineta ancha">
-                <div class="rotulo">ANTES DE EMPEZAR · COMPROBACIÓN EN VIVO</div>
-                <p>Todo lo que verás se ejecuta <strong>de verdad</strong> en este computador.
-                   Empecemos comprobando que el entorno está arriba.</p>
-                <div class="consola">
-                    <div class="cmd-fila" data-cmd="estado">
-                        <span class="cmd-txt">SELECT VERSION(); SHOW TABLES;</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Ejecutar</button>
-                    </div>
-                    <div class="salida"><span class="vacio">Pulsa «Ejecutar» para correr el comando…</span></div>
+            <div class="tarjeta gris" style="max-width:860px;margin:22px auto 0">
+                <p style="margin:0" class="centrado">
+                    <strong>G11 · Comic House</strong> · Juan Diego Arrieta &nbsp;·&nbsp;
+                    Todo lo que verás a continuación <strong>se ejecuta en vivo</strong> sobre
+                    la base de datos real del proyecto.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ 2 · AGENDA ============ -->
+        <section class="pagina" data-paso="Agenda">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Qué vamos a ver</h2><span class="raya"></span></div>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>1 · El contexto</h3>
+                    <ul class="puntos">
+                        <li>Qué guarda Comic House y cómo se relacionan sus tablas</li>
+                        <li>El volumen real hoy: 5 obras, 8 capítulos, 884 páginas</li>
+                        <li>La operación más costosa: subir un CBR</li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>2 · El problema</h3>
+                    <ul class="puntos">
+                        <li>Un <code>INSERT</code> por página dentro del bucle</li>
+                        <li>220 viajes a la base y 220 commits</li>
+                        <li>El código, en vivo, con <code>git diff</code></li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>3 · La solución y su evidencia</h3>
+                    <ul class="puntos">
+                        <li>Transacción + inserción por lotes</li>
+                        <li>Medición antes/después con tiempos reales</li>
+                        <li><code>EXPLAIN</code>: qué plan elige el motor</li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>4 · Integridad y cierre</h3>
+                    <ul class="puntos">
+                        <li>Las reglas del negocio como restricciones</li>
+                        <li>Intentar romper la base a propósito</li>
+                        <li>Qué pasa si el volumen crece ×1000</li>
+                    </ul>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 2 · EL PROYECTO ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">01 · EL PROBLEMA</div>
-                <h1>¿Qué guarda Comic House?</h1>
-                <div class="globo">
-                    Un cómic tiene capítulos. Un capítulo tiene páginas.
-                    Cuando subes un <strong>CBR</strong>, el servidor lo descomprime y
-                    registra <strong>una fila por página</strong>.
+        <!-- ============ 3 · EL PROYECTO ============ -->
+        <section class="pagina" data-paso="Contexto">
+            <div class="titulo-seccion"><span class="raya"></span><h2>El modelo de datos</h2><span class="raya"></span></div>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Tres niveles encadenados</h3>
+                    <pre class="codigo">editoriales
+     ↓  (1 : N)
+   comics        ← el catálogo que ve el lector
+     ↓  (1 : N)
+ capitulos       ← cada entrega publicada
+     ↓  (1 : N)
+  paginas        ← una fila POR IMAGEN del CBR</pre>
+                    <p class="apunte">Al subir un capítulo de 220 páginas se crean
+                       <strong>1 fila</strong> en <code>capitulos</code> y
+                       <strong>220</strong> en <code>paginas</code>.</p>
                 </div>
-                <p>El catálogo es pequeño, pero <strong>las páginas no</strong>: cada capítulo
-                   añade entre 30 y 240 filas. Veamos el volumen real ahora mismo.</p>
+
+                <div class="tarjeta">
+                    <h3>Preguntas que el sistema debe responder</h3>
+                    <ul class="puntos">
+                        <li>¿Cuántas obras hay por editorial y con qué clasificación?</li>
+                        <li>¿Qué obras siguen en publicación y cuáles terminaron?</li>
+                        <li><strong>¿Cuáles son las páginas del capítulo N, en orden?</strong>
+                            — la consulta del lector, la más frecuente de todas</li>
+                    </ul>
+                    <p class="apunte">La tercera es la que se optimizó: se ejecuta cada vez
+                       que alguien abre un capítulo.</p>
+                </div>
             </div>
 
-            <div class="vineta ancha">
+            <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="conteo">
                         <span class="cmd-txt">SELECT COUNT(*) FROM comics, capitulos, paginas</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Ejecutar</button>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Ver volumen real</button>
                     </div>
-                    <div class="salida"><span class="vacio">Consulta la base de datos real…</span></div>
+                    <div class="salida"><span class="vacio">Consulta la base de datos del proyecto…</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 3 · EL CUELLO DE BOTELLA ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">02 · EL CUELLO DE BOTELLA</div>
-                <h1>Un INSERT por página</h1>
-                <p>El controlador insertaba <strong>dentro del bucle</strong> que recorre las
-                   imágenes. Con 220 páginas: <strong>220 viajes</strong> a MariaDB, y como
-                   mysqli va en <em>autocommit</em>, <strong>220 commits</strong> a disco.</p>
+        <!-- ============ 4 · EL PROBLEMA ============ -->
+        <section class="pagina" data-paso="El problema">
+            <div class="titulo-seccion"><span class="raya"></span><h2>El cuello de botella</h2><span class="raya"></span></div>
+
+            <div class="cita">
+                El controlador insertaba <strong>dentro del bucle</strong> que recorre las
+                imágenes extraídas del CBR. Con 220 páginas: <strong>220 viajes</strong> a
+                MariaDB. Y como mysqli trabaja en <em>autocommit</em>, también
+                <strong>220 commits</strong> sincronizados a disco.
             </div>
 
-            <div class="vineta ancha">
-                <div class="consola">
-                    <div class="cmd-fila" data-cmd="codigo_antes">
-                        <span class="cmd-txt">sed -n '99,113p' procesar_capitulo.ANTES.php</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Ver código original</button>
+            <div class="dos crece">
+                <div class="tarjeta ancha">
+                    <h3>Así estaba escrito</h3>
+                    <pre class="codigo"><span class="com">// procesar_capitulo.php · líneas 100-113</span>
+foreach ($imagenes as $idx => $img) {
+    ...
+<span class="mal">    $conexion->query("INSERT INTO paginas
+        (capitulo_id, imagen_url, orden, es_doble)
+        VALUES ('$capitulo_id', '$ruta_web',
+                '$orden', '$es_doble')");</span>
+}</pre>
+                    <p class="apunte">Además concatenaba variables en el SQL, sin sentencia preparada.</p>
+                </div>
+
+                <div class="tarjeta ancha">
+                    <div class="consola">
+                        <div class="cmd-fila" data-cmd="codigo_antes">
+                            <span class="cmd-txt">cat benchmark/antes/procesar_capitulo.ANTES.php</span>
+                            <span class="estado">sin ejecutar</span>
+                            <button class="boton">Ver original</button>
+                        </div>
+                        <div class="salida"><span class="vacio">El archivo original está guardado, no reconstruido…</span></div>
                     </div>
-                    <div class="salida"><span class="vacio">El archivo original está guardado en benchmark/antes/…</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 4 · EL DIFF ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">03 · ANTES vs DESPUÉS</div>
-                <h1>El cambio, línea por línea</h1>
-                <p>Git conserva el código original. Este es el <strong>diff real</strong>
-                   entre el commit anterior y el optimizado.</p>
+        <!-- ============ 5 · LA SOLUCIÓN ============ -->
+        <section class="pagina" data-paso="La solución">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Qué se cambió</h2><span class="raya"></span></div>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Una transacción, lotes de 100</h3>
+                    <pre class="codigo"><span class="bien">$conexion->begin_transaction();</span>
+try {
+    for ($i = 0; $i &lt; $total; $i += 100) {
+        <span class="com">// 100 filas en UNA sola consulta</span>
+        $conexion->query("INSERT INTO paginas
+            (...) VALUES " . implode(',', $tuplas));
+    }
+    <span class="bien">$conexion->commit();</span>
+} catch (Throwable $e) {
+    <span class="bien">$conexion->rollback();</span>
+}</pre>
+                </div>
+
+                <div class="tarjeta">
+                    <h3>Tres mejoras en un solo cambio</h3>
+                    <ul class="puntos">
+                        <li><strong>Velocidad:</strong> 220 consultas → 3, y 220 commits → 1</li>
+                        <li><strong>Atomicidad:</strong> si falla la página 150, el
+                            <code>ROLLBACK</code> deshace todo y borra el capítulo. Antes
+                            quedaba media carga sin forma de detectarla</li>
+                        <li><strong>Seguridad:</strong> el <code>INSERT</code> del capítulo
+                            pasó a sentencia preparada</li>
+                    </ul>
+                    <p class="apunte">Optimizar y dar correctitud resultaron ser la misma acción.</p>
+                </div>
             </div>
 
-            <div class="vineta ancha">
+            <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="diff">
                         <span class="cmd-txt">git diff 4d1fee7 1875069 -- controlador/procesar_capitulo.php</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Ver diff</button>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Ver el diff real</button>
                     </div>
                     <div class="salida"><span class="vacio">Rojo = lo que se quitó · Verde = lo que entró…</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 5 · LA MEDICIÓN ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">04 · LA EVIDENCIA</div>
-                <h1>Medir, no suponer</h1>
-                <div class="cifras">
-                    <div class="cifra"><div class="n">206</div><div class="r">ms · antes</div></div>
-                    <div class="cifra"><div class="n">2.9</div><div class="r">ms · después</div></div>
-                    <div class="cifra"><div class="n">71×</div><div class="r">más rápido</div></div>
-                </div>
-                <p class="apunte apunta">Ojo al escenario intermedio: <strong>solo envolver en una
-                   transacción ya da 12×</strong>. El costo no estaba en el INSERT, sino en
-                   el commit por fila.</p>
+        <!-- ============ 6 · LA MEDICIÓN ============ -->
+        <section class="pagina" data-paso="Medición">
+            <div class="titulo-seccion"><span class="raya"></span><h2>La evidencia: medir, no suponer</h2><span class="raya"></span></div>
+
+            <table class="t">
+                <tr><th>Escenario</th><th>Media</th><th>Mejor</th><th>Factor</th></tr>
+                <tr><td>A · un INSERT por página <em>(código original)</em></td>
+                    <td class="num">206.47 ms</td><td class="num">196.17 ms</td><td>—</td></tr>
+                <tr><td>B2 · sentencia preparada + transacción</td>
+                    <td class="num">17.22 ms</td><td class="num">14.16 ms</td><td class="num">12×</td></tr>
+                <tr class="destaca"><td>B · inserción por lotes + transacción</td>
+                    <td class="num">2.92 ms</td><td class="num">1.56 ms</td><td class="num">71×</td></tr>
+            </table>
+
+            <div class="cita">
+                Fíjate en el escenario intermedio: <strong>solo envolver los 220 INSERT en una
+                transacción ya da 12×</strong>, sin cambiar la forma de la consulta. El costo
+                dominante no era el INSERT — era <strong>el commit por fila</strong>.
             </div>
 
-            <div class="vineta ancha">
+            <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="benchmark">
                         <span class="cmd-txt">php benchmark.php 220 3</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Medir ahora (~40 s)</button>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Medir ahora (~25 s)</button>
                     </div>
-                    <div class="salida"><span class="vacio">Inserta 220 páginas 3 veces con cada estrategia…</span></div>
+                    <div class="salida"><span class="vacio">Inserta 220 páginas tres veces con cada estrategia. Los números variarán un poco según la carga de la máquina…</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 6 · EXPLAIN ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">05 · PLAN DE CONSULTA</div>
-                <h1>¿Qué hace el motor?</h1>
-                <p>La consulta del lector es <em>«dame las páginas del capítulo N en orden»</em>.
-                   Veamos qué plan elige MariaDB con los datos actuales.</p>
-            </div>
+        <!-- ============ 7 · EXPLAIN ============ -->
+        <section class="pagina" data-paso="EXPLAIN">
+            <div class="titulo-seccion"><span class="raya"></span><h2>¿Qué decide el motor?</h2><span class="raya"></span></div>
+            <p class="centrado" style="margin-bottom:4px">
+                La consulta del lector: <code>SELECT … FROM paginas WHERE capitulo_id = 1 ORDER BY orden</code>
+            </p>
 
-            <div class="dos-col">
-                <div class="vineta ancha">
+            <div class="dos crece">
+                <div class="tarjeta ancha">
+                    <h3>Plan que elige por su cuenta</h3>
                     <div class="consola">
                         <div class="cmd-fila" data-cmd="explain_antes">
                             <span class="cmd-txt">EXPLAIN SELECT … ORDER BY orden</span>
-                            <span class="estado espera">sin ejecutar</span>
-                            <button class="boton">Plan actual</button>
+                            <span class="estado">sin ejecutar</span>
+                            <button class="boton">Ejecutar</button>
                         </div>
-                        <div class="salida"><span class="vacio">Busca type y Extra…</span></div>
+                        <div class="salida"><span class="vacio">Mira los campos type, key y Extra…</span></div>
                     </div>
                 </div>
-                <div class="vineta ancha">
+
+                <div class="tarjeta ancha">
+                    <h3>Forzando el índice compuesto</h3>
                     <div class="consola">
                         <div class="cmd-fila" data-cmd="explain_forzado">
                             <span class="cmd-txt">EXPLAIN … FORCE INDEX (idx_paginas_cap_orden)</span>
-                            <span class="estado espera">sin ejecutar</span>
-                            <button class="boton">Forzando índice</button>
+                            <span class="estado">sin ejecutar</span>
+                            <button class="boton">Ejecutar</button>
                         </div>
                         <div class="salida"><span class="vacio">El mismo dato, otra estrategia…</span></div>
                     </div>
@@ -400,82 +559,119 @@ $BASE = '../..';   // raiz del proyecto, para reutilizar sus assets
             </div>
         </section>
 
-        <!-- ========== 7 · POR QUÉ LO IGNORA ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">06 · EL HALLAZGO</div>
-                <h1>El índice existe… y el motor lo ignora</h1>
-                <div class="globo">
-                    No es un error. El capítulo 1 es el <strong>24.8 % de la tabla</strong>.
-                    Cuando vas a leer una cuarta parte de las filas, <strong>recorrerlas todas
-                    sale más barato</strong> que saltar del índice a los datos una por una.
-                </div>
-                <p>El optimizador lo calcula y decide. Comprobémoslo con los datos reales.</p>
+        <!-- ============ 8 · EL HALLAZGO ============ -->
+        <section class="pagina" data-paso="Hallazgo">
+            <div class="titulo-seccion"><span class="raya"></span><h2>El índice existe… y el motor lo ignora</h2><span class="raya"></span></div>
+
+            <div class="cita">
+                <strong>No es un error.</strong> El capítulo 1 tiene 219 de las 884 páginas:
+                es el <strong>24.8 % de la tabla</strong>. Cuando una consulta va a devolver
+                una cuarta parte de las filas, recorrer la tabla entera de forma secuencial
+                sale <strong>más barato</strong> que saltar del índice a los datos fila por
+                fila. El optimizador lo calcula y descarta el índice.
             </div>
 
-            <div class="vineta ancha">
-                <div class="consola">
-                    <div class="cmd-fila" data-cmd="proporcion">
-                        <span class="cmd-txt">SELECT capitulo_id, COUNT(*), % del total …</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Ver proporción</button>
+            <div class="dos crece">
+                <div class="tarjeta ancha">
+                    <h3>La proporción, en datos</h3>
+                    <div class="consola">
+                        <div class="cmd-fila" data-cmd="proporcion">
+                            <span class="cmd-txt">SELECT capitulo_id, COUNT(*), % del total</span>
+                            <span class="estado">sin ejecutar</span>
+                            <button class="boton">Comprobar</button>
+                        </div>
+                        <div class="salida"><span class="vacio">¿Cuánto pesa un capítulo dentro de la tabla?</span></div>
                     </div>
-                    <div class="salida"><span class="vacio">¿Cuánto pesa un capítulo dentro de la tabla?</span></div>
+                </div>
+
+                <div class="tarjeta ancha">
+                    <h3>El umbral medido</h3>
+                    <table class="t">
+                        <tr><th>Capítulos</th><th>Filas</th><th>Plan</th></tr>
+                        <tr><td>4</td><td class="num">880</td><td>ALL + filesort</td></tr>
+                        <tr class="destaca"><td>10</td><td class="num">2.200</td><td>ref · usa el índice</td></tr>
+                        <tr><td>1.000</td><td class="num">220.000</td><td>ref</td></tr>
+                        <tr><td>4.000</td><td class="num">880.000</td><td>ref</td></tr>
+                    </table>
+                    <p class="apunte" style="margin-top:10px">El punto de quiebre está entre 4 y 10
+                       capítulos. <strong>Comic House tiene 8</strong>: con el próximo que se
+                       suba, el índice empieza a usarse solo.</p>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 8 · ESCALADO ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">07 · SI EL VOLUMEN CRECE</div>
-                <h1>Dos curvas distintas</h1>
-                <div class="cifras">
-                    <div class="cifra"><div class="n">75 ms</div><div class="r">sin índice · 880k filas</div></div>
-                    <div class="cifra"><div class="n">0.47</div><div class="r">ms con índice</div></div>
-                    <div class="cifra"><div class="n">161×</div><div class="r">diferencia</div></div>
+        <!-- ============ 9 · ESCALADO ============ -->
+        <section class="pagina" data-paso="Escalado">
+            <div class="titulo-seccion"><span class="raya"></span><h2>¿Y si el volumen crece?</h2><span class="raya"></span></div>
+
+            <table class="t">
+                <tr><th>Capítulos</th><th>Filas</th><th>Sin índice</th><th>Con índice</th><th>Factor</th></tr>
+                <tr><td>10</td><td class="num">2.200</td><td class="num">0.484 ms</td><td class="num">0.237 ms</td><td>2×</td></tr>
+                <tr><td>100</td><td class="num">22.000</td><td class="num">2.261 ms</td><td class="num">0.331 ms</td><td>7×</td></tr>
+                <tr><td>500</td><td class="num">110.000</td><td class="num">10.140 ms</td><td class="num">0.318 ms</td><td>32×</td></tr>
+                <tr><td>2.000</td><td class="num">440.000</td><td class="num">38.657 ms</td><td class="num">0.376 ms</td><td>103×</td></tr>
+                <tr class="destaca"><td>4.000</td><td class="num">880.000</td><td class="num">75.379 ms</td><td class="num">0.469 ms</td><td>161×</td></tr>
+            </table>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Sin índice · O(n)</h3>
+                    <p>El tiempo crece con la tabla: de 0.48 a 75 ms, unas <strong>156 veces</strong>.
+                       Cada capítulo nuevo hace más lenta la lectura de <em>todos</em> los demás.</p>
                 </div>
-                <p>Sin índice el tiempo crece con la tabla — <strong>O(n)</strong>. Con índice
-                   se mantiene casi plano — <strong>O(log n)</strong>.</p>
+                <div class="tarjeta">
+                    <h3>Con índice · O(log n)</h3>
+                    <p>Se mantiene plano: de 0.24 a 0.47 ms. Multiplicar los datos por
+                       <strong>400</strong> apenas duplica el tiempo.</p>
+                </div>
             </div>
 
-            <div class="vineta ancha">
+            <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="escalado">
                         <span class="cmd-txt">php escalado.php</span>
-                        <span class="estado espera">sin ejecutar</span>
+                        <span class="estado">sin ejecutar</span>
                         <button class="boton">Proyectar (~3 min)</button>
                     </div>
-                    <div class="salida"><span class="vacio">Genera hasta 880.000 filas y compara. Tarda unos 3 minutos…</span></div>
+                    <div class="salida"><span class="vacio">Genera hasta 880.000 filas y mide. Tarda unos 3 minutos — mejor lanzarlo y seguir explicando…</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 9 · INTEGRIDAD ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">08 · INTEGRIDAD</div>
-                <h1>Las reglas, dentro de la base</h1>
-                <p>De nada sirve ser rápido si los datos se corrompen. Estas restricciones
-                   impiden que entre lo que nunca debió entrar.</p>
-            </div>
+        <!-- ============ 10 · INTEGRIDAD ============ -->
+        <section class="pagina" data-paso="Integridad">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Las reglas, dentro de la base</h2><span class="raya"></span></div>
+            <p class="centrado">De nada sirve ser rápido si los datos se corrompen.
+               Cada regla del negocio se convirtió en una restricción verificable.</p>
 
-            <div class="dos-col">
-                <div class="vineta ancha">
+            <table class="t">
+                <tr><th>Regla del negocio</th><th>Restricción</th></tr>
+                <tr><td>Dos páginas no ocupan la misma posición en un capítulo</td>
+                    <td><code>UNIQUE (capitulo_id, orden)</code></td></tr>
+                <tr><td>El orden de página es positivo</td>
+                    <td><code>CHECK (orden &gt; 0)</code> + <code>INT UNSIGNED</code></td></tr>
+                <tr><td>Una página pertenece a un capítulo que existe</td>
+                    <td><code>FOREIGN KEY</code> + <code>ON DELETE CASCADE</code></td></tr>
+                <tr><td>Leer un capítulo en orden debe ser rápido</td>
+                    <td><code>INDEX (capitulo_id, orden)</code></td></tr>
+            </table>
+
+            <div class="dos crece">
+                <div class="tarjeta ancha">
                     <div class="consola">
                         <div class="cmd-fila" data-cmd="restricciones">
                             <span class="cmd-txt">SHOW INDEX FROM paginas</span>
-                            <span class="estado espera">sin ejecutar</span>
+                            <span class="estado">sin ejecutar</span>
                             <button class="boton">Índices</button>
                         </div>
                         <div class="salida"><span class="vacio">…</span></div>
                     </div>
                 </div>
-                <div class="vineta ancha">
+                <div class="tarjeta ancha">
                     <div class="consola">
                         <div class="cmd-fila" data-cmd="fk">
                             <span class="cmd-txt">SELECT … KEY_COLUMN_USAGE</span>
-                            <span class="estado espera">sin ejecutar</span>
+                            <span class="estado">sin ejecutar</span>
                             <button class="boton">Claves foráneas</button>
                         </div>
                         <div class="salida"><span class="vacio">…</span></div>
@@ -484,45 +680,61 @@ $BASE = '../..';   // raiz del proyecto, para reutilizar sus assets
             </div>
         </section>
 
-        <!-- ========== 10 · RECHAZO ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">09 · PREVENCIÓN</div>
-                <h1>Intentemos romperla</h1>
-                <div class="globo">
-                    Vamos a insertar una página con <strong>orden = −5</strong>.
-                    Si el error aparece, <strong>el sistema funciona</strong>.
-                </div>
-                <p class="apunte apunta">Aquí un error es la respuesta correcta: significa que la base
-                   protege la regla sin depender de que el PHP esté bien escrito.</p>
+        <!-- ============ 11 · ROMPERLA ============ -->
+        <section class="pagina" data-paso="Prevención">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Intentemos romperla</h2><span class="raya"></span></div>
+
+            <div class="cita">
+                Vamos a insertar una página con <strong>orden = −5</strong> directamente en
+                la base, saltándonos el PHP. <strong>Si aparece un error, el sistema
+                funciona.</strong>
             </div>
 
-            <div class="vineta ancha">
+            <p class="apunte centrado">Aquí el error es el resultado deseado: demuestra que la
+               regla se cumple aunque el código de la aplicación falle.</p>
+
+            <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="rechazo">
-                        <span class="cmd-txt">INSERT INTO paginas … VALUES (1, '…', -5, 0)</span>
-                        <span class="estado espera">sin ejecutar</span>
-                        <button class="boton">Intentar romper</button>
+                        <span class="cmd-txt">INSERT INTO paginas (…) VALUES (1, 'prueba/invalida.jpg', -5, 0)</span>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Intentar romper la base</button>
                     </div>
-                    <div class="salida"><span class="vacio">Debería aparecer un CHECK constraint failed…</span></div>
+                    <div class="salida"><span class="vacio">Debería aparecer un error de la base rechazando el dato…</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ========== 11 · BATERÍA ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">10 · VERIFICACIÓN COMPLETA</div>
-                <h1>Siete pruebas sobre la base real</h1>
-                <p>Orden correcto, UNIQUE, CHECK, ROLLBACK y borrado en cascada.
-                   Se ejecuta contra el catálogo real y <strong>limpia todo</strong> al terminar.</p>
+        <!-- ============ 12 · BATERÍA ============ -->
+        <section class="pagina" data-paso="Verificación">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Siete pruebas sobre la base real</h2><span class="raya"></span></div>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Qué comprueba</h3>
+                    <ul class="puntos">
+                        <li>Inserta 220 páginas con el método nuevo</li>
+                        <li>Verifica que quedaron en orden 1..220</li>
+                        <li><code>UNIQUE</code> rechaza una posición repetida</li>
+                        <li><code>CHECK</code> rechaza orden cero</li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>Y además</h3>
+                    <ul class="puntos">
+                        <li><code>ROLLBACK</code> deshace una carga a medias</li>
+                        <li><code>ON DELETE CASCADE</code> borra las páginas huérfanas</li>
+                        <li><strong>Limpia todo</strong> lo que creó al terminar</li>
+                    </ul>
+                    <p class="apunte">Corre contra el catálogo real: 5 cómics, 8 capítulos, 884 páginas.</p>
+                </div>
             </div>
 
-            <div class="vineta ancha">
+            <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="verificar">
                         <span class="cmd-txt">php verificar_controlador.php</span>
-                        <span class="estado espera">sin ejecutar</span>
+                        <span class="estado">sin ejecutar</span>
                         <button class="boton">Ejecutar las 7 pruebas</button>
                     </div>
                     <div class="salida"><span class="vacio">Resultado esperado: 7 correctas, 0 fallidas…</span></div>
@@ -530,43 +742,76 @@ $BASE = '../..';   // raiz del proyecto, para reutilizar sus assets
             </div>
         </section>
 
-        <!-- ========== 12 · CIERRE ========== -->
-        <section class="pagina">
-            <div class="vineta">
-                <div class="rotulo">11 · CONSULTAS DEL PROYECTO</div>
-                <h1>Preguntas reales, no SELECT *</h1>
-            </div>
+        <!-- ============ 13 · CONSULTAS + DEUDA ============ -->
+        <section class="pagina" data-paso="Consultas">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Consultas que responden preguntas</h2><span class="raya"></span></div>
 
-            <div class="dos-col">
-                <div class="vineta ancha">
+            <div class="dos crece">
+                <div class="tarjeta ancha">
                     <div class="consola">
                         <div class="cmd-fila" data-cmd="consulta2">
                             <span class="cmd-txt">Páginas por capítulo</span>
-                            <span class="estado espera">sin ejecutar</span>
+                            <span class="estado">sin ejecutar</span>
                             <button class="boton">Consultar</button>
                         </div>
-                        <div class="salida"><span class="vacio">…</span></div>
+                        <div class="salida"><span class="vacio">JOIN de comics, capitulos y paginas…</span></div>
                     </div>
                 </div>
-                <div class="vineta ancha">
+                <div class="tarjeta ancha">
                     <div class="consola">
-                        <div class="cmd-fila" data-cmd="consulta3">
-                            <span class="cmd-txt">Destacados aptos para menores</span>
-                            <span class="estado espera">sin ejecutar</span>
-                            <button class="boton">Consultar</button>
+                        <div class="cmd-fila" data-cmd="fk_huerfana">
+                            <span class="cmd-txt">SELECT titulo, editorial, editorial_id FROM comics</span>
+                            <span class="estado">sin ejecutar</span>
+                            <button class="boton">Una deuda encontrada</button>
                         </div>
-                        <div class="salida"><span class="vacio">…</span></div>
+                        <div class="salida"><span class="vacio">Al preparar esto apareció algo que conviene arreglar…</span></div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ 14 · CIERRE ============ -->
+        <section class="pagina" data-paso="Conclusiones">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Lo que aprendí</h2><span class="raya"></span></div>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Conclusiones</h3>
+                    <ul class="puntos">
+                        <li><strong>El costo estaba en los commits</strong>, no en los INSERT.
+                            Solo la transacción ya daba 12×.</li>
+                        <li><strong>Un índice puede ser correcto y no usarse todavía.</strong>
+                            A 884 filas el optimizador lo descarta con razón.</li>
+                        <li><strong>Optimizar dio correctitud de regalo:</strong> la misma
+                            transacción que acelera evita capítulos a medio subir.</li>
+                        <li><strong>Medir cambia la conversación:</strong> «va más rápido» no
+                            es un argumento; 206 → 2.9 ms sí lo es.</li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>Límites y siguiente paso</h3>
+                    <ul class="puntos">
+                        <li>Los volúmenes grandes son datos sintéticos; el catálogo real
+                            tiene 884 páginas.</li>
+                        <li>Solo se midió el tiempo de base de datos: descomprimir el CBR
+                            sigue siendo lo más lento en términos absolutos.</li>
+                        <li><code>editorial_id</code> está NULL: la relación va por nombre
+                            de texto y debería ser clave foránea.</li>
+                        <li>Mover la descompresión a segundo plano para que el usuario no
+                            espere.</li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="vineta">
-                <div class="pow" style="font-size:33px">FIN.</div>
-                <p style="margin-top:9px">
-                    <strong>Se midió, no se supuso.</strong> 71× en la carga, 161× en la lectura
-                    proyectada, y 7 de 7 pruebas de integridad.
-                </p>
+            <div class="cifras" style="margin-top:6px">
+                <div class="cifra fuerte"><div class="n">71×</div><div class="r">carga de capítulo</div></div>
+                <div class="cifra fuerte"><div class="n">161×</div><div class="r">lectura proyectada</div></div>
+                <div class="cifra fuerte"><div class="n">7/7</div><div class="r">pruebas de integridad</div></div>
             </div>
+
+            <p class="centrado" style="margin-top:14px;font-size:16px">
+                <strong>Se midió, no se supuso.</strong> Gracias.
+            </p>
         </section>
 
     </div>
@@ -574,7 +819,7 @@ $BASE = '../..';   // raiz del proyecto, para reutilizar sus assets
 
 <button class="flecha izq" id="ant">‹</button>
 <button class="flecha der" id="sig">›</button>
-<div class="ayuda"><kbd>←</kbd> <kbd>→</kbd> pasar página · <kbd>Enter</kbd> ejecutar · <kbd>F</kbd> pantalla completa</div>
+<div class="ayuda"><kbd>←</kbd> <kbd>→</kbd> pasar · <kbd>Enter</kbd> ejecutar · <kbd>F</kbd> pantalla completa</div>
 
 <script>
 const pista   = document.getElementById('pista');
@@ -582,32 +827,35 @@ const paginas = document.querySelectorAll('.pagina');
 const total   = paginas.length;
 let actual = 0;
 
-// ---------- barra de progreso ----------
-const barra = document.getElementById('progreso');
+const cajaPips = document.getElementById('pips');
 for (let i = 0; i < total; i++) {
-    const pip = document.createElement('div');
-    pip.className = 'pip';
-    pip.onclick = () => ir(i);
-    barra.appendChild(pip);
+    const d = document.createElement('div');
+    d.className = 'pip';
+    d.title = paginas[i].dataset.paso || ('Página ' + (i + 1));
+    d.onclick = () => ir(i);
+    cajaPips.appendChild(d);
 }
-const pips = barra.querySelectorAll('.pip');
+const pips = cajaPips.querySelectorAll('.pip');
 
 function ir(n) {
     actual = Math.max(0, Math.min(total - 1, n));
     pista.style.transform = `translateX(-${actual * 100}%)`;
-    document.getElementById('contador').textContent = `${actual + 1} / ${total}`;
+    document.getElementById('contador').textContent = `${actual + 1}/${total}`;
+    document.getElementById('paso').textContent = paginas[actual].dataset.paso || '';
     pips.forEach((p, i) => {
         p.classList.toggle('actual', i === actual);
         p.classList.toggle('visto', i < actual);
     });
     document.getElementById('ant').disabled = actual === 0;
     document.getElementById('sig').disabled = actual === total - 1;
+    paginas[actual].scrollTop = 0;
 }
 
 document.getElementById('ant').onclick = () => ir(actual - 1);
 document.getElementById('sig').onclick = () => ir(actual + 1);
 
 document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
     if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); ir(actual + 1); }
     if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { e.preventDefault(); ir(actual - 1); }
     if (e.key === 'Home') ir(0);
@@ -617,12 +865,11 @@ document.addEventListener('keydown', e => {
                                    : document.documentElement.requestFullscreen();
     }
     if (e.key === 'Enter') {
-        const btn = paginas[actual].querySelector('.cmd-fila button:not(:disabled)');
-        if (btn) btn.click();
+        const b = paginas[actual].querySelector('.cmd-fila button:not(:disabled)');
+        if (b) b.click();
     }
 });
 
-// ---------- coloreado de salida ----------
 function escapar(t) {
     return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -631,22 +878,22 @@ function colorear(texto, tipo) {
     return escapar(texto).split('\n').map(l => {
         if (tipo === 'diff') {
             if (/^\+\+\+|^---|^diff |^index /.test(l)) return `<span class="ln-hdr">${l}</span>`;
-            if (/^@@/.test(l))  return `<span class="ln-key">${l}</span>`;
-            if (/^\+/.test(l))  return `<span class="ln-add">${l}</span>`;
-            if (/^-/.test(l))   return `<span class="ln-del">${l}</span>`;
+            if (/^@@/.test(l)) return `<span class="ln-key">${l}</span>`;
+            if (/^\+/.test(l)) return `<span class="ln-add">${l}</span>`;
+            if (/^-/.test(l))  return `<span class="ln-del">${l}</span>`;
             return l;
         }
-        if (/\[OK\]|✅|correctas/i.test(l))                      return `<span class="ln-ok">${l}</span>`;
-        if (/\[FALLA\]|ERROR|failed|fallidas|denied/i.test(l))   return `<span class="ln-err">${l}</span>`;
-        if (/SEARCH|USING INDEX|ref\b/.test(l))                  return `<span class="ln-ok">${l}</span>`;
-        if (/\bALL\b|filesort|SCAN/.test(l))                     return `<span class="ln-num">${l}</span>`;
-        if (/^=+$|^-+$|^\s*[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ \·]+$/.test(l))   return `<span class="ln-hdr">${l}</span>`;
-        if (/\d+\.\d+\s*(ms|x)|\d+x\b/.test(l))                  return `<span class="ln-num">${l}</span>`;
+        if (/\[OK\]|✅|correctas|RECHAZÓ/i.test(l))            return `<span class="ln-ok">${l}</span>`;
+        if (/\[FALLA\]|errno|ERROR|failed|fallidas/i.test(l))  return `<span class="ln-err">${l}</span>`;
+        if (/SEARCH|USING INDEX|type=ref|: ref/.test(l))       return `<span class="ln-ok">${l}</span>`;
+        if (/\bALL\b|filesort|SCAN|NULL/.test(l))              return `<span class="ln-num">${l}</span>`;
+        if (/^\s*[-+|]{3,}|^\s*\*{5,}/.test(l))                return `<span class="ln-hdr">${l}</span>`;
+        if (/HALLAZGO|RECONCILIACIÓN/.test(l))                 return `<span class="ln-key">${l}</span>`;
+        if (/\d+\.\d+\s*(ms|x)|\d+x\b/.test(l))                return `<span class="ln-num">${l}</span>`;
         return l;
     }).join('\n');
 }
 
-// ---------- ejecutar comandos ----------
 document.querySelectorAll('.cmd-fila').forEach(fila => {
     const clave  = fila.dataset.cmd;
     const boton  = fila.querySelector('button');
@@ -657,11 +904,10 @@ document.querySelectorAll('.cmd-fila').forEach(fila => {
         const rotulo = boton.textContent;
         boton.disabled = true;
         boton.textContent = 'Ejecutando…';
-        estado.className = 'estado espera';
+        estado.className = 'estado';
         estado.textContent = 'corriendo';
-        salida.innerHTML = '<span class="vacio">Ejecutando en tu máquina…</span>';
+        salida.innerHTML = '<span class="vacio">Ejecutando en esta máquina…</span>';
 
-        const t0 = performance.now();
         try {
             const r = await fetch('ejecutar.php?cmd=' + encodeURIComponent(clave));
             const d = await r.json();
@@ -674,14 +920,11 @@ document.querySelectorAll('.cmd-fila').forEach(fila => {
             }
 
             salida.innerHTML = colorear(d.salida, d.tipo);
-
-            // Un INSERT rechazado es el resultado DESEADO en esa diapositiva
             const exito = d.esperaba_error ? (d.codigo !== 0) : (d.codigo === 0);
             estado.className = 'estado ' + (exito ? 'ok' : 'mal');
             estado.textContent = d.esperaba_error
                 ? (d.codigo !== 0 ? '✓ rechazado' : '✗ no rechazó')
                 : (d.codigo === 0 ? `✓ ${d.ms} ms` : `✗ código ${d.codigo}`);
-
         } catch (err) {
             estado.className = 'estado mal';
             estado.textContent = 'sin respuesta';
