@@ -43,26 +43,18 @@ $BASE = '../..';
         }
 
         /* ===== header identico al de la app ===== */
+        /* franja superior: conserva el rojo del header de la app, pero sin
+           un buscador falso — en una presentacion no busca nada. */
         .search_bar {
             background: var(--busqueda);
-            width: 100%; height: 66px;
+            width: 100%; height: 40px;
             display: flex; align-items: center; justify-content: center;
             position: relative; z-index: 200;
         }
-        .busqueda-ctn { display: flex; }
-        .barra_de_busqueda {
-            width: 620px; height: 40px;
-            border-top-left-radius: 13px; border-bottom-left-radius: 13px;
-            padding: 12px 15px;
-            background: #fff; border: 1px solid #d0d0d0; border-right: none;
-            color: var(--tinta); font-size: 14px; font-family: Montserrat;
-            outline: none;
-        }
-        .search_button {
-            width: 52px; height: 40px; background: #fff;
-            border-top-right-radius: 13px; border-bottom-right-radius: 13px;
-            border: 1px solid #d0d0d0; border-left: none;
-            color: var(--tinta); cursor: pointer;
+        .franja-titulo {
+            color: #fff; font-size: 12.5px; font-weight: 700;
+            letter-spacing: 2.4px; text-transform: uppercase;
+            opacity: .95;
         }
 
         .navbar {
@@ -94,7 +86,7 @@ $BASE = '../..';
         .pip.actual { background: #fff; width: 38px; }
 
         /* ===== lienzo ===== */
-        .lienzo { position: absolute; top: 138px; bottom: 0; left: 0; right: 0; overflow: hidden; }
+        .lienzo { position: absolute; top: 112px; bottom: 0; left: 0; right: 0; overflow: hidden; }
         .pista  { display: flex; height: 100%; transition: transform .42s cubic-bezier(.4,0,.2,1); }
 
         .pagina {
@@ -252,16 +244,10 @@ $BASE = '../..';
         }
 
         /* ===== navegacion ===== */
-        .flecha {
-            position: fixed; top: 55%; transform: translateY(-50%);
-            width: 42px; height: 66px; background: var(--navbar);
-            border: none; color: #fff; font-size: 24px; cursor: pointer; z-index: 300;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .flecha:hover:not(:disabled) { background: var(--acento); }
-        .flecha.izq { left: 0; border-radius: 0 8px 8px 0; }
-        .flecha.der { right: 0; border-radius: 8px 0 0 8px; }
-        .flecha:disabled { opacity: .2; cursor: default; }
+        /* sin flechas: se navega deslizando (rueda, arrastre o gesto tactil) */
+        .pista.arrastrando { transition: none; cursor: grabbing; }
+        .pagina { cursor: grab; user-select: none; }
+        .pagina.sin-cursor { cursor: default; }
 
         .ayuda {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -279,11 +265,9 @@ $BASE = '../..';
 
 <header>
     <div class="search_bar">
-        <div class="busqueda-ctn">
-            <input class="barra_de_busqueda" type="search"
-                   placeholder="Optativa II · E1 · Núcleo de datos del proyecto" readonly>
-            <button class="search_button"><i class="bi bi-search"></i></button>
-        </div>
+        <span class="franja-titulo">
+            Optativa&nbsp;II · E1 · Núcleo de datos del proyecto
+        </span>
     </div>
 
     <nav class="navbar">
@@ -817,9 +801,7 @@ try {
     </div>
 </div>
 
-<button class="flecha izq" id="ant">‹</button>
-<button class="flecha der" id="sig">›</button>
-<div class="ayuda"><kbd>←</kbd> <kbd>→</kbd> pasar · <kbd>Enter</kbd> ejecutar · <kbd>F</kbd> pantalla completa</div>
+<div class="ayuda">Desliza o usa <kbd>←</kbd> <kbd>→</kbd> · <kbd>Enter</kbd> ejecutar · <kbd>F</kbd> pantalla completa</div>
 
 <script>
 const pista   = document.getElementById('pista');
@@ -846,13 +828,96 @@ function ir(n) {
         p.classList.toggle('actual', i === actual);
         p.classList.toggle('visto', i < actual);
     });
-    document.getElementById('ant').disabled = actual === 0;
-    document.getElementById('sig').disabled = actual === total - 1;
     paginas[actual].scrollTop = 0;
 }
 
-document.getElementById('ant').onclick = () => ir(actual - 1);
-document.getElementById('sig').onclick = () => ir(actual + 1);
+// ---------- navegacion por deslizamiento ----------
+const lienzo = document.querySelector('.lienzo');
+
+/** ¿el puntero está sobre algo que tiene su propio scroll (una consola)? */
+function sobreZonaConScroll(destino) {
+    let n = destino;
+    while (n && n !== lienzo) {
+        if (n.classList && n.classList.contains('salida')) return true;
+        if (n.tagName === 'PRE') return true;
+        n = n.parentElement;
+    }
+    return false;
+}
+
+// --- rueda del ratón / trackpad ---
+let ruedaOcupada = false;
+lienzo.addEventListener('wheel', e => {
+    if (sobreZonaConScroll(e.target)) return;       // deja leer la salida
+    const pag = paginas[actual];
+    const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    // si la diapositiva tiene scroll vertical propio, respetarlo primero
+    if (!horizontal && pag.scrollHeight > pag.clientHeight) {
+        const arriba = pag.scrollTop <= 0;
+        const abajo  = pag.scrollTop + pag.clientHeight >= pag.scrollHeight - 1;
+        if (!(arriba && e.deltaY < 0) && !(abajo && e.deltaY > 0)) return;
+    }
+    const delta = horizontal ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) < 12 || ruedaOcupada) return;
+    e.preventDefault();
+    ruedaOcupada = true;
+    ir(actual + (delta > 0 ? 1 : -1));
+    setTimeout(() => { ruedaOcupada = false; }, 480);
+}, { passive: false });
+
+// --- arrastre con el ratón y deslizamiento táctil ---
+let x0 = null, y0 = null, arrastrando = false, ancho = 0;
+
+function inicio(x, y, destino) {
+    if (sobreZonaConScroll(destino)) return;
+    x0 = x; y0 = y; arrastrando = false;
+    ancho = lienzo.clientWidth;
+}
+
+function mover(x, y, e) {
+    if (x0 === null) return;
+    const dx = x - x0, dy = y - y0;
+    if (!arrastrando) {
+        if (Math.abs(dx) < 12 || Math.abs(dx) < Math.abs(dy)) return;  // es scroll vertical
+        arrastrando = true;
+        pista.classList.add('arrastrando');
+    }
+    if (e && e.cancelable) e.preventDefault();
+    // resistencia en los extremos
+    let corr = dx;
+    if ((actual === 0 && dx > 0) || (actual === total - 1 && dx < 0)) corr = dx * 0.32;
+    pista.style.transform = `translateX(calc(-${actual * 100}% + ${corr}px))`;
+}
+
+function fin(x) {
+    if (x0 === null) return;
+    const dx = x - x0;
+    pista.classList.remove('arrastrando');
+    if (arrastrando && Math.abs(dx) > ancho * 0.16) {
+        ir(actual + (dx < 0 ? 1 : -1));
+    } else {
+        ir(actual);   // vuelve a su sitio
+    }
+    x0 = null; y0 = null; arrastrando = false;
+}
+
+lienzo.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    inicio(e.clientX, e.clientY, e.target);
+});
+window.addEventListener('mousemove', e => mover(e.clientX, e.clientY, e));
+window.addEventListener('mouseup',   e => fin(e.clientX));
+
+lienzo.addEventListener('touchstart', e => {
+    inicio(e.touches[0].clientX, e.touches[0].clientY, e.target);
+}, { passive: true });
+lienzo.addEventListener('touchmove', e => {
+    mover(e.touches[0].clientX, e.touches[0].clientY, e);
+}, { passive: false });
+lienzo.addEventListener('touchend', e => fin(e.changedTouches[0].clientX));
+
+// que arrastrar no seleccione texto ni arrastre imagenes
+lienzo.addEventListener('dragstart', e => e.preventDefault());
 
 document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
