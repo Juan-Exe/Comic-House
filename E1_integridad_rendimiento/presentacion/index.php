@@ -293,7 +293,7 @@ $BASE = '../..';
             <div class="tarjeta gris" style="max-width:860px;margin:22px auto 0">
                 <p style="margin:0" class="centrado">
                     <strong>G11 · Comic House</strong> · Juan Diego Arrieta &nbsp;·&nbsp;
-                    Todo lo que verás a continuación <strong>se ejecuta en vivo</strong> sobre
+                    Los resultados que aparecen <strong>se ejecutan en vivo</strong> sobre
                     la base de datos real del proyecto.
                 </p>
             </div>
@@ -301,7 +301,7 @@ $BASE = '../..';
 
         <!-- ============ 2 · AGENDA ============ -->
         <section class="pagina" data-paso="Agenda">
-            <div class="titulo-seccion"><span class="raya"></span><h2>Qué vamos a ver</h2><span class="raya"></span></div>
+            <div class="titulo-seccion"><span class="raya"></span><h2>Contenido</h2><span class="raya"></span></div>
 
             <div class="dos">
                 <div class="tarjeta">
@@ -345,10 +345,10 @@ $BASE = '../..';
             <div class="titulo-seccion"><span class="raya"></span><h2>De dónde viene este trabajo</h2><span class="raya"></span></div>
 
             <div class="cita">
-                En clase trabajamos un dataset de <strong>pedidos</strong> con defectos
+                En clase se trabajó un dataset de <strong>pedidos</strong> con defectos
                 intencionales: 138 filas, de las que 131 sobrevivían a la limpieza.
-                La consigna de E1 fue <strong>transferir esa lógica al proyecto propio</strong>,
-                donde las decisiones ya no vienen dadas: hay que justificarlas.
+                E1 pide <strong>transferir esa lógica al proyecto propio</strong>.
+                El dataset de esta exposición sale de la base real de Comic House.
             </div>
 
             <div class="dos">
@@ -365,7 +365,7 @@ $BASE = '../..';
                     <h3>E1 · Comic House</h3>
                     <ul class="puntos">
                         <li>Dataset propio, exportado de la base real del proyecto</li>
-                        <li><strong>Yo defino las reglas</strong> y tengo que justificarlas</li>
+                        <li>Las reglas <strong>las define el proyecto</strong> y hay que justificarlas</li>
                         <li>Editoriales válidas del 1 al 5</li>
                         <li>13 filas → 4 válidas</li>
                     </ul>
@@ -373,9 +373,9 @@ $BASE = '../..';
             </div>
 
             <div class="tarjeta gris">
-                <h3>La pregunta que abrió todo</h3>
+                <h3>La pregunta de partida</h3>
                 <p style="margin:0">Si la aplicación hoy <strong>no muestra datos duplicados</strong>,
-                   ¿qué impide que mañana entren? Responderla es lo que lleva de «limpiar datos»
+                   ¿qué impide que mañana entren? Esa pregunta lleva de «limpiar datos»
                    a «diseñar un sistema que no los acepte».</p>
             </div>
         </section>
@@ -384,7 +384,7 @@ $BASE = '../..';
         <section class="pagina" data-paso="Dataset sucio">
             <div class="titulo-seccion"><span class="raya"></span><h2>Ensuciar el dataset a propósito</h2><span class="raya"></span></div>
 
-            <p class="centrado">Antes de limpiar hacía falta algo que limpiar. Se tomó el export
+            <p class="centrado">Se partió del export
                real de <code>comics.csv</code> — <strong>5 obras</strong> — y se le inyectaron
                <strong>13 defectos</strong> de forma determinista: sin azar, el resultado es
                idéntico en cada ejecución.</p>
@@ -419,7 +419,7 @@ $BASE = '../..';
                         <span class="estado">sin ejecutar</span>
                         <button class="boton">Ver la bitácora de defectos</button>
                     </div>
-                    <div class="salida"><span class="vacio">Cada defecto quedó registrado para poder verificar después si la limpieza lo atrapó…</span></div>
+                    <div class="salida"><span class="vacio">Cada defecto queda registrado, para verificar después si la limpieza lo detecta…</span></div>
                 </div>
             </div>
         </section>
@@ -430,7 +430,7 @@ $BASE = '../..';
 
             <div class="cita">
                 Regla de trabajo: <strong>no corregir datos silenciosamente.</strong>
-                Primero identificar el problema, después decidir qué regla del sistema
+                Primero se identifica el problema y después se decide qué regla del sistema
                 debería impedirlo. En esta fase solo se cuenta.
             </div>
 
@@ -441,14 +441,14 @@ $BASE = '../..';
                         <span class="estado">sin ejecutar</span>
                         <button class="boton">Ver el dataset sucio</button>
                     </div>
-                    <div class="salida"><span class="vacio">Cada fila con la regla que viola. Las marcadas ✓ son las que sobrevivirán…</span></div>
+                    <div class="salida"><span class="vacio">Cada fila con la regla que viola. Las marcadas ✓ son las que sobreviven…</span></div>
                 </div>
             </div>
 
             <p class="apunte centrado" style="margin:0">
-                Un detalle: <em>Absolute Batman</em> aparece con dos problemas a la vez.
-                La fila con PK duplicada arrastra también una violación de la clave natural
-                — <strong>un solo defecto se propaga</strong>.
+                <em>Absolute Batman</em> aparece con dos problemas a la vez:
+                la fila con PK duplicada arrastra también una violación de la clave natural.
+                <strong>Un solo defecto se propaga.</strong>
             </p>
         </section>
 
@@ -473,8 +473,8 @@ $BASE = '../..';
               ↓
 <span class="com">      se aparta, no se corrige</span></pre>
                     <p class="apunte" style="margin:0">Parece un typo evidente, pero corregirlo
-                       sería <strong>suponer la intención</strong> del dato. Si el sistema empieza
-                       a adivinar, deja de ser auditable.</p>
+                       sería <strong>suponer la intención</strong> del dato. Un sistema que
+                       adivina deja de ser auditable.</p>
                 </div>
             </div>
 
@@ -485,7 +485,7 @@ $BASE = '../..';
                         <span class="estado">sin ejecutar</span>
                         <button class="boton">Ver la reconciliación</button>
                     </div>
-                    <div class="salida"><span class="vacio">13 filas iniciales − 2 duplicadas − 7 inválidas = 4 válidas…</span></div>
+                    <div class="salida"><span class="vacio">Reconciliación: 13 filas − 2 duplicadas − 7 inválidas = 4 válidas…</span></div>
                 </div>
             </div>
         </section>
@@ -540,8 +540,8 @@ $BASE = '../..';
 
             <div class="cita">
                 El controlador insertaba <strong>dentro del bucle</strong> que recorre las
-                imágenes extraídas del CBR. Con 220 páginas: <strong>220 viajes</strong> a
-                MariaDB. Y como mysqli trabaja en <em>autocommit</em>, también
+                imágenes extraídas del CBR. Con 220 páginas eso son <strong>220 viajes</strong>
+                a MariaDB y, como mysqli trabaja en <em>autocommit</em>, también
                 <strong>220 commits</strong> sincronizados a disco.
             </div>
 
@@ -566,7 +566,7 @@ foreach ($imagenes as $idx => $img) {
                             <span class="estado">sin ejecutar</span>
                             <button class="boton">Ver original</button>
                         </div>
-                        <div class="salida"><span class="vacio">El archivo original está guardado, no reconstruido…</span></div>
+                        <div class="salida"><span class="vacio">El archivo original se conserva en el repositorio, no está reconstruido…</span></div>
                     </div>
                 </div>
             </div>
@@ -613,7 +613,7 @@ try {
                         <span class="estado">sin ejecutar</span>
                         <button class="boton">Ver el diff real</button>
                     </div>
-                    <div class="salida"><span class="vacio">Rojo = lo que se quitó · Verde = lo que entró…</span></div>
+                    <div class="salida"><span class="vacio">En rojo lo que se quitó, en verde lo que entró…</span></div>
                 </div>
             </div>
         </section>
@@ -633,9 +633,9 @@ try {
             </table>
 
             <div class="cita">
-                Fíjate en el escenario intermedio: <strong>solo envolver los 220 INSERT en una
-                transacción ya da 12×</strong>, sin cambiar la forma de la consulta. El costo
-                dominante no era el INSERT — era <strong>el commit por fila</strong>.
+                El escenario intermedio es el revelador: <strong>solo envolver los 220 INSERT en
+                una transacción ya da 12×</strong>, sin cambiar la forma de la consulta.
+                El costo dominante no era el INSERT sino <strong>el commit por fila</strong>.
             </div>
 
             <div class="tarjeta ancha">
@@ -645,7 +645,7 @@ try {
                         <span class="estado">sin ejecutar</span>
                         <button class="boton">Medir ahora (~25 s)</button>
                     </div>
-                    <div class="salida"><span class="vacio">Inserta 220 páginas tres veces con cada estrategia. Los números variarán un poco según la carga de la máquina…</span></div>
+                    <div class="salida"><span class="vacio">Inserta 220 páginas tres veces con cada estrategia. Los números varían un poco según la carga de la máquina…</span></div>
                 </div>
             </div>
         </section>
@@ -659,14 +659,14 @@ try {
 
             <div class="dos crece">
                 <div class="tarjeta ancha">
-                    <h3>Plan que elige por su cuenta</h3>
+                    <h3>Plan que elige el motor</h3>
                     <div class="consola">
                         <div class="cmd-fila" data-cmd="explain_antes">
                             <span class="cmd-txt">EXPLAIN SELECT … ORDER BY orden</span>
                             <span class="estado">sin ejecutar</span>
                             <button class="boton">Ejecutar</button>
                         </div>
-                        <div class="salida"><span class="vacio">Mira los campos type, key y Extra…</span></div>
+                        <div class="salida"><span class="vacio">Los campos a observar son type, key y Extra…</span></div>
                     </div>
                 </div>
 
@@ -678,7 +678,7 @@ try {
                             <span class="estado">sin ejecutar</span>
                             <button class="boton">Ejecutar</button>
                         </div>
-                        <div class="salida"><span class="vacio">El mismo dato, otra estrategia…</span></div>
+                        <div class="salida"><span class="vacio">Los mismos datos, otra estrategia de acceso…</span></div>
                     </div>
                 </div>
             </div>
@@ -705,7 +705,7 @@ try {
                             <span class="estado">sin ejecutar</span>
                             <button class="boton">Comprobar</button>
                         </div>
-                        <div class="salida"><span class="vacio">¿Cuánto pesa un capítulo dentro de la tabla?</span></div>
+                        <div class="salida"><span class="vacio">Cuánto pesa un capítulo dentro de la tabla…</span></div>
                     </div>
                 </div>
 
@@ -719,8 +719,8 @@ try {
                         <tr><td>4.000</td><td class="num">880.000</td><td>ref</td></tr>
                     </table>
                     <p class="apunte" style="margin-top:10px">El punto de quiebre está entre 4 y 10
-                       capítulos. <strong>Comic House tiene 8</strong>: con el próximo que se
-                       suba, el índice empieza a usarse solo.</p>
+                       capítulos. <strong>Comic House tiene 8</strong>: con el próximo capítulo
+                       que se suba, el índice empieza a usarse solo.</p>
                 </div>
             </div>
         </section>
@@ -758,7 +758,7 @@ try {
                         <span class="estado">sin ejecutar</span>
                         <button class="boton">Proyectar (~3 min)</button>
                     </div>
-                    <div class="salida"><span class="vacio">Genera hasta 880.000 filas y mide. Tarda unos 3 minutos — mejor lanzarlo y seguir explicando…</span></div>
+                    <div class="salida"><span class="vacio">Genera hasta 880.000 filas y mide. Tarda unos 3 minutos…</span></div>
                 </div>
             </div>
         </section>
@@ -807,25 +807,24 @@ try {
 
         <!-- ============ 11 · ROMPERLA ============ -->
         <section class="pagina" data-paso="Prevención">
-            <div class="titulo-seccion"><span class="raya"></span><h2>Intentemos romperla</h2><span class="raya"></span></div>
+            <div class="titulo-seccion"><span class="raya"></span><h2>Prueba de rechazo</h2><span class="raya"></span></div>
 
             <div class="cita">
-                Vamos a insertar una página con <strong>orden = −5</strong> directamente en
-                la base, saltándonos el PHP. <strong>Si aparece un error, el sistema
-                funciona.</strong>
+                Se inserta una página con <strong>orden = −5</strong> directamente en la base,
+                sin pasar por el PHP. <strong>Si aparece un error, el sistema funciona.</strong>
             </div>
 
-            <p class="apunte centrado">Aquí el error es el resultado deseado: demuestra que la
-               regla se cumple aunque el código de la aplicación falle.</p>
+            <p class="apunte centrado">El error es el resultado deseado: demuestra que la regla
+               se cumple aunque el código de la aplicación falle.</p>
 
             <div class="tarjeta ancha">
                 <div class="consola">
                     <div class="cmd-fila" data-cmd="rechazo">
                         <span class="cmd-txt">INSERT INTO paginas (…) VALUES (1, 'prueba/invalida.jpg', -5, 0)</span>
                         <span class="estado">sin ejecutar</span>
-                        <button class="boton">Intentar romper la base</button>
+                        <button class="boton">Ejecutar el INSERT inválido</button>
                     </div>
-                    <div class="salida"><span class="vacio">Debería aparecer un error de la base rechazando el dato…</span></div>
+                    <div class="salida"><span class="vacio">Debe aparecer un error de la base rechazando el dato…</span></div>
                 </div>
             </div>
         </section>
@@ -889,7 +888,7 @@ try {
                             <span class="estado">sin ejecutar</span>
                             <button class="boton">Una deuda encontrada</button>
                         </div>
-                        <div class="salida"><span class="vacio">Al preparar esto apareció algo que conviene arreglar…</span></div>
+                        <div class="salida"><span class="vacio">Al preparar el entregable apareció algo que conviene corregir…</span></div>
                     </div>
                 </div>
             </div>
@@ -909,8 +908,8 @@ try {
                             A 884 filas el optimizador lo descarta con razón.</li>
                         <li><strong>Optimizar dio correctitud de regalo:</strong> la misma
                             transacción que acelera evita capítulos a medio subir.</li>
-                        <li><strong>Medir cambia la conversación:</strong> «va más rápido» no
-                            es un argumento; 206 → 2.9 ms sí lo es.</li>
+                        <li><strong>Medir cambia la conversación:</strong> «va más rápido» no es un
+                            argumento; 206 → 2.9 ms sí lo es.</li>
                     </ul>
                 </div>
                 <div class="tarjeta">
