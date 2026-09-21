@@ -348,32 +348,125 @@ $ACCIONES = [
         },
     ],
 
+    'tabla_sucia' => [
+        'titulo' => 'El dataset sucio, fila por fila',
+        'muestra' => 'dataset_sucio/comics_sucio.csv',
+        'run' => function () use ($E1) {
+            $f = $E1 . '/dataset_sucio/comics_sucio.csv';
+            if (!is_file($f)) return ['texto' => 'No se encontró el CSV', 'error' => true];
+
+            $fh = fopen($f, 'r');
+            $cab = fgetcsv($fh);
+            $i = array_flip($cab);
+            $out = [];
+            $out[] = sprintf('  %-4s %-26s %-7s %-6s %-22s %-4s %s',
+                'id', 'titulo', 'clasif', 'anio', 'estado_publicacion', 'ed', 'dest');
+            $out[] = '  ' . str_repeat('-', 84);
+
+            $CL = ['ATP', '+13', '+16', '+18'];
+            $ES = ['En publicacion', 'Publicacion Terminada'];
+            $vistos = [];
+            $titulos = [];
+
+            while (($r = fgetcsv($fh)) !== false) {
+                if (count($r) === 1 && $r[0] === null) continue;
+                $id  = $r[$i['id']];
+                $tit = trim((string)$r[$i['titulo']]);
+                $mal = [];
+                if (isset($vistos[$id])) $mal[] = 'PK repetida';
+                $vistos[$id] = true;
+                $k = mb_strtolower($tit);
+                if ($tit !== '' && isset($titulos[$k])) $mal[] = 'título repetido';
+                if ($tit !== '') $titulos[$k] = true;
+                if ((int)$id <= 0) $mal[] = 'id negativo';
+                if ($tit === '') $mal[] = 'sin título';
+                $anio = (int)$r[$i['anio']];
+                if ($anio < 1900 || $anio > 2026) $mal[] = 'año futuro';
+                if (!in_array($r[$i['clasificacion']], $CL, true)) $mal[] = 'clasificación';
+                if (!in_array($r[$i['estado_publicacion']], $ES, true)) $mal[] = 'estado';
+                if (!in_array($r[$i['editorial_id']], ['1','2','3','4','5'], true)) $mal[] = 'FK';
+                if (!in_array($r[$i['destacado']], ['0','1'], true)) $mal[] = 'booleano';
+
+                $out[] = sprintf('  %-4s %-26s %-7s %-6s %-22s %-4s %-4s %s',
+                    $id, ($tit === '' ? '(VACÍO)' : mb_substr($tit, 0, 26)),
+                    $r[$i['clasificacion']], $r[$i['anio']],
+                    mb_substr($r[$i['estado_publicacion']], 0, 22),
+                    $r[$i['editorial_id']], $r[$i['destacado']],
+                    $mal ? '  ✗ ' . implode(', ', $mal) : '  ✓ correcta');
+            }
+            fclose($fh);
+            $out[] = '';
+            $out[] = '  Las filas marcadas ✓ son las que sobreviven a la limpieza.';
+            return ['texto' => implode("\n", $out), 'error' => false];
+        },
+    ],
+
     'limpio' => [
         'titulo' => 'Resultado de la limpieza',
         'muestra' => 'dataset_limpio/*.csv',
         'run' => function () use ($E1) {
-            $v = $E1 . '/dataset_limpio/comics_limpio.csv';
-            $r = $E1 . '/dataset_limpio/comics_rechazados.csv';
-            if (!is_file($v)) return ['texto' => 'Falta el dataset limpio', 'error' => true];
-            $nv = count(file($v)) - 1;
-            $nr = count(file($r)) - 1;
+            // OJO: no se cuenta con count(file(...)): la columna descripcion
+            // contiene saltos de linea dentro de comillas, asi que una fila
+            // CSV puede ocupar varias lineas del archivo. Hay que parsear.
+            $leer = function (string $ruta): array {
+                $filas = [];
+                $fh = fopen($ruta, 'r');
+                $cab = fgetcsv($fh);
+                while (($f = fgetcsv($fh)) !== false) {
+                    if (count($f) === 1 && $f[0] === null) continue;
+                    $filas[] = array_combine($cab, array_pad(
+                        array_slice($f, 0, count($cab)), count($cab), ''));
+                }
+                fclose($fh);
+                return $filas;
+            };
+
+            $vf = $E1 . '/dataset_limpio/comics_limpio.csv';
+            $rf = $E1 . '/dataset_limpio/comics_rechazados.csv';
+            $sf = $E1 . '/dataset_sucio/comics_sucio.csv';
+            if (!is_file($vf)) return ['texto' => 'Falta el dataset limpio', 'error' => true];
+
+            $validas    = $leer($vf);
+            $rechazadas = $leer($rf);
+            $sucias     = is_file($sf) ? $leer($sf) : [];
+
+            $ini = count($sucias);
+            $nv  = count($validas);
+            $nr  = count($rechazadas);
+            $dup = $ini - $nv - $nr;      // lo que se aparto por unicidad
+
+            $motivos = [
+                '2'  => 'año 2099 · fecha futura',
+                '9'  => 'estado «En publicacionn» · typo',
+                '10' => 'clasificación «18+» · fuera de dominio',
+                '11' => 'editorial 999 · no existe',
+                '6'  => 'título vacío · NOT NULL',
+                '7'  => 'destacado = 5 · no es booleano',
+                '-4' => 'id negativo · imposible en INT UNSIGNED',
+            ];
+
             $txt  = "  RECONCILIACIÓN\n\n";
-            $txt .= "    13 filas iniciales\n";
-            $txt .= "     - 1 PK duplicada\n";
-            $txt .= "     - 1 título duplicado\n";
-            $txt .= "     - 7 inválidos\n";
-            $txt .= "     = $nv válidas\n\n";
-            $txt .= "  Rechazadas ($nr), con su motivo:\n\n";
-            $fh = fopen($r, 'r');
-            $cab = fgetcsv($fh);
-            $iId = array_search('id', $cab);
-            $iTi = array_search('titulo', $cab);
-            while (($f = fgetcsv($fh)) !== false) {
-                $t = trim((string)($f[$iTi] ?? ''));
-                $txt .= sprintf("    id=%-4s %s\n", $f[$iId] ?? '?',
-                        $t === '' ? '(sin título)' : $t);
+            $txt .= sprintf("    %2d filas en el dataset sucio\n", $ini);
+            $txt .= sprintf("   - %2d apartadas por duplicado (PK y título)\n", $dup);
+            $txt .= sprintf("   - %2d rechazadas por reglas de dominio\n", $nr);
+            $txt .= "     " . str_repeat('-', 34) . "\n";
+            $txt .= sprintf("   = %2d obras válidas\n\n", $nv);
+
+            $txt .= "  VÁLIDAS ($nv)\n";
+            foreach ($validas as $f) {
+                $txt .= sprintf("    id=%-4s %s\n", $f['id'], $f['titulo']);
             }
-            fclose($fh);
+
+            $txt .= "\n  RECHAZADAS ($nr) · con su motivo\n";
+            foreach ($rechazadas as $f) {
+                $t = trim((string)$f['titulo']);
+                $txt .= sprintf("    id=%-4s %-22s %s\n", $f['id'],
+                        $t === '' ? '(sin título)' : $t,
+                        $motivos[$f['id']] ?? '');
+            }
+
+            $txt .= "\n  Ninguna se borró: quedan en comics_rechazados.csv\n";
+            $txt .= "  para poder auditar qué se descartó y por qué.";
             return ['texto' => $txt, 'error' => false];
         },
     ],

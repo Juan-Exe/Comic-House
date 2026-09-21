@@ -305,11 +305,12 @@ $BASE = '../..';
 
             <div class="dos">
                 <div class="tarjeta">
-                    <h3>1 · El contexto</h3>
+                    <h3>1 · El punto de partida · <span style="color:var(--acento)">E1</span></h3>
                     <ul class="puntos">
+                        <li>Del laboratorio de pedidos a los datos propios</li>
+                        <li>Ensuciar un dataset limpio <em>a propósito</em>: 13 defectos</li>
+                        <li>Normalizar vs. rechazar, y la reconciliación 13 → 4</li>
                         <li>Qué guarda Comic House y cómo se relacionan sus tablas</li>
-                        <li>El volumen real hoy: 5 obras, 8 capítulos, 884 páginas</li>
-                        <li>La operación más costosa: subir un CBR</li>
                     </ul>
                 </div>
                 <div class="tarjeta">
@@ -339,7 +340,157 @@ $BASE = '../..';
             </div>
         </section>
 
-        <!-- ============ 3 · EL PROYECTO ============ -->
+        <!-- ============ 3 · DE DÓNDE VIENE E1 ============ -->
+        <section class="pagina" data-paso="Origen">
+            <div class="titulo-seccion"><span class="raya"></span><h2>De dónde viene este trabajo</h2><span class="raya"></span></div>
+
+            <div class="cita">
+                En clase trabajamos un dataset de <strong>pedidos</strong> con defectos
+                intencionales: 138 filas, de las que 131 sobrevivían a la limpieza.
+                La consigna de E1 fue <strong>transferir esa lógica al proyecto propio</strong>,
+                donde las decisiones ya no vienen dadas: hay que justificarlas.
+            </div>
+
+            <div class="dos">
+                <div class="tarjeta gris">
+                    <h3>El laboratorio · pedidos</h3>
+                    <ul class="puntos">
+                        <li>Dataset entregado, ya preparado por el profesor</li>
+                        <li>Reglas dadas: estados y métodos de pago fijos</li>
+                        <li>Clientes válidos del 1 al 40</li>
+                        <li>138 filas → 131 válidas</li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>E1 · Comic House</h3>
+                    <ul class="puntos">
+                        <li>Dataset propio, exportado de la base real del proyecto</li>
+                        <li><strong>Yo defino las reglas</strong> y tengo que justificarlas</li>
+                        <li>Editoriales válidas del 1 al 5</li>
+                        <li>13 filas → 4 válidas</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tarjeta gris">
+                <h3>La pregunta que abrió todo</h3>
+                <p style="margin:0">Si la aplicación hoy <strong>no muestra datos duplicados</strong>,
+                   ¿qué impide que mañana entren? Responderla es lo que lleva de «limpiar datos»
+                   a «diseñar un sistema que no los acepte».</p>
+            </div>
+        </section>
+
+        <!-- ============ 4 · ENSUCIAR ============ -->
+        <section class="pagina" data-paso="Dataset sucio">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Ensuciar el dataset a propósito</h2><span class="raya"></span></div>
+
+            <p class="centrado">Antes de limpiar hacía falta algo que limpiar. Se tomó el export
+               real de <code>comics.csv</code> — <strong>5 obras</strong> — y se le inyectaron
+               <strong>13 defectos</strong> de forma determinista: sin azar, el resultado es
+               idéntico en cada ejecución.</p>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Formato · se normalizan</h3>
+                    <p class="apunte" style="margin-bottom:8px">La corrección es inequívoca y no inventa información.</p>
+                    <ul class="puntos">
+                        <li><code>' MANGA '</code> · mayúsculas y espacios</li>
+                        <li><code>'comic'</code> · minúsculas</li>
+                        <li><code>'COMIC '</code> · espacio sobrante</li>
+                        <li><code>'  Superheroes  '</code> · espacios</li>
+                    </ul>
+                </div>
+                <div class="tarjeta">
+                    <h3>Dominio y unicidad · se rechazan</h3>
+                    <p class="apunte" style="margin-bottom:8px">El valor correcto no puede deducirse con evidencia.</p>
+                    <ul class="puntos">
+                        <li><code>2099</code> año futuro · <code>18+</code> fuera de dominio</li>
+                        <li><code>En publicacionn</code> typo · <code>999</code> FK inexistente</li>
+                        <li>título vacío · <code>destacado = 5</code> no booleano</li>
+                        <li>PK duplicada · título duplicado · <code>id = -4</code></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tarjeta ancha">
+                <div class="consola">
+                    <div class="cmd-fila" data-cmd="sucio">
+                        <span class="cmd-txt">cat dataset_sucio/defectos_inyectados.csv</span>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Ver la bitácora de defectos</button>
+                    </div>
+                    <div class="salida"><span class="vacio">Cada defecto quedó registrado para poder verificar después si la limpieza lo atrapó…</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ 5 · DIAGNÓSTICO ============ -->
+        <section class="pagina" data-paso="Diagnóstico">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Diagnóstico: observar sin corregir</h2><span class="raya"></span></div>
+
+            <div class="cita">
+                Regla de trabajo: <strong>no corregir datos silenciosamente.</strong>
+                Primero identificar el problema, después decidir qué regla del sistema
+                debería impedirlo. En esta fase solo se cuenta.
+            </div>
+
+            <div class="tarjeta ancha">
+                <div class="consola">
+                    <div class="cmd-fila" data-cmd="tabla_sucia">
+                        <span class="cmd-txt">dataset_sucio/comics_sucio.csv · 13 filas</span>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Ver el dataset sucio</button>
+                    </div>
+                    <div class="salida"><span class="vacio">Cada fila con la regla que viola. Las marcadas ✓ son las que sobrevivirán…</span></div>
+                </div>
+            </div>
+
+            <p class="apunte centrado" style="margin:0">
+                Un detalle: <em>Absolute Batman</em> aparece con dos problemas a la vez.
+                La fila con PK duplicada arrastra también una violación de la clave natural
+                — <strong>un solo defecto se propaga</strong>.
+            </p>
+        </section>
+
+        <!-- ============ 6 · LIMPIEZA ============ -->
+        <section class="pagina" data-paso="Limpieza">
+            <div class="titulo-seccion"><span class="raya"></span><h2>Normalizar no es lo mismo que rechazar</h2><span class="raya"></span></div>
+
+            <div class="dos">
+                <div class="tarjeta">
+                    <h3>Normalizar</h3>
+                    <p style="margin-bottom:6px">Cuando la corrección es <strong>inequívoca</strong>.</p>
+                    <pre class="codigo"><span class="mal">' MANGA '  'comic'  'COMIC '</span>
+              ↓
+<span class="bien">        'Manga'  ·  'Comic'</span></pre>
+                    <p class="apunte" style="margin:0">Cinco formas textuales que en realidad
+                       eran dos valores. Quitar espacios y unificar mayúsculas es reversible.</p>
+                </div>
+                <div class="tarjeta">
+                    <h3>Rechazar</h3>
+                    <p style="margin-bottom:6px">Cuando el valor correcto <strong>no se puede deducir</strong>.</p>
+                    <pre class="codigo"><span class="mal">'En publicacionn'</span>
+              ↓
+<span class="com">      se aparta, no se corrige</span></pre>
+                    <p class="apunte" style="margin:0">Parece un typo evidente, pero corregirlo
+                       sería <strong>suponer la intención</strong> del dato. Si el sistema empieza
+                       a adivinar, deja de ser auditable.</p>
+                </div>
+            </div>
+
+            <div class="tarjeta ancha">
+                <div class="consola">
+                    <div class="cmd-fila" data-cmd="limpio">
+                        <span class="cmd-txt">dataset_limpio/comics_limpio.csv + comics_rechazados.csv</span>
+                        <span class="estado">sin ejecutar</span>
+                        <button class="boton">Ver la reconciliación</button>
+                    </div>
+                    <div class="salida"><span class="vacio">13 filas iniciales − 2 duplicadas − 7 inválidas = 4 válidas…</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ 7 · EL PROYECTO ============ -->
         <section class="pagina" data-paso="Contexto">
             <div class="titulo-seccion"><span class="raya"></span><h2>El modelo de datos</h2><span class="raya"></span></div>
 
