@@ -21,7 +21,7 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="assets/tailwind.js"></script>
     <link rel="icon" href="ico.ico">
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

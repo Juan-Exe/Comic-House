@@ -50,7 +50,7 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../assets/tailwind.js"></script>
     <link rel="stylesheet" href="slider.css">
     <link rel="stylesheet" href="comics.css">
 
