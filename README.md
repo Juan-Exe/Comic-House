@@ -144,6 +144,39 @@ docker compose down -v
 
 ---
 
+## Entregables académicos
+
+El repositorio sostiene también los entregables de Optativa II. Con los
+contenedores levantados (`docker compose up -d`):
+
+```bash
+# Momento 2 · las cuatro operaciones del prototipo (11 comprobaciones)
+docker exec comic_house_web php \
+  /var/www/html/E1_integridad_rendimiento/benchmark/momento2_operaciones.php
+
+# Momento 2 · punto 9.8: orden inverso, con y sin índice
+docker exec comic_house_web php \
+  /var/www/html/E1_integridad_rendimiento/benchmark/momento2_orden_inverso.php
+
+# Momento 1 · inserción por lotes: 206 ms -> 2.9 ms
+docker exec comic_house_web php \
+  /var/www/html/E1_integridad_rendimiento/benchmark/benchmark.php 220 5
+```
+
+Las restricciones de integridad vienen aplicadas en
+`database/init/01_schema.sql`, así que una base creada desde cero ya las
+incluye. Para aplicarlas sobre una base existente:
+
+```bash
+docker exec -i comic_house_db mariadb -ucomic_user -pcomic_pass_123 \
+  comic_house < E1_integridad_rendimiento/benchmark/momento2_integridad.sql
+```
+
+Informes: `Informe_Momento2_Comic_House.pdf` (documento completo, incluye la
+sección 09) y `E1_integridad_rendimiento/Informe_Rendimiento_Comic_House.pdf`.
+
+---
+
 ## Estructura del proyecto
 
 ```

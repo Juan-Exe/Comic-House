@@ -9,6 +9,18 @@ $usuario = $_SESSION['usuario'];
 $total_comics  = $conexion->query("SELECT COUNT(*) as n FROM comics")->fetch_object()->n;
 $total_caps    = $conexion->query("SELECT COUNT(*) as n FROM capitulos")->fetch_object()->n;
 $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_object()->n;
+$total_paginas = $conexion->query("SELECT COUNT(*) as n FROM paginas")->fetch_object()->n;
+
+// Lo último que se subió: da un punto de partida al abrir el panel,
+// en vez de solo contadores que no llevan a ninguna parte.
+$recientes = $conexion->query(
+    "SELECT c.titulo, c.portada, k.numero, k.id,
+            (SELECT COUNT(*) FROM paginas p WHERE p.capitulo_id = k.id) AS paginas
+       FROM capitulos k
+       JOIN comics c ON c.id = k.comic_id
+      ORDER BY k.id DESC
+      LIMIT 4"
+);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -19,238 +31,162 @@ $total_usuarios= $conexion->query("SELECT COUNT(*) as n FROM usuarios")->fetch_o
     <link rel="icon" href="ico.ico">
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="admin/admin.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: Montserrat, sans-serif;
-            background: #1a1a1a;
-            color: #f0f0f0;
-            min-height: 100vh;
+        /* Propio del panel de inicio. El resto viene de admin/admin.css. */
+
+        .saludo { margin-bottom: 34px; }
+        .saludo h1 { font-size: var(--t-grande); font-weight: 800; letter-spacing: -.6px; }
+        .saludo h1 b { color: var(--rojo); font-weight: 800; }
+        .saludo p { color: var(--texto-medio); margin-top: 2px; }
+
+        /* Cifras del catálogo: una fila sobria, sin tarjeta cada una.
+           Son un dato de contexto, no el contenido de la pantalla. */
+        .cifras {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
+            gap: 46px;
+            padding-bottom: 26px;
+            border-bottom: 1px solid var(--linea);
+            margin-bottom: 38px;
         }
-
-        /* TOPBAR */
-        .topbar {
-            background: #ef4444;
-            height: 72px;
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            padding: 0 28px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .topbar-brand {
-            display: flex; align-items: center; gap: 10px;
-            text-decoration: none; justify-self: start;
-        }
-        .topbar-brand img { height: 48px; }
-        .topbar-title {
-            justify-self: center;
-            color: #fff; font-size: 14px; font-weight: 700;
-            letter-spacing: 2px; text-transform: uppercase; opacity: .9;
-        }
-        .topbar-actions {
-            justify-self: end; display: flex; gap: 10px;
-        }
-        .btn-top {
-            padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
-            font-family: Montserrat, sans-serif; text-decoration: none;
-            display: flex; align-items: center; gap: 6px; transition: opacity .2s;
-        }
-        .btn-top:hover { opacity: .8; }
-        .btn-top-ghost {
-            background: rgba(255,255,255,.15); color: #fff;
-            border: 1px solid rgba(255,255,255,.35);
-        }
-
-        /* MAIN */
-        .dash-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 32px 24px;
-            gap: 24px;
-        }
-
-        .welcome {
-            text-align: center;
-        }
-        .welcome h1 {
-            font-size: 28px;
-            font-weight: 800;
-            color: #fff;
-            margin-bottom: 6px;
-        }
-        .welcome h1 span { color: #ef4444; }
-        .welcome p { color: #888; font-size: 14px; }
-
-        /* STATS */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 140px);
-            gap: 12px;
-            justify-content: center;
-        }
-        .stat-card {
-            background: #242426;
-            border: 1px solid #2a2a2a;
-            border-radius: 10px;
-            padding: 16px 24px;
-            text-align: center;
-            width: 140px;
-        }
-        .stat-card i {
-            font-size: 22px;
-            color: #ef4444;
-            margin-bottom: 6px;
+        .cifra b {
             display: block;
-        }
-        .stat-num {
-            font-size: 26px;
+            font-size: 32px;
             font-weight: 800;
-            color: #fff;
-            line-height: 1;
+            line-height: 1.1;
         }
-        .stat-label {
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .8px;
-            color: #666;
-            margin-top: 4px;
-        }
+        .cifra span { font-size: var(--t-nota); color: var(--texto-medio); }
 
-        /* ACTIONS */
-        .dash-actions {
+        /* Accesos: lista de enlaces con icono, no una rejilla de cajas.
+           El primero es el que más se usa y va destacado. */
+        .accesos {
             display: grid;
-            grid-template-columns: repeat(5, 140px);
-            gap: 12px;
-            justify-content: center;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 10px;
+            margin-bottom: 38px;
         }
-        .action-card {
-            background: #242426;
-            border: 1px solid #2a2a2a;
-            border-radius: 10px;
-            padding: 18px 10px;
-            text-align: center;
-            text-decoration: none;
-            color: #fff;
-            transition: border-color .2s, transform .2s;
-            width: 140px;
-            height: 110px;
+        .acceso {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .action-card:hover {
-            border-color: #ef4444;
-            transform: translateY(-2px);
-            color: #fff;
-        }
-        .action-card i {
-            font-size: 24px;
-            color: #ef4444;
-        }
-        .action-card span {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .6px;
-            line-height: 1.3;
-        }
-
-        .btn-logout {
-            padding: 9px 22px;
-            background: transparent;
-            color: #ef4444;
-            border: 1px solid #ef4444;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 700;
-            font-family: Montserrat, sans-serif;
+            gap: 13px;
+            padding: 14px 0;
+            border-bottom: 2px solid var(--linea);
+            color: var(--texto);
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: background .2s, color .2s;
+            transition: var(--paso);
         }
-        .btn-logout:hover { background: #ef4444; color: #fff; }
+        .acceso:hover { border-bottom-color: var(--rojo); }
+        .acceso i { font-size: 19px; color: var(--texto-medio); flex-shrink: 0; transition: var(--paso); }
+        .acceso:hover i { color: var(--rojo); }
+        .acceso b { font-weight: 600; }
+
+        /* Lo último subido */
+        .ultimos { display: flex; flex-direction: column; }
+        .ultimo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 11px 2px;
+            border-bottom: 1px solid var(--linea);
+        }
+        .ultimo:last-child { border-bottom: none; }
+        .ultimo img {
+            width: 38px; height: 54px;
+            object-fit: cover;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .ultimo-centro { flex: 1; min-width: 0; }
+        .ultimo-centro b { font-weight: 600; display: block; }
+        .ultimo-centro span { font-size: var(--t-nota); color: var(--texto-medio); }
+
     </style>
 </head>
 <body>
 
-<div class="topbar">
-    <a href="index.php" class="topbar-brand">
-        <img src="Imagenes/Logo-Comic-Huse.png" alt="Comic House">
-    </a>
-    <span class="topbar-title">Panel de administración</span>
-    <div class="topbar-actions">
-        <a href="index.php" class="btn-top btn-top-ghost">
-            <i class="bi bi-house"></i> Ver sitio
-        </a>
-    </div>
+<?php
+$titulo = 'Administración';
+require __DIR__ . '/admin/cabecera.php';
+?>
+
 </div>
 
-<div class="dash-main">
+<main class="pagina">
 
-    <div class="welcome">
-        <h1>Hola, <span><?= htmlspecialchars($usuario) ?></span></h1>
-        <p>¿Qué quieres gestionar hoy?</p>
+    <div class="saludo">
+        <h1>Hola, <b><?= htmlspecialchars($usuario) ?></b></h1>
+        <p>Esto es lo que hay en el catálogo ahora mismo.</p>
     </div>
 
-    <div class="stats">
-        <div class="stat-card">
-            <i class="bi bi-book-half"></i>
-            <div class="stat-num"><?= $total_comics ?></div>
-            <div class="stat-label">Cómics</div>
+    <div class="cifras">
+        <div class="cifra">
+            <b><?= $total_comics ?></b>
+            <span>cómics</span>
         </div>
-        <div class="stat-card">
-            <i class="bi bi-collection"></i>
-            <div class="stat-num"><?= $total_caps ?></div>
-            <div class="stat-label">Capítulos</div>
+        <div class="cifra">
+            <b><?= $total_caps ?></b>
+            <span>capítulos</span>
         </div>
-        <div class="stat-card">
-            <i class="bi bi-people"></i>
-            <div class="stat-num"><?= $total_usuarios ?></div>
-            <div class="stat-label">Usuarios</div>
+        <div class="cifra">
+            <b><?= number_format($total_paginas, 0, ',', '.') ?></b>
+            <span>páginas</span>
+        </div>
+        <div class="cifra">
+            <b><?= $total_usuarios ?></b>
+            <span>usuarios</span>
         </div>
     </div>
 
-    <div class="dash-actions">
-        <a href="index.php" class="action-card">
-            <i class="bi bi-house"></i>
-            <span>Ingresar al sitio</span>
-        </a>
-        <a href="crud.php" class="action-card">
-            <i class="bi bi-grid-3x3-gap"></i>
-            <span>Registrar y gestionar cómics</span>
-        </a>
-        <a href="destacar.php" class="action-card">
-            <i class="bi bi-star"></i>
-            <span>Destacar cómics</span>
-        </a>
-        <a href="editoriales.php" class="action-card">
-            <i class="bi bi-building"></i>
-            <span>Editoriales</span>
-        </a>
-        <a href="subir_capitulo.php" class="action-card">
+    <div class="seccion">
+        <h2>Gestionar</h2>
+    </div>
+
+    <nav class="accesos">
+        <a href="subir_capitulo.php" class="acceso">
             <i class="bi bi-upload"></i>
-            <span>Subir capítulo</span>
+            <b>Subir capítulo</b>
         </a>
-    </div>
+        <a href="crud.php" class="acceso">
+            <i class="bi bi-collection"></i>
+            <b>Cómics del catálogo</b>
+        </a>
+        <a href="destacar.php" class="acceso">
+            <i class="bi bi-star"></i>
+            <b>Destacados del slider</b>
+        </a>
+        <a href="editoriales.php" class="acceso">
+            <i class="bi bi-buildings"></i>
+            <b>Editoriales</b>
+        </a>
+    </nav>
 
-    <a href="logout.php" class="btn-logout">
-        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
-    </a>
+    <?php if ($recientes->num_rows > 0): ?>
+        <div class="seccion">
+            <h2>Subido últimamente</h2>
+        </div>
 
-</div>
+        <div class="ultimos">
+            <?php while ($r = $recientes->fetch_assoc()): ?>
+                <div class="ultimo">
+                    <img src="uploads/<?= htmlspecialchars($r['portada']) ?>"
+                         alt="Portada de <?= htmlspecialchars($r['titulo']) ?>">
+                    <div class="ultimo-centro">
+                        <b><?= htmlspecialchars($r['titulo']) ?></b>
+                        <span>
+                            Capítulo <?= htmlspecialchars($r['numero']) ?>,
+                            <?= (int) $r['paginas'] ?> páginas
+                        </span>
+                    </div>
+                    <a href="Lector/lector.php?capitulo_id=<?= (int) $r['id'] ?>"
+                       class="btn btn-plano">Abrir</a>
+                </div>
+            <?php endwhile; ?>
+        </div>
+    <?php endif; ?>
+
+
+</main>
 
 </body>
 </html>

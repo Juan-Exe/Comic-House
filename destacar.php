@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/controlador/miniaturas.php';
 include_once("modelo/conexion.php");
 if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
     header("Location: index.php"); exit();
@@ -49,298 +50,336 @@ $msg = isset($_GET['ok']) ? 'Cambios guardados correctamente.' : '';
     <link rel="icon" href="ico.ico">
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="admin/admin.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Montserrat, sans-serif; background: #1c1c1e; color: #f0f0f0; min-height: 100vh; }
+        /* Propio de esta pantalla: el conmutador y el par de subidas.
+           Todo lo demás viene de admin/admin.css. */
 
-        /* TOPBAR */
-        .topbar {
-            background: #ef4444; height: 72px;
-            display: grid; grid-template-columns: 1fr auto 1fr;
-            align-items: center; padding: 0 28px;
-            position: sticky; top: 0; z-index: 100;
-        }
-        .topbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; justify-self: start; }
-        .topbar-brand img { height: 48px; }
-        .topbar-title { justify-self: center; color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-        .topbar-actions { justify-self: end; }
-        .btn-top { padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; font-family: Montserrat, sans-serif; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: opacity .2s; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35); }
-        .btn-top:hover { opacity: .8; }
-
-        /* MAIN */
-        .main { max-width: 1100px; margin: 0 auto; padding: 28px 40px; }
-        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-        .page-title { font-size: 18px; font-weight: 800; }
-        .page-sub { color: #666; font-size: 12px; margin-top: 4px; }
-
-        .toast { background: #16a34a; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
-
-        /* GRID */
-        .catalog-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 280px));
-            gap: 24px;
-            justify-content: center;
-        }
-
-        /* CARD */
-        .comic-card {
-            background: #242426;
-            border: 2px solid #303033;
-            border-radius: 14px;
-            overflow: hidden;
-            transition: border-color .2s, transform .2s;
-            display: flex;
-            flex-direction: column;
-        }
-        .comic-card:hover { transform: translateY(-2px); }
-        .comic-card.is-destacado { border-color: #ef4444; }
-
-        /* PORTADA grande */
-        .card-cover {
-            width: 100%;
-            aspect-ratio: 2/3;
-            background-size: cover;
-            background-position: center top;
+        /* Conmutador de destacado */
+        .palanca { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; }
+        .palanca input { display: none; }
+        .palanca-pista {
+            width: 40px; height: 22px;
+            background: var(--estante-alto);
+            border: 1px solid var(--linea);
+            border-radius: var(--r-pil);
             position: relative;
+            transition: var(--paso);
             flex-shrink: 0;
         }
-        .card-cover-overlay {
-            position: absolute; inset: 0;
-            background: linear-gradient(to top, rgba(0,0,0,.85) 0%, transparent 50%);
+        .palanca-pista::after {
+            content: "";
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 16px; height: 16px;
+            background: var(--texto-bajo);
+            border-radius: 50%;
+            transition: var(--paso);
         }
-        .card-cover-info {
-            position: absolute; bottom: 12px; left: 12px; right: 12px;
+        .palanca input:checked + .palanca-pista {
+            background: var(--rojo);
+            border-color: var(--rojo);
         }
-        .card-title {
-            font-size: 15px; font-weight: 800;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.8);
+        .palanca input:checked + .palanca-pista::after {
+            transform: translateX(18px);
+            background: #fff;
         }
-        .card-meta { font-size: 11px; color: #ccc; margin-top: 3px; }
-        .badge-destacado {
-            position: absolute; top: 10px; right: 10px;
-            background: #ef4444; color: #fff;
-            font-size: 10px; font-weight: 700; letter-spacing: .8px;
-            text-transform: uppercase; padding: 4px 10px; border-radius: 20px;
-            display: flex; align-items: center; gap: 4px;
+        .palanca input:focus-visible + .palanca-pista {
+            outline: 2px solid var(--rojo);
+            outline-offset: 2px;
         }
+        .palanca-texto { font-size: var(--t-nota); font-weight: 600; }
 
-        /* FORM dentro de la card */
-        .card-form { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-
-        .toggle-row {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #1c1c1e; border-radius: 8px; padding: 10px 12px;
-        }
-        .toggle-label { font-size: 12px; font-weight: 700; }
-
-        .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider-toggle {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background: #3a3a3d; border-radius: 24px; transition: .3s;
-        }
-        .slider-toggle:before {
-            content: ""; position: absolute; height: 18px; width: 18px;
-            left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s;
-        }
-        .toggle-switch input:checked + .slider-toggle { background: #ef4444; }
-        .toggle-switch input:checked + .slider-toggle:before { transform: translateX(20px); }
-
-        .field-label {
-            font-size: 10px; font-weight: 700; color: #777;
-            text-transform: uppercase; letter-spacing: .7px; margin-bottom: 4px;
-        }
-
-        select.styled {
-            background: #1c1c1e; border: 1px solid #3a3a3d; border-radius: 7px;
-            color: #f0f0f0; font-family: Montserrat, sans-serif; font-size: 12px;
-            padding: 8px 32px 8px 10px; width: 100%; cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23aaa' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-        }
-        select.styled:focus { outline: none; border-color: #ef4444; }
-
-        /* Botones de imagen personalizados */
-        .upload-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-        .upload-btn {
-            position: relative;
-            background: #1c1c1e;
-            border: 2px dashed #3a3a3d;
-            border-radius: 10px;
-            padding: 12px 8px;
+        /* Par de subidas: fondo y logo del slider */
+        .par-subidas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .mini-subir {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 10px 6px;
+            min-height: 66px;
+            background: var(--papel);
+            border: 1.5px dashed var(--linea);
+            border-radius: var(--r);
+            color: var(--texto-bajo);
+            font-size: var(--t-nota);
+            font-weight: 600;
             cursor: pointer;
             text-align: center;
-            transition: border-color .2s, background .2s;
+            transition: var(--paso);
+            position: relative;
             overflow: hidden;
         }
-        .upload-btn:hover { border-color: #ef4444; background: rgba(239,68,68,.05); }
-        .upload-btn.has-file { border-color: #ef4444; border-style: solid; background: rgba(239,68,68,.08); }
-
-        .upload-btn input[type=file] {
-            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        .mini-subir:hover { border-color: var(--rojo); color: var(--texto); }
+        .mini-subir input { display: none; }
+        .mini-subir i { font-size: 15px; }
+        .mini-subir.lista { border-style: solid; border-color: var(--rojo-linea); color: var(--texto-medio); }
+        /* La imagen se ve ENTERA y centrada; el hueco que deja a los
+           lados lo rellena una copia suya desenfocada, en vez de
+           quedar en negro. Es el mismo recurso del lector. */
+        .mini-subir .ambiente {
+            position: absolute;
+            inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: blur(14px) saturate(1.6) brightness(.5);
+            transform: scale(1.3);
+            z-index: 0;
         }
-        .upload-btn i { font-size: 20px; color: #ef4444; display: block; margin-bottom: 5px; }
-        .upload-btn .up-label { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .5px; line-height: 1.3; }
-        .upload-btn .up-current { font-size: 10px; color: #ef4444; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .upload-btn .up-chosen { font-size: 10px; color: #22c55e; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
+        /* El fondo del slider llena la miniatura: es apaisado y no deja
+           hueco. */
+        .mini-subir .cubre {
+            position: absolute;
+            inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: .55;
+            z-index: 0;
+        }
+        .mini-subir .real {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+            max-height: 52px;
+            object-fit: contain;
+        }
+        /* Con imagen cargada, el texto se aparta para no taparla. */
+        .mini-subir.lista i,
+        .mini-subir.lista span:not(.etiqueta) { display: none; }
+        .mini-subir .etiqueta {
+            position: absolute;
+            bottom: 3px; left: 0; right: 0;
+            z-index: 2;
+            font-size: 9.5px;
+            color: rgba(255,255,255,.82);
+            text-shadow: 0 1px 3px rgba(0,0,0,.9);
+        }
+        .mini-subir span { position: relative; z-index: 1; }
 
-        /* Preview miniatura */
-        .upload-btn .preview-thumb {
-            width: 100%; height: 50px;
-            object-fit: cover; border-radius: 6px;
-            margin-bottom: 5px; display: none;
+        /* La portada se ve ENTERA y centrada; el espacio que deja
+           arriba y abajo lo rellena una copia suya desenfocada, en vez
+           de quedar en negro. */
+        .ficha-portada {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            isolation: isolate;
+        }
+        /* La luz es la MISMA imagen estirada a todo el alto de la
+           columna, sin recortar: así cada zona de la portada continúa
+           hacia arriba y hacia abajo con su propio color (el cielo de
+           Batman arriba, la entrada abajo) en vez de mostrar un trozo
+           suelto de la imagen. */
+        .ficha-portada .luz {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            filter: blur(24px) saturate(1.45) brightness(.8);
+            z-index: -1;
+        }
+        /* Un velo suave en los extremos, para que la luz se apague
+           hacia el borde de la fila sin cortarse. */
+        .ficha-portada::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom,
+                        rgba(0,0,0,.4) 0%, rgba(0,0,0,0) 22%,
+                        rgba(0,0,0,0) 78%, rgba(0,0,0,.4) 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* La portada, entera y centrada en la columna. El alto lo
+           marca su proporción, no el de la caja, de modo que arriba y
+           abajo queda el hueco que llena la luz.
+
+           Sus bordes superior e inferior se desvanecen con una máscara,
+           así la imagen no termina en un corte seco sino que se funde
+           con su propio difuminado. */
+        .ficha-portada .obra {
+            position: relative;
+            width: 100%;
+            height: auto;
+            max-height: 100%;
+            object-fit: contain;
+            align-self: center;
+            z-index: 1;
+            -webkit-mask-image: linear-gradient(to bottom,
+                        transparent 0%, #000 13%, #000 87%, transparent 100%);
+            mask-image: linear-gradient(to bottom,
+                        transparent 0%, #000 13%, #000 87%, transparent 100%);
         }
 
-        .btn-save {
-            width: 100%; padding: 10px;
-            background: #ef4444; color: #fff; border: none; border-radius: 8px;
-            font-family: Montserrat, sans-serif; font-size: 12px; font-weight: 700;
-            cursor: pointer; transition: opacity .2s;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            margin-top: auto;
+        /* Marca de destacado sobre la portada */
+        .en-portada {
+            position: absolute;
+            z-index: 2;          /* sobre la portada y su luz */
+            top: 8px; left: 8px;
+            background: var(--rojo);
+            color: #fff;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: var(--r-pil);
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        .btn-save:hover { opacity: .85; }
     </style>
 </head>
 <body>
 
-<div class="topbar">
-    <a href="dashboard.php" class="topbar-brand">
-        <img src="Imagenes/Logo-Comic-Huse.png" alt="Comic House">
-    </a>
-    <span class="topbar-title">Destacar cómics</span>
-    <div class="topbar-actions">
-        <a href="dashboard.php" class="btn-top"><i class="bi bi-arrow-left"></i> Dashboard</a>
-    </div>
+<?php
+$titulo = 'Destacados';
+require __DIR__ . '/admin/cabecera.php';
+?>
+
 </div>
 
-<div class="main">
-    <div class="page-header">
-        <div>
-            <p class="page-title">Gestionar cómics destacados</p>
-            <p class="page-sub">Activa el toggle · sube imagen de fondo y logo · el slider se actualiza automáticamente</p>
-        </div>
-    </div>
+<main class="pagina">
+
+    <p class="intro">
+        Los cómics activos aparecen en el carrusel de la portada. Cada uno
+        necesita una imagen de fondo y un logo para mostrarse bien.
+    </p>
 
     <?php if ($msg): ?>
-        <div class="toast"><i class="bi bi-check-circle"></i> <?= $msg ?></div>
+        <div class="aviso aviso-ok" id="aviso">
+            <i class="bi bi-check-circle-fill"></i><span><?= $msg ?></span>
+        </div>
     <?php endif; ?>
 
-    <div class="catalog-grid">
-        <?php while ($c = $comics->fetch_assoc()): ?>
-        <div class="comic-card <?= $c['destacado'] ? 'is-destacado' : '' ?>">
+    <div class="seccion">
+        <h2>Catálogo</h2>
+        <span class="cuenta"><?= $comics->num_rows ?> cómics</span>
+    </div>
 
-            <!-- PORTADA GRANDE -->
-            <div class="card-cover" style="background-image: url('uploads/<?= htmlspecialchars($c['portada']) ?>');">
-                <div class="card-cover-overlay"></div>
-                <div class="card-cover-info">
-                    <p class="card-title"><?= htmlspecialchars($c['titulo']) ?></p>
-                    <p class="card-meta"><?= htmlspecialchars($c['editorial']) ?> · <?= htmlspecialchars($c['anio']) ?></p>
-                </div>
-                <?php if ($c['destacado']): ?>
-                    <span class="badge-destacado"><i class="bi bi-star-fill"></i> Destacado</span>
+    <div class="fichas">
+        <?php while ($c = $comics->fetch_assoc()):
+            $activo = (int) $c['destacado'] === 1;
+            $id = (int) $c['id'];
+        ?>
+        <article class="ficha <?= $activo ? 'activa' : '' ?>">
+
+            <div class="ficha-portada">
+                <?php $mini = miniatura($c['portada'], 400); ?>
+                <img class="luz" aria-hidden="true" alt="" src="<?= htmlspecialchars($mini) ?>">
+                <img class="obra" src="<?= htmlspecialchars($mini) ?>"
+                     alt="Portada de <?= htmlspecialchars($c['titulo']) ?>">
+                <?php if ($activo): ?>
+                    <span class="en-portada"><i class="bi bi-star-fill"></i> En portada</span>
                 <?php endif; ?>
             </div>
 
-            <!-- FORM -->
-            <div class="card-form">
-                <form method="POST" enctype="multipart/form-data" style="display:contents">
-                    <input type="hidden" name="accion" value="toggle">
-                    <input type="hidden" name="id" value="<?= $c['id'] ?>">
+            <form method="POST" enctype="multipart/form-data" class="ficha-cuerpo">
+                <input type="hidden" name="accion" value="toggle">
+                <input type="hidden" name="id" value="<?= $id ?>">
 
-                    <!-- Toggle -->
-                    <div class="toggle-row">
-                        <span class="toggle-label">Destacar en slider</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" name="destacado" value="1" <?= $c['destacado'] ? 'checked' : '' ?>>
-                            <span class="slider-toggle"></span>
-                        </label>
-                    </div>
+                <div>
+                    <p class="ficha-titulo"><?= htmlspecialchars($c['titulo']) ?></p>
+                    <p class="ficha-dato">
+                        <?= htmlspecialchars($c['editorial']) ?>, <?= htmlspecialchars($c['anio']) ?>
+                    </p>
+                </div>
 
-                    <!-- Estado -->
-                    <div>
-                        <p class="field-label">Estado de publicación</p>
-                        <select name="estado_publicacion" class="styled">
-                            <option value="En publicacion" <?= $c['estado_publicacion'] === 'En publicacion' ? 'selected' : '' ?>>En publicación</option>
-                            <option value="Publicacion Terminada" <?= $c['estado_publicacion'] === 'Publicacion Terminada' ? 'selected' : '' ?>>Publicación Terminada</option>
-                        </select>
-                    </div>
+                <label class="palanca">
+                    <input type="checkbox" name="destacado" value="1" <?= $activo ? 'checked' : '' ?>>
+                    <span class="palanca-pista"></span>
+                    <span class="palanca-texto">Mostrar en el slider</span>
+                </label>
 
-                    <!-- Upload pair -->
-                    <div>
-                        <p class="field-label">Imágenes para el slider</p>
-                        <div class="upload-pair">
+                <div class="campo" style="margin:0">
+                    <label for="estado-<?= $id ?>">Estado</label>
+                    <select name="estado_publicacion" id="estado-<?= $id ?>">
+                        <option value="En publicacion" <?= $c['estado_publicacion'] === 'En publicacion' ? 'selected' : '' ?>>En publicación</option>
+                        <option value="Publicacion Terminada" <?= $c['estado_publicacion'] === 'Publicacion Terminada' ? 'selected' : '' ?>>Terminado</option>
+                    </select>
+                </div>
 
-                            <!-- Fondo -->
-                            <label class="upload-btn <?= $c['imagen_slider'] ? 'has-file' : '' ?>" id="lbl-bg-<?= $c['id'] ?>">
-                                <input type="file" name="imagen_slider" accept="image/*"
-                                    onchange="previewUpload(this, 'lbl-bg-<?= $c['id'] ?>', 'prev-bg-<?= $c['id'] ?>')">
-                                <img id="prev-bg-<?= $c['id'] ?>" class="preview-thumb" src="">
-                                <i class="bi bi-image"></i>
-                                <span class="up-label">Fondo</span>
-                                <?php if ($c['imagen_slider']): ?>
-                                    <span class="up-current"><i class="bi bi-check-circle-fill"></i> Cargado</span>
-                                <?php endif; ?>
-                                <span class="up-chosen" id="chosen-bg-<?= $c['id'] ?>"></span>
-                            </label>
+                <div class="par-subidas">
+                    <label class="mini-subir <?= $c['imagen_slider'] ? 'lista' : '' ?>" id="bg-<?= $id ?>">
+                        <input type="file" name="imagen_slider" accept="image/*"
+                               onchange="verImagen(this, 'bg-<?= $id ?>', 'Fondo')">
+                        <?php if ($c['imagen_slider']): ?>
+                            <img class="cubre" alt="Fondo actual del slider"
+                                 src="uploads/<?= htmlspecialchars($c['imagen_slider']) ?>">
+                            <span class="etiqueta">Fondo</span>
+                        <?php else: ?>
+                            <i class="bi bi-image"></i>
+                            <span>Fondo</span>
+                        <?php endif; ?>
+                    </label>
 
-                            <!-- Logo -->
-                            <label class="upload-btn <?= $c['logo_slider'] ? 'has-file' : '' ?>" id="lbl-logo-<?= $c['id'] ?>">
-                                <input type="file" name="logo_slider" accept="image/*"
-                                    onchange="previewUpload(this, 'lbl-logo-<?= $c['id'] ?>', 'prev-logo-<?= $c['id'] ?>')">
-                                <img id="prev-logo-<?= $c['id'] ?>" class="preview-thumb" src="">
-                                <i class="bi bi-type-bold"></i>
-                                <span class="up-label">Logo</span>
-                                <?php if ($c['logo_slider']): ?>
-                                    <span class="up-current"><i class="bi bi-check-circle-fill"></i> Cargado</span>
-                                <?php endif; ?>
-                                <span class="up-chosen" id="chosen-logo-<?= $c['id'] ?>"></span>
-                            </label>
-                        </div>
-                    </div>
+                    <label class="mini-subir <?= $c['logo_slider'] ? 'lista' : '' ?>" id="logo-<?= $id ?>">
+                        <input type="file" name="logo_slider" accept="image/*"
+                               onchange="verImagen(this, 'logo-<?= $id ?>', 'Logo')">
+                        <?php if ($c['logo_slider']): ?>
+                            <img class="ambiente" aria-hidden="true" alt=""
+                                 src="uploads/<?= htmlspecialchars($c['logo_slider']) ?>">
+                            <img class="real" alt="Logo actual del slider"
+                                 src="uploads/<?= htmlspecialchars($c['logo_slider']) ?>">
+                            <span class="etiqueta">Logo</span>
+                        <?php else: ?>
+                            <i class="bi bi-fonts"></i>
+                            <span>Logo</span>
+                        <?php endif; ?>
+                    </label>
+                </div>
 
-                    <button type="submit" class="btn-save"><i class="bi bi-check-lg"></i> Guardar</button>
-                </form>
-            </div>
-        </div>
+                <button type="submit" class="btn btn-rojo" style="width:100%">
+                    Guardar cambios
+                </button>
+            </form>
+        </article>
         <?php endwhile; ?>
     </div>
-</div>
+</main>
 
 <script>
-document.querySelectorAll('.toast').forEach(t => {
+// El aviso se retira solo
+const aviso = document.getElementById('aviso');
+if (aviso) {
     setTimeout(() => {
-        t.style.transition = 'opacity 0.5s ease';
-        t.style.opacity = '0';
-        setTimeout(() => t.remove(), 500);
-    }, 3000);
-});
+        aviso.style.transition = 'opacity .4s';
+        aviso.style.opacity = '0';
+        setTimeout(() => aviso.remove(), 400);
+    }, 3500);
+}
 
-function previewUpload(input, lblId, prevId) {
-    const lbl = document.getElementById(lblId);
-    const prev = document.getElementById(prevId);
-    const chosenId = lblId.replace('lbl-', 'chosen-');
-    const chosen = document.getElementById(chosenId);
+// Vista previa al elegir una imagen. Se montan las dos capas: la copia
+// borrosa de fondo y la imagen entera encima.
+function verImagen(input, cajaId, etiqueta) {
+    if (!input.files || !input.files[0]) return;
+    const caja = document.getElementById(cajaId);
+    const lector = new FileReader();
 
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = e => {
-            prev.src = e.target.result;
-            prev.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-        lbl.classList.add('has-file');
-        if (chosen) { chosen.textContent = file.name; chosen.style.display = 'block'; }
-        // ocultar "Cargado" anterior
-        const cur = lbl.querySelector('.up-current');
-        if (cur) cur.style.display = 'none';
-    }
+    lector.onload = e => {
+        caja.querySelectorAll('img, i, span').forEach(n => n.remove());
+
+        const fondo = document.createElement('img');
+        fondo.className = 'ambiente';
+        fondo.setAttribute('aria-hidden', 'true');
+        fondo.alt = '';
+        fondo.src = e.target.result;
+
+        const real = document.createElement('img');
+        real.className = 'real';
+        real.alt = etiqueta + ' elegido';
+        real.src = e.target.result;
+
+        const pie = document.createElement('span');
+        pie.className = 'etiqueta';
+        pie.textContent = etiqueta;
+
+        caja.append(fondo, real, pie);
+        caja.classList.add('lista');
+    };
+    lector.readAsDataURL(input.files[0]);
 }
 </script>
 

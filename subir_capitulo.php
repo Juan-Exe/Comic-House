@@ -1,12 +1,16 @@
 <?php
 session_start();
+require_once __DIR__ . '/controlador/miniaturas.php';
 include_once("modelo/conexion.php");
 if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
     header("Location: index.php");
     exit();
 }
 
-$comics = $conexion->query("SELECT id, titulo, portada FROM comics ORDER BY titulo ASC");
+$comics = $conexion->query(
+    "SELECT id, titulo, portada, tipo, capitulos
+       FROM comics ORDER BY titulo ASC"
+);
 $auto_comic_id = intval($_GET['comic_id'] ?? 0);
 ?>
 <!DOCTYPE html>
@@ -18,516 +22,456 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
     <link rel="icon" href="ico.ico">
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="admin/admin.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* Propio de esta pantalla: el selector de cómic, la zona de
+           archivo y el progreso. Lo demás viene de admin/admin.css. */
 
-        body {
-            font-family: Montserrat, sans-serif;
-            background: #1c1c1e;
-            color: #f0f0f0;
-            min-height: 100vh;
-        }
-
-        /* TOPBAR */
-        .topbar {
-            background: #ef4444;
-            height: 72px;
+        /* ---- Paso 1: elegir el cómic ----
+           Rejilla de portadas: aquí la portada ES el botón. */
+        .rejilla-comics {
             display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            padding: 0 28px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .topbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; justify-self: start; }
-        .topbar-brand img { height: 48px; }
-        .topbar-title {
-            justify-self: center;
-            color: #fff; font-size: 14px; font-weight: 700;
-            letter-spacing: 2px; text-transform: uppercase; opacity: .9;
-        }
-        .topbar-back {
-            justify-self: end;
-            padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
-            font-family: Montserrat, sans-serif; text-decoration: none;
-            display: flex; align-items: center; gap: 6px;
-            background: rgba(255,255,255,.15); color: #fff;
-            border: 1px solid rgba(255,255,255,.35); transition: opacity .2s;
-        }
-        .topbar-back:hover { opacity: .8; }
-
-        /* MAIN */
-        .main-wrapper {
-            max-width: 720px;
-            margin: 40px auto;
-            padding: 0 20px 60px;
-            display: flex;
-            flex-direction: column;
-            gap: 28px;
-        }
-
-        /* CARD */
-        .card {
-            background: #242426;
-            border: 1px solid #303033;
-            border-radius: 14px;
-            overflow: hidden;
-        }
-        .card-header {
-            background: #2a2a2c;
-            border-bottom: 1px solid #303033;
-            padding: 16px 24px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .card-header i { color: #ef4444; font-size: 17px; }
-        .card-header h2 {
-            font-size: 13px; font-weight: 700;
-            color: #fff; text-transform: uppercase; letter-spacing: 1.5px;
-        }
-        .card-body { padding: 24px; }
-
-        /* FORM */
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-        .field-full { grid-column: 1 / -1; }
-
-        .field { display: flex; flex-direction: column; gap: 6px; }
-        .field label {
-            font-size: 10px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 1px; color: #888;
-        }
-        .field input,
-        .field select {
-            width: 100%;
-            background: #1c1c1e;
-            border: 1px solid #3a3a3c;
-            border-radius: 7px;
-            color: #f0f0f0;
-            padding: 9px 12px;
-            font-size: 13px;
-            font-family: Montserrat, sans-serif;
-            transition: border-color .2s;
-            outline: none;
-        }
-        .field input:focus,
-        .field select:focus { border-color: #ef4444; }
-        .field select {
-            appearance: none;
-            -webkit-appearance: none;
-            padding-right: 36px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            cursor: pointer;
-        }
-        .field select option { background: #242426; }
-        .field input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(0.5);
-            cursor: pointer;
-        }
-
-        /* Upload de imágenes */
-        .upload-area {
-            width: 100%;
-            border: 2px dashed #3a3a3c;
-            border-radius: 8px;
-            background: #1c1c1e;
-            padding: 28px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: border-color .2s, background .2s;
-            position: relative;
-            text-align: center;
-        }
-        .upload-area:hover { border-color: #ef4444; background: #2a1515; }
-        .upload-area.has-files { border-color: #ef4444; border-style: solid; background: rgba(239,68,68,.06); }
-        .upload-area i { font-size: 28px; color: #555; pointer-events: none; }
-        .upload-area .up-label {
-            font-size: 11px; color: #666; font-weight: 600;
-            text-transform: uppercase; letter-spacing: .8px;
-            pointer-events: none;
-        }
-        .upload-area .up-count {
-            font-size: 12px; color: #22c55e; font-weight: 700;
-            display: none;
-        }
-        .upload-area input[type="file"] {
-            position: absolute; inset: 0;
-            opacity: 0; cursor: pointer; width: 100%; height: 100%;
-        }
-
-        /* Catálogo selector */
-        .comic-picker-label {
-            font-size: 10px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 1px; color: #888;
-            margin-bottom: 10px; display: block;
-        }
-        .comic-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+            gap: 22px 18px;
         }
         .comic-card {
-            background: #1c1c1e;
-            border: 2px solid #3a3a3c;
-            border-radius: 8px;
-            overflow: hidden;
             cursor: pointer;
-            transition: border-color .2s, transform .15s;
-            position: relative;
+            border: none;
+            background: none;
+            padding: 0;
+            text-align: left;
+            font-family: Montserrat, sans-serif;
+            transition: var(--paso);
         }
-        .comic-card:hover { border-color: #ef4444; transform: translateY(-2px); }
-        .comic-card.selected { border-color: #ef4444; }
-        .comic-card.selected::after {
-            content: '\f26b';
-            font-family: 'Bootstrap Icons';
-            position: absolute; top: 5px; right: 6px;
-            background: #ef4444; color: #fff;
-            font-size: 12px; width: 22px; height: 22px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .comic-card img {
-            width: 100%; aspect-ratio: 2/3;
-            object-fit: cover; display: block;
+        .comic-card img,
+        .comic-card-no-img {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            border-radius: 3px;
+            background: var(--estante-alto);
+            transition: var(--paso);
         }
         .comic-card-no-img {
-            width: 100%; aspect-ratio: 2/3;
-            background: #2a2a2c;
-            display: flex; align-items: center; justify-content: center;
-            color: #444; font-size: 24px;
-        }
-        .comic-card-title {
-            padding: 6px 7px;
-            font-size: 10px; font-weight: 700;
-            color: #ccc; line-height: 1.3;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-
-        /* Panel seleccionado */
-        .selected-comic-bar {
-            display: none;
+            display: flex;
             align-items: center;
-            gap: 14px;
-            background: rgba(239,68,68,.1);
-            border: 1px solid rgba(239,68,68,.3);
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 16px;
+            justify-content: center;
+            color: var(--texto-bajo);
+            font-size: 24px;
         }
-        .selected-comic-bar.visible { display: flex; }
-        .selected-comic-bar img {
-            width: 36px; height: 50px;
-            object-fit: cover; border-radius: 4px;
+        .comic-card:hover img,
+        .comic-card:hover .comic-card-no-img { box-shadow: 0 0 0 2px var(--rojo); }
+        .comic-card-title {
+            margin-top: 8px;
+            font-size: var(--t-nota);
+            font-weight: 600;
+            color: var(--texto-medio);
+            line-height: 1.35;
         }
-        .selected-comic-bar-info { flex: 1; }
-        .selected-comic-bar-name { font-size: 13px; font-weight: 700; color: #fff; }
-        .selected-comic-bar-sub { font-size: 11px; color: #888; margin-top: 2px; }
-        .btn-change {
-            font-size: 11px; font-weight: 700; color: #ef4444;
-            background: none; border: none; cursor: pointer;
-            font-family: Montserrat, sans-serif;
-            padding: 4px 8px; border-radius: 4px;
-            transition: background .2s;
-        }
-        .btn-change:hover { background: rgba(239,68,68,.15); }
+        .comic-card:hover .comic-card-title { color: var(--texto); }
 
-        /* Campo fecha personalizado */
-        .date-input-wrap {
-            position: relative;
+        /* ---- Paso 2: el cómic elegido, en cabecera ---- */
+        .elegido {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--linea);
+            margin-bottom: 26px;
         }
-        .date-input-wrap input[type="text"] {
-            padding-left: 36px;
+        .elegido img {
+            width: 54px;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            border-radius: 3px;
         }
-        .date-icon {
+        .elegido-info { flex: 1; min-width: 0; }
+        .elegido-nombre { font-size: 17px; font-weight: 700; }
+        .elegido-sub { font-size: var(--t-nota); color: var(--texto-medio); }
+
+        /* ---- Formulario ----
+           Esta pantalla ensancha su columna: con 300 px los campos de
+           numeración se apilaban y la fecha quedaba cortada. */
+        .dos-columnas { grid-template-columns: minmax(0, 470px) 1fr; gap: 42px; }
+
+        .rejilla-campos {
+            display: grid;
+            grid-template-columns: 1fr minmax(170px, auto);
+            gap: 0 20px;
+        }
+        .campo-ancho { grid-column: 1 / -1; }
+        .campo .suave { color: var(--texto-bajo); font-weight: 400; }
+
+        /* La numeración ocupa su propia fila y reparte el espacio entre
+           los campos que estén visibles en cada formato. */
+        .fila-numeracion {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        /* El select conserva el ancho que necesita su texto; los
+           números se reparten el resto. */
+        .fila-numeracion .campo { flex: 1 1 100px; min-width: 0; }
+        .fila-numeracion .campo:first-child { flex: 0 0 182px; }
+        .fila-numeracion .campo.oculto { display: none; }
+        /* El select muestra el texto completo: «Número suelto» se
+           cortaba a «Número suelt…». */
+        /* Los tres campos de numeración caben en una fila. */
+        .fila-numeracion { gap: 12px; }
+
+        .fecha-caja { position: relative; }
+        .fecha-caja .bi-calendar3 {
             position: absolute;
-            left: 12px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: #555;
-            font-size: 14px;
+            color: var(--texto-bajo);
             pointer-events: none;
         }
-        .date-input-wrap:focus-within .date-icon { color: #ef4444; }
-        #fecha-display.date-ok { color: #22c55e; }
 
-        /* Botones */
-        .form-actions {
-            display: flex; gap: 12px;
-            margin-top: 20px; padding-top: 20px;
-            border-top: 1px solid #303033;
-        }
-        .btn-submit {
-            flex: 1; padding: 12px;
-            background: #ef4444; color: #fff;
-            border: none; border-radius: 7px;
-            font-size: 13px; font-weight: 700;
-            font-family: Montserrat, sans-serif;
-            cursor: pointer; display: flex; align-items: center;
-            justify-content: center; gap: 7px; transition: background .2s;
-        }
-        .btn-submit:hover { background: #cc2222; }
-
-        /* Overlay de progreso */
-        .progress-overlay {
-            display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,.75);
-            z-index: 200;
+        /* Zona de archivo: ancha, es la acción central de la pantalla */
+        .zona-archivo {
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 20px;
+            gap: 9px;
+            min-height: 150px;
+            padding: 24px;
+            background: var(--papel);
+            border: 1.5px dashed var(--linea);
+            border-radius: var(--r);
+            cursor: pointer;
+            color: var(--texto-medio);
+            text-align: center;
+            transition: var(--paso);
+        }
+        .zona-archivo:hover { border-color: var(--rojo); color: var(--texto); }
+        .zona-archivo input[type=file] { display: none; }
+        .zona-archivo i { font-size: 28px; }
+        .zona-archivo.cargado { border-style: solid; border-color: var(--rojo); }
+        #up-count { font-size: var(--t-nota); color: var(--texto-bajo); }
+
+        /* ---- Capítulos ya subidos ---- */
+        /* ---- Capítulos del cómic ----
+           Cada capítulo se despliega y muestra sus páginas dentro, sin
+           saltar a otra pantalla. */
+        .cap-list { display: flex; flex-direction: column; }
+        .cap-item {
+            border-bottom: 1px solid var(--linea);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+        }
+        .cap-item:last-child { border-bottom: none; }
+        .cap-item .cap-paginas { grid-column: 1 / -1; }
+
+        .cap-cab {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            width: 100%;
+            padding: 14px 2px;
+            background: none;
+            border: none;
+            color: var(--texto);
+            font-family: Montserrat, sans-serif;
+            font-size: var(--t-base);
+            text-align: left;
+            cursor: pointer;
+            transition: var(--paso);
+        }
+        .cap-cab:hover { color: var(--rojo); }
+        .cap-flecha {
+            color: var(--texto-bajo);
+            font-size: 13px;
+            transition: transform var(--paso);
+            flex-shrink: 0;
+        }
+        .cap-item.abierto .cap-flecha { transform: rotate(90deg); color: var(--rojo); }
+        .cap-num {
+            flex-shrink: 0;
+            min-width: 54px;
+            color: var(--texto-medio);
+            font-weight: 700;
+            font-size: var(--t-nota);
+        }
+        .cap-centro { flex: 1; min-width: 0; }
+        .cap-titulo { font-weight: 600; line-height: 1.3; display: block; }
+        .cap-meta { font-size: var(--t-nota); color: var(--texto-medio); display: block; }
+        .cap-editar {
+            flex-shrink: 0;
+            color: var(--texto-bajo);
+            font-size: 14px;
+            padding: 5px;
+            text-decoration: none;
+            transition: var(--paso);
+        }
+        .cap-editar:hover { color: var(--rojo); }
+
+        /* Páginas del capítulo: rejilla de miniaturas con proporción
+           fija, para que ninguna deforme la fila. */
+        .cap-paginas {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+            gap: 8px;
+            padding: 4px 2px 18px 30px;
+        }
+        .cap-item.abierto .cap-paginas { display: grid; }
+        .cap-pagina {
+            position: relative;
+            aspect-ratio: 2 / 3;
+            border-radius: 3px;
+            overflow: hidden;
+            background: var(--estante-alto);
+            cursor: zoom-in;
+            border: none;
+            padding: 0;
+        }
+        .cap-pagina img { width: 100%; height: 100%; object-fit: cover; }
+        .cap-pagina span {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 2px;
+            background: rgba(0,0,0,.72);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .cap-pagina:hover { outline: 2px solid var(--rojo); }
+
+        /* Visor a pantalla completa de una página */
+        .visor {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 8, 10, .95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 600;
+            padding: 30px;
+        }
+        .visor.abierto { display: flex; }
+        .visor img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .visor-cerrar {
+            position: absolute;
+            top: 18px; right: 22px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 26px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        /* ---- Progreso de subida ---- */
+        .progress-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 12, .88);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            padding: 20px;
         }
         .progress-overlay.visible { display: flex; }
-        .progress-box {
-            background: #242426;
-            border: 1px solid #303033;
-            border-radius: 14px;
-            padding: 32px 40px;
-            width: 420px;
-            max-width: 90vw;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+        .progress-box { width: 100%; max-width: 420px; text-align: center; }
         .progress-title {
-            font-size: 13px; font-weight: 700;
-            color: #fff; text-transform: uppercase;
-            letter-spacing: 1.5px;
-            display: flex; align-items: center; gap: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 7px;
         }
-        .progress-title i { color: #ef4444; font-size: 16px; }
-        .progress-filename {
-            font-size: 11px; color: #666;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .progress-title i { color: var(--rojo); }
+        .progress-filename { font-size: var(--t-nota); color: var(--texto-medio); margin-bottom: 20px; }
         .progress-bar-track {
-            width: 100%;
-            height: 6px;
-            background: #3a3a3c;
-            border-radius: 3px;
+            height: 4px;
+            background: var(--estante-alto);
+            border-radius: var(--r-pil);
             overflow: hidden;
         }
         .progress-bar-fill {
             height: 100%;
-            width: 0%;
-            background: #ef4444;
-            border-radius: 3px;
-            transition: width .2s ease;
+            width: 0;
+            background: var(--rojo);
+            border-radius: var(--r-pil);
+            transition: width .25s ease;
         }
-        .progress-bar-fill.processing {
-            background: linear-gradient(90deg, #ef4444 0%, #f87171 50%, #ef4444 100%);
-            background-size: 200% 100%;
-            animation: shimmer 1.2s infinite linear;
-            width: 100% !important;
-        }
-        @keyframes shimmer {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        .progress-pct {
-            font-size: 12px; font-weight: 700; color: #ef4444;
-            text-align: right;
-        }
-        .progress-status {
-            font-size: 11px; color: #888; text-align: center;
-        }
+        .progress-pct { font-size: 26px; font-weight: 800; margin-top: 14px; }
+        .progress-status { font-size: var(--t-nota); color: var(--texto-medio); margin-top: 3px; }
 
-        /* Toast */
-        .toast-ok {
-            background: #16a34a; color: #fff;
-            padding: 10px 18px; border-radius: 8px;
-            font-size: 13px; font-weight: 600;
-            display: inline-flex; align-items: center; gap: 8px;
+        @media (max-width: 760px) {
+            .rejilla-campos { grid-template-columns: 1fr; }
         }
-        .toast-err {
-            background: #dc2626; color: #fff;
-            padding: 10px 18px; border-radius: 8px;
-            font-size: 13px; font-weight: 600;
-            display: inline-flex; align-items: center; gap: 8px;
-        }
-
-        /* Lista de capítulos */
-        .cap-list { display: flex; flex-direction: column; gap: 10px; }
-        .cap-item {
-            background: #2a2a2c;
-            border: 1px solid #303033;
-            border-radius: 10px;
-            padding: 14px 18px;
-        }
-        .cap-item-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .cap-badge {
-            background: #ef4444; color: #fff;
-            font-size: 10px; font-weight: 700;
-            padding: 2px 8px; border-radius: 4px;
-            text-transform: uppercase; letter-spacing: .5px;
-            white-space: nowrap;
-        }
-        .cap-title { font-size: 14px; font-weight: 700; }
-        .cap-meta { font-size: 11px; color: #666; margin-top: 2px; }
-        .cap-comic { font-size: 12px; color: #aaa; margin-left: auto; }
-        .btn-edit {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 12px; border-radius: 5px;
-            font-size: 11px; font-weight: 700; font-family: Montserrat, sans-serif;
-            text-decoration: none;
-            background: rgba(239,68,68,.15); color: #ef4444;
-            border: 1px solid rgba(239,68,68,.3);
-            transition: background .2s;
-        }
-        .btn-edit:hover { background: #ef4444; color: #fff; }
-        .cap-pages {
-            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
-        }
-        .cap-pages img {
-            width: 54px; height: 76px;
-            object-fit: cover; border-radius: 4px;
-            border: 1px solid #3a3a3c;
-        }
-        .empty { color: #555; font-size: 13px; text-align: center; padding: 30px 0; }
     </style>
 </head>
 <body>
 
-<div class="topbar">
-    <a href="index.php" class="topbar-brand">
-        <img src="Imagenes/Logo-Comic-Huse.png" alt="Comic House">
-    </a>
-    <span class="topbar-title">Subir capítulo</span>
-    <a href="dashboard.php" class="topbar-back">
-        <i class="bi bi-arrow-left"></i> Dashboard
-    </a>
-</div>
+<?php
+$titulo = 'Subir capítulo';
+require __DIR__ . '/admin/cabecera.php';
+?>
 
-<div class="main-wrapper">
+<main class="pagina">
 
     <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
-    <div class="toast-ok" id="toast-ok">
-        <i class="bi bi-check-circle"></i> Capítulo subido correctamente.
-    </div>
+        <div class="aviso aviso-ok" id="toast-ok">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>Capítulo subido correctamente.</span>
+        </div>
     <?php endif; ?>
 
-    <!-- FORMULARIO -->
-    <div class="card">
-        <div class="card-header">
-            <i class="bi bi-upload"></i>
-            <h2>Subir nuevo capítulo</h2>
+    <!-- PASO 1 · elegir el cómic -->
+    <div id="step-picker">
+        <p class="intro">Elige a qué cómic pertenece el capítulo. El archivo
+           puede ser .cbr o .cbz.</p>
+
+        <div class="seccion">
+            <h2>Catálogo</h2>
+            <span class="cuenta"><?= $comics->num_rows ?> cómics</span>
         </div>
-        <div class="card-body">
-            <!-- PASO 1: Elegir cómic -->
-            <div id="step-picker">
-                <span class="comic-picker-label">Selecciona el cómic</span>
-                <div class="comic-grid">
-                    <?php while ($comic = $comics->fetch_assoc()): ?>
-                    <div class="comic-card"
-                         data-id="<?= $comic['id'] ?>"
-                         data-titulo="<?= htmlspecialchars($comic['titulo'], ENT_QUOTES) ?>"
-                         data-portada="<?= !empty($comic['portada']) ? 'uploads/' . htmlspecialchars($comic['portada']) : '' ?>"
-                         onclick="selectComic(this)">
-                        <?php if (!empty($comic['portada'])): ?>
-                            <img src="uploads/<?= htmlspecialchars($comic['portada']) ?>" alt="<?= htmlspecialchars($comic['titulo']) ?>">
-                        <?php else: ?>
-                            <div class="comic-card-no-img"><i class="bi bi-book"></i></div>
-                        <?php endif; ?>
-                        <div class="comic-card-title"><?= htmlspecialchars($comic['titulo']) ?></div>
-                    </div>
-                    <?php endwhile; ?>
-                </div>
-            </div>
 
-            <!-- PASO 2: Formulario (oculto hasta elegir cómic) -->
-            <form action="controlador/procesar_capitulo.php" method="POST" enctype="multipart/form-data" id="form-capitulo" style="display:none;">
-                <input type="hidden" name="comic_id" id="input-comic-id">
-
-                <!-- Bar del cómic seleccionado -->
-                <div class="selected-comic-bar visible" id="selected-bar">
-                    <img src="" alt="" id="sel-portada">
-                    <div class="selected-comic-bar-info">
-                        <div class="selected-comic-bar-name" id="sel-nombre"></div>
-                        <div class="selected-comic-bar-sub">Cómic seleccionado</div>
-                    </div>
-                    <button type="button" class="btn-change" onclick="backToPicker()">
-                        <i class="bi bi-arrow-left"></i> Cambiar
-                    </button>
-                </div>
-
-                <div class="form-grid">
-                    <div class="field field-full">
-                        <label>Título del capítulo</label>
-                        <input type="text" name="titulo" placeholder="Ej. El eclipse" required>
-                    </div>
-                    <div class="field">
-                        <label>Número</label>
-                        <input type="text" name="numero" placeholder="Ej. 1" required>
-                    </div>
-                    <div class="field">
-                        <label>Fecha de publicación <span style="color:#555;font-weight:400;text-transform:none">(opcional)</span></label>
-                        <div class="date-input-wrap">
-                            <input type="text" id="fecha-display" placeholder="dd / mm / aaaa"
-                                maxlength="14" autocomplete="off" oninput="maskFecha(this)">
-                            <i class="bi bi-calendar3 date-icon"></i>
-                            <input type="hidden" name="fecha_publicacion" id="fecha-hidden">
-                        </div>
-                    </div>
-                    <div class="field field-full">
-                        <label>Archivo del capítulo <span style="color:#555;font-weight:400;text-transform:none">(CBR o CBZ)</span></label>
-                        <label class="upload-area" id="upload-area">
-                            <input type="file" name="cbr_file" accept=".cbr,.cbz" required onchange="handleUpload(this)">
-                            <i class="bi bi-file-zip" id="up-icon"></i>
-                            <span class="up-label" id="up-label">Elegir archivo .cbr / .cbz</span>
-                            <span class="up-count" id="up-count"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-submit">
-                        <i class="bi bi-cloud-upload"></i> Subir capítulo
-                    </button>
-                </div>
-            </form>
+        <div class="rejilla-comics">
+            <?php while ($comic = $comics->fetch_assoc()): ?>
+                <button type="button" class="comic-card"
+                     data-id="<?= $comic['id'] ?>"
+                     data-titulo="<?= htmlspecialchars($comic['titulo'], ENT_QUOTES) ?>"
+                     data-portada="<?= !empty($comic['portada']) ? 'uploads/' . htmlspecialchars($comic['portada']) : '' ?>"
+                     data-tipo="<?= htmlspecialchars($comic['tipo'], ENT_QUOTES) ?>"
+                     data-capitulos="<?= htmlspecialchars($comic['capitulos'], ENT_QUOTES) ?>"
+                     onclick="selectComic(this)">
+                    <?php if (!empty($comic['portada'])): ?>
+                        <img src="<?= htmlspecialchars(miniatura($comic['portada'], 400)) ?>"
+                             srcset="<?= htmlspecialchars(miniaturaSrcset($comic['portada'])) ?>"
+                             sizes="(max-width: 640px) 40vw, 165px"
+                             alt="<?= htmlspecialchars($comic['titulo']) ?>">
+                    <?php else: ?>
+                        <div class="comic-card-no-img"><i class="bi bi-book"></i></div>
+                    <?php endif; ?>
+                    <div class="comic-card-title"><?= htmlspecialchars($comic['titulo']) ?></div>
+                </button>
+            <?php endwhile; ?>
         </div>
     </div>
 
-    <!-- LISTA DE CAPÍTULOS (se muestra al seleccionar cómic) -->
-    <div class="card" id="card-capitulos" style="display:none;">
-        <div class="card-header">
-            <i class="bi bi-collection"></i>
-            <h2>Capítulos de <span id="cap-comic-nombre"></span></h2>
-        </div>
-        <div class="card-body">
+    <!-- PASO 2 · datos del capítulo -->
+    <div class="dos-columnas" id="paso-datos" style="display:none">
+
+        <form action="controlador/procesar_capitulo.php" method="POST"
+              enctype="multipart/form-data" id="form-capitulo">
+            <input type="hidden" name="comic_id" id="input-comic-id">
+
+            <div class="elegido" id="selected-bar">
+                <img src="" alt="" id="sel-portada">
+                <div class="elegido-info">
+                    <div class="elegido-nombre" id="sel-nombre"></div>
+                    <div class="elegido-sub">Cómic elegido</div>
+                </div>
+                <button type="button" class="btn btn-plano" onclick="backToPicker()">
+                    <i class="bi bi-arrow-left"></i> Cambiar
+                </button>
+            </div>
+
+            <div class="rejilla-campos">
+                <div class="campo">
+                    <label for="cap-titulo">Título del capítulo</label>
+                    <input type="text" id="cap-titulo" name="titulo"
+                           placeholder="Ej. El eclipse" required>
+                </div>
+
+                <div class="campo">
+                    <label for="fecha-display">Fecha de publicación <span class="suave">(opcional)</span></label>
+                    <div class="fecha-caja">
+                        <input type="text" id="fecha-display" placeholder="dd / mm / aaaa"
+                               maxlength="14" autocomplete="off" oninput="maskFecha(this)">
+                        <i class="bi bi-calendar3"></i>
+                        <input type="hidden" name="fecha_publicacion" id="fecha-hidden">
+                    </div>
+                </div>
+
+                <!-- La numeración cambia según la obra: un manga agrupa
+                     capítulos en arcos y un cómic publica grapas sueltas
+                     o recopilatorios. -->
+                <div class="fila-numeracion">
+                    <div class="campo">
+                        <label for="cap-formato">Numeración</label>
+                        <select id="cap-formato" name="formato" onchange="ajustarFormato()">
+                            <option value="grapa">Número suelto</option>
+                            <option value="rango">Varios capítulos</option>
+                            <option value="tomo">Recopilatorio</option>
+                        </select>
+                    </div>
+
+                    <div class="campo" id="campo-desde">
+                        <label for="cap-desde">Capítulo</label>
+                        <input type="text" id="cap-desde" name="numero_desde"
+                               inputmode="numeric" placeholder="Ej. 1" required>
+                    </div>
+
+                    <div class="campo oculto" id="campo-hasta">
+                        <label for="cap-hasta">Hasta el capítulo</label>
+                        <input type="text" id="cap-hasta" name="numero_hasta"
+                               inputmode="numeric" placeholder="Ej. 3">
+                    </div>
+                </div>
+
+                <div class="campo campo-ancho oculto" id="campo-arco">
+                    <label for="cap-arco">Arco <span class="suave">(opcional)</span></label>
+                    <input type="text" id="cap-arco" name="arco"
+                           placeholder="Ej. Arco del Espadachín Negro">
+                </div>
+
+                <div class="campo campo-ancho">
+                    <label for="archivo-cap">Archivo del capítulo</label>
+                    <label class="zona-archivo" id="upload-area">
+                        <input type="file" id="archivo-cap" name="cbr_file" accept=".cbr,.cbz"
+                               required onchange="handleUpload(this)">
+                        <i class="bi bi-file-zip" id="up-icon"></i>
+                        <span id="up-label">Elegir un archivo .cbr o .cbz</span>
+                        <span id="up-count"></span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-rojo" style="width:100%;margin-top:6px">
+                <i class="bi bi-cloud-upload"></i> Subir capítulo
+            </button>
+        </form>
+
+        <!-- Capítulos que ya tiene este cómic -->
+        <div id="card-capitulos">
+            <div class="seccion">
+                <h2>Ya subidos</h2>
+            </div>
             <div class="cap-list" id="cap-list">
-                <p class="empty">Cargando...</p>
+                <p class="empty">Cargando…</p>
             </div>
+            <span class="oculto" id="cap-comic-nombre"></span>
         </div>
     </div>
 
-</div>
+</main>
 
-<!-- OVERLAY PROGRESO -->
+<!-- Progreso de la subida -->
 <div class="progress-overlay" id="progress-overlay">
     <div class="progress-box">
         <div class="progress-title">
             <i class="bi bi-cloud-upload"></i>
-            <span id="prog-titulo">Subiendo capítulo...</span>
+            <span id="prog-titulo">Subiendo capítulo</span>
         </div>
         <div class="progress-filename" id="prog-filename"></div>
         <div class="progress-bar-track">
             <div class="progress-bar-fill" id="prog-fill"></div>
         </div>
         <div class="progress-pct" id="prog-pct">0%</div>
-        <div class="progress-status" id="prog-status">Enviando archivo...</div>
+        <div class="progress-status" id="prog-status">Enviando archivo…</div>
     </div>
 </div>
 
@@ -547,68 +491,113 @@ function selectComic(card) {
         portadaEl.style.display = 'none';
     }
 
+    // El tipo manda sobre los formatos de numeración disponibles.
+    window.__obra = {
+        tipo: card.dataset.tipo || 'Comic',
+        capitulos: card.dataset.capitulos || ''
+    };
+    ajustarFormato();
+
     document.getElementById('step-picker').style.display = 'none';
-    document.getElementById('form-capitulo').style.display = 'block';
+    document.getElementById('paso-datos').style.display = 'grid';
 
     // Cargar capítulos del cómic
     cargarCapitulos(card.dataset.id, card.dataset.titulo);
 }
 
 function backToPicker() {
-    document.getElementById('form-capitulo').style.display = 'none';
-    document.getElementById('card-capitulos').style.display = 'none';
+    document.getElementById('paso-datos').style.display = 'none';
     document.getElementById('step-picker').style.display = 'block';
     document.querySelectorAll('.comic-card').forEach(c => c.classList.remove('selected'));
 }
 
 function cargarCapitulos(comicId, comicNombre) {
-    const card = document.getElementById('card-capitulos');
     const list = document.getElementById('cap-list');
     const titulo = document.getElementById('cap-comic-nombre');
 
     titulo.textContent = comicNombre;
-    card.style.display = 'block';
-    list.innerHTML = '<p class="empty" style="padding:20px 0;">Cargando...</p>';
+    list.innerHTML = '<p class="empty">Cargando…</p>';
 
     fetch('controlador/get_capitulos.php?comic_id=' + comicId)
         .then(r => r.json())
         .then(caps => {
             if (caps.length === 0) {
-                list.innerHTML = '<p class="empty">Este cómic no tiene capítulos aún.</p>';
+                list.innerHTML = '<p class="empty">Este cómic todavía no tiene capítulos.</p>';
                 return;
             }
-            list.innerHTML = caps.map(cap => {
+            list.innerHTML = caps.map((cap, i) => {
                 const fecha = cap.fecha_publicacion
-                    ? new Date(cap.fecha_publicacion).toLocaleDateString('es', {day:'2-digit', month:'2-digit', year:'numeric'})
+                    ? new Date(cap.fecha_publicacion).toLocaleDateString('es',
+                        { day: '2-digit', month: '2-digit', year: 'numeric' })
                     : 'Sin fecha';
-                const imgs = cap.imagenes.slice(0, 10).map(img =>
-                    `<img src="${img}" alt="Página">`
-                ).join('');
-                const extra = cap.imagenes.length > 10
-                    ? `<div style="width:54px;height:76px;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#666;font-weight:700;">+${cap.imagenes.length - 10}</div>`
-                    : '';
-                const pages = cap.imagenes.length > 0
-                    ? `<div class="cap-pages">${imgs}${extra}</div>` : '';
+                const n = cap.total_paginas || cap.imagenes.length;
+
+                // Las páginas se montan al desplegar, no antes: un
+                // capítulo puede tener más de doscientas.
                 return `
-                <div class="cap-item">
-                    <div class="cap-item-header">
-                        <span class="cap-badge">Cap. ${cap.numero}</span>
-                        <div>
-                            <div class="cap-title">${cap.titulo}</div>
-                            <div class="cap-meta">${fecha}</div>
-                        </div>
-                        <a href="editar_capitulo.php?id=${cap.id}" class="btn-edit" style="margin-left:auto;">
-                            <i class="bi bi-pencil"></i> Editar
-                        </a>
-                    </div>
-                    ${pages}
+                <div class="cap-item" data-caps="${i}">
+                    <button type="button" class="cap-cab" onclick="alternarCapitulo(${i})">
+                        <i class="bi bi-chevron-right cap-flecha"></i>
+                        <span class="cap-num">${cap.numero}</span>
+                        <span class="cap-centro">
+                            <span class="cap-titulo">${cap.titulo}</span>
+                            <span class="cap-meta">${n} página${n === 1 ? '' : 's'} · ${fecha}</span>
+                        </span>
+                    </button>
+                    <a href="editar_capitulo.php?id=${cap.id}" class="cap-editar"
+                       title="Editar los datos del capítulo" onclick="event.stopPropagation()">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <div class="cap-paginas" id="paginas-${i}"></div>
                 </div>`;
             }).join('');
+
+            // Se guardan las páginas para montarlas al desplegar.
+            window.__capitulos = caps;
         })
         .catch(() => {
-            list.innerHTML = '<p class="empty">Error al cargar capítulos.</p>';
+            list.innerHTML = '<p class="empty">No se pudieron cargar los capítulos.</p>';
         });
 }
+
+/* Despliega un capítulo y pinta sus páginas la primera vez. */
+function alternarCapitulo(i) {
+    const item = document.querySelector(`.cap-item[data-caps="${i}"]`);
+    if (!item) return;
+
+    const caja = document.getElementById('paginas-' + i);
+    if (caja && !caja.dataset.montado) {
+        const cap = (window.__capitulos || [])[i];
+        caja.innerHTML = (cap?.imagenes || []).map((img, p) => `
+            <button type="button" class="cap-pagina" onclick="verPagina('${img}')">
+                <img loading="lazy" src="${img}" alt="Página ${p + 1}">
+                <span>${p + 1}</span>
+            </button>`).join('') ||
+            '<p class="empty">Este capítulo no tiene páginas.</p>';
+        caja.dataset.montado = '1';
+    }
+    item.classList.toggle('abierto');
+}
+
+/* Abre una página a pantalla completa, sin salir de la pantalla. */
+function verPagina(src) {
+    let visor = document.getElementById('visor');
+    if (!visor) {
+        visor = document.createElement('div');
+        visor.id = 'visor';
+        visor.className = 'visor';
+        visor.innerHTML = '<button type="button" class="visor-cerrar">&times;</button><img alt="">';
+        document.body.appendChild(visor);
+        const cerrar = () => visor.classList.remove('abierto');
+        visor.addEventListener('click', cerrar);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') cerrar();
+        });
+    }
+    visor.querySelector('img').src = src;
+    visor.classList.add('abierto');
+}
+
 
 function maskFecha(input) {
     // Eliminar todo lo que no sea dígito
@@ -639,14 +628,68 @@ function maskFecha(input) {
     }
 }
 
+/* ---- Numeración según el tipo de obra ----
+   Un manga agrupa capítulos en arcos; un cómic publica grapas sueltas
+   o recopilatorios. El formulario muestra solo lo que tiene sentido
+   para la obra elegida. */
+function ajustarFormato() {
+    const obra = window.__obra || { tipo: 'Comic' };
+    const esManga = obra.tipo === 'Manga';
+    const sel = document.getElementById('cap-formato');
+    const fmt = sel.value;
+
+    // Un recopilatorio no tiene sentido en un manga.
+    const opcionTomo = sel.querySelector('option[value="tomo"]');
+    if (opcionTomo) opcionTomo.hidden = esManga;
+    if (esManga && fmt === 'tomo') { sel.value = 'rango'; }
+
+    // En un manga lo habitual es agrupar: se propone el rango.
+    if (esManga && !sel.dataset.tocado) sel.value = 'rango';
+
+    const actual = sel.value;
+    const desde = document.getElementById('campo-desde');
+    const hasta = document.getElementById('campo-hasta');
+    const arco  = document.getElementById('campo-arco');
+
+    desde.classList.toggle('oculto', actual === 'tomo');
+    hasta.classList.toggle('oculto', actual !== 'rango');
+    arco.classList.toggle('oculto', !esManga);
+
+    document.getElementById('cap-desde').required = actual !== 'tomo';
+    document.getElementById('cap-hasta').required = actual === 'rango';
+
+    const etiqueta = document.querySelector('#campo-desde label');
+    if (etiqueta) {
+        etiqueta.textContent = actual === 'rango' ? 'Desde el capítulo' : 'Capítulo';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('cap-formato');
+    if (sel) sel.addEventListener('change', () => { sel.dataset.tocado = '1'; });
+
+    /* El número de capítulo solo admite dígitos: se filtra al escribir
+       para que el error no llegue al envío. */
+    for (const id of ['cap-desde', 'cap-hasta']) {
+        const campo = document.getElementById(id);
+        if (!campo) continue;
+        campo.addEventListener('input', () => {
+            let v = campo.value.replace(/[^0-9]/g, '');
+            v = v.replace(/^0+(?=[0-9])/, '');   // '007' -> '7'
+            if (v.length > 4) v = v.slice(0, 4); // tope de cuatro dígitos
+            if (campo.value !== v) campo.value = v;
+        });
+    }
+});
+
 function handleUpload(input) {
     const area  = document.getElementById('upload-area');
     const icon  = document.getElementById('up-icon');
     const label = document.getElementById('up-label');
     const count = document.getElementById('up-count');
     if (input.files && input.files.length > 0) {
-        area.classList.add('has-files');
-        icon.style.color = '#ef4444';
+        area.classList.add('cargado');
+        icon.style.color = 'var(--rojo)';
         label.style.display = 'none';
         count.style.display = 'block';
         count.textContent = input.files[0].name;
@@ -706,9 +749,18 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                 }, 800);
             } else {
                 overlay.classList.remove('visible');
-                const msg = res.error === 'duplicado'
-                    ? 'Ya existe un capítulo con ese número para este cómic.'
-                    : 'Error al subir el capítulo. Intenta de nuevo.';
+                // El servidor explica qué regla frenó la subida; se
+                // muestra tal cual en vez de un error genérico.
+                let msg;
+                if (res.error === 'numeracion') {
+                    msg = res.mensaje || 'La numeración no es válida.';
+                } else if (res.error === 'duplicado') {
+                    msg = 'Ya existe un capítulo con ese número para este cómic.';
+                } else if (res.error === 'comic_inexistente') {
+                    msg = 'El cómic elegido ya no está en el catálogo.';
+                } else {
+                    msg = 'Error al subir el capítulo. Intenta de nuevo.';
+                }
                 showError(msg);
             }
         } catch(err) {
@@ -735,10 +787,10 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
 })();
 
 function showError(msg) {
-    const wrapper = document.querySelector('.main-wrapper');
+    const wrapper = document.querySelector('.pagina');
     const err = document.createElement('div');
-    err.className = 'toast-err';
-    err.innerHTML = '<i class="bi bi-x-circle"></i> ' + msg;
+    err.className = 'aviso aviso-error';
+    err.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i><span>' + msg + '</span>';
     wrapper.prepend(err);
     setTimeout(() => {
         err.style.transition = 'opacity 0.5s';

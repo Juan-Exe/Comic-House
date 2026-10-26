@@ -1,10 +1,12 @@
+/* Sin `overflow` declarado en html ni en body: cualquiera de los dos
+   convierte a ese elemento en contenedor de scroll y Lenis, que
+   gobierna el de la ventana, deja de tener efecto. El desbordamiento
+   horizontal se evita acotando el ancho de los elementos. */
 body {
     margin: 0;
     padding: 0;
-    font-family: Montserrat;
+    font-family: Montserrat, sans-serif;
     background: #171616;
-    overflow-x: hidden;
-    /* <-- Esto es clave */
 }
 
 foot {
@@ -30,8 +32,13 @@ a {
     height: 72px;
     background-color: #ef4444;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* La izquierda lleva logo y título, así que se le deja crecer;
+       los controles van centrados y el interruptor a la derecha con
+       el ancho que necesite. Con 190px fijos a la izquierda el título
+       desbordaba y empujaba el interruptor fuera de la pantalla. */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
+    gap: 16px;
     padding: 0 28px;
     top: 0;
     left: 0;
@@ -105,20 +112,117 @@ span {
     justify-content: center;
 }
 
+/* `stretch` en vez de `center`: cada franja ocupa todo el ancho, de
+   modo que su luz llega hasta los bordes de la ventana. Con `center`
+   la franja se encogía al ancho de la página y quedaban bandas negras
+   a los lados. */
 .comic {
-    margin-top: 25px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    align-items: stretch;
+    width: 100%;
+}
+
+/* Ambient light: el fondo de cada página es la propia imagen,
+   ampliada y desenfocada, igual que el modo cine de YouTube o el fondo
+   de Gemini. Las bandas de los lados dejan de ser una barra gris y
+   pasan a ser el cómic difuminado. */
+/* Ambient light.
+
+   La luz NO vive en cada página: es una sola capa fija detrás de todo,
+   donde las páginas visibles pintan su color y se mezclan entre sí.
+   Cuando cada franja tenía su propio difuminado, dos luces contiguas
+   solo podían tocarse por el borde y se veía la costura; aquí los
+   colores se funden de verdad porque comparten superficie. */
+#ambiente {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    overflow: hidden;
+    background: #171616;
+}
+
+/* Cada página aporta una mancha de color. Se solapan y sus bordes se
+   desvanecen, de modo que la transición entre una y otra es continua. */
+#ambiente .mancha {
+    position: absolute;
+    left: 50%;
+    width: 150vw;
+    transform: translateX(-50%);
+    object-fit: cover;
+    filter: blur(80px) saturate(1.9);
+    opacity: 0;
+    transition: opacity .9s ease;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at center,
+                #000 0%, transparent 78%);
+    mask-image: radial-gradient(ellipse 70% 60% at center,
+                #000 0%, transparent 78%);
+}
+#ambiente .mancha.visible { opacity: .9; }
+
+.pagina-franja {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 14px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #ambiente .mancha { transition: none; }
+}
+
+/* Columna derecha de la barra: alinea el interruptor al final. */
+.right-section {
+    display: flex;
     align-items: center;
+    justify-content: flex-end;
+}
+
+/* Interruptor del modo ambiente, en la barra del lector. */
+.btn-ambiente {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    font-family: Montserrat, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s ease, opacity .18s ease;
+    white-space: nowrap;
+}
+.btn-ambiente:hover { background: rgba(255, 255, 255, .26); }
+.btn-ambiente i { font-size: 14px; }
+/* Apagado: el botón se atenúa, como el propio efecto. */
+.btn-ambiente.apagado { opacity: .62; background: transparent; }
+
+/* Al apagar, toda la capa se desvanece a la vez. */
+#ambiente {
+    opacity: 1;
+    transition: opacity .55s ease;
+}
+#ambiente.apagado { opacity: 0; }
+
+@media (max-width: 680px) {
+    .btn-ambiente span { display: none; }
 }
 
 .comic-page {
+    position: relative;
+    z-index: 1;              /* siempre por encima de la luz */
     width: min(898px, 95vw);
     height: auto;
     object-fit: contain;
     display: block;
 }
+
+.comic-page-wrapper { position: relative; z-index: 1; }
 
 .comic-page.doble {
     width: min(1300px, 95vw);

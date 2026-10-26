@@ -1,11 +1,34 @@
-<?php include("modelo/conexion.php");
+<?php
+require_once __DIR__ . '/controlador/miniaturas.php'; include("modelo/conexion.php");
 session_start();
 $slider      = $conexion->query("SELECT * FROM comics WHERE destacado = 1 ORDER BY id ASC");
 $destacados  = $conexion->query("SELECT * FROM comics WHERE imprescindible = 1 ORDER BY id ASC LIMIT 4");
 $catalogo    = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 100");
 $generos     = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'manga'");
 $generosn    = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'Comic'");
-$editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC");
+// Las destacadas, en su orden. El formato (5 o 10 espacios) se elige en
+// el panel y la base impide destacar mas de las que caben, de modo que
+// la seccion siempre tiene filas completas de cinco.
+$formato_portada = (int) $conexion->query(
+    "SELECT editoriales_formato FROM configuracion WHERE id = 1"
+)->fetch_assoc()['editoriales_formato'];
+
+$destacadas_q = $conexion->prepare(
+    "SELECT * FROM editoriales
+      WHERE destacada = 1
+      ORDER BY orden_destacada ASC, nombre ASC
+      LIMIT ?"
+);
+$destacadas_q->bind_param('i', $formato_portada);
+$destacadas_q->execute();
+$editoriales_portada = $destacadas_q->get_result()->fetch_all(MYSQLI_ASSOC);
+$destacadas_q->close();
+
+// Red de seguridad: si por cualquier via quedara una cantidad que no
+// llena filas de cinco, se recorta a la ultima fila completa.
+$editoriales_portada = array_slice(
+    $editoriales_portada, 0, intdiv(count($editoriales_portada), 5) * 5
+);
 ?>
 
 
@@ -498,16 +521,16 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
 
     <div class="editoriales-btn">
         <div class="editoriales-container">
-            <?php if ($editoriales_q->num_rows > 0): ?>
-                <?php while ($ed = $editoriales_q->fetch_assoc()): ?>
+            <?php if (count($editoriales_portada) > 0): ?>
+                <?php foreach ($editoriales_portada as $ed): ?>
                 <div class="editoriales-btns">
                     <button class="editorial-btnss" onclick="location.href='P-comics/p-comics.php?editorial=<?= urlencode($ed['nombre']) ?>'">
                         <img src="uploads/<?= htmlspecialchars($ed['imagen']) ?>" alt="<?= htmlspecialchars($ed['nombre']) ?>" class="editorial-logo-img">
                     </button>
                 </div>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             <?php else: ?>
-                <p style="color:#aaa; font-size:13px; text-align:center; width:100%; padding:20px 0;">No hay editoriales registradas. Ve al panel de admin → Editoriales.</p>
+                <p style="color:#aaa; font-size:13px; text-align:center; width:100%; padding:20px 0;">No hay editoriales destacadas. Ve al panel de admin → Editoriales.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -524,7 +547,7 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
         <div class="Comics-container">
             <?php while ($datos = $destacados->fetch_object()): ?>
                 <div class="Comics-btn" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'">
-                    <img class="Comics-btns" src="uploads/<?= htmlspecialchars($datos->portada) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
+                    <img class="Comics-btns" src="<?= htmlspecialchars(miniatura($datos->portada, 400)) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
                     <div class="Comics-info">
                         <p class="title-c"><?= htmlspecialchars($datos->titulo) ?></p>
                         <p class="description-c"><span><?= htmlspecialchars($datos->clasificacion) ?></span>
@@ -550,7 +573,7 @@ $editoriales_q = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC
         <div class="Comics-container-2">
             <?php while ($datos = $catalogo->fetch_object()) { ?>
                 <div class="Comics-btn-2" onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'">
-                    <img class="Comics-btns-2" src="uploads/<?= htmlspecialchars($datos->portada) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
+                    <img class="Comics-btns-2" src="<?= htmlspecialchars(miniatura($datos->portada, 400)) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
                     <div class="Comics-info-2">
                         <p class="title-c-2"><?= htmlspecialchars($datos->titulo) ?></p>
                         <p class="description-c-2"><span><?= htmlspecialchars($datos->clasificacion) ?></span>

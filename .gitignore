@@ -15,3 +15,6 @@ Integridad y rendimiento.html
 # Export de la BD: usuarios.csv contiene hashes de contrasenas
 E1_integridad_rendimiento/export_csv/
 export_csv/
+
+# Miniaturas generadas: se recrean solas desde las portadas
+uploads/miniaturas/

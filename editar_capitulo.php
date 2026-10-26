@@ -35,116 +35,93 @@ if (!empty($capitulo['fecha_publicacion'])) {
     <link rel="icon" href="ico.ico">
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="admin/admin.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Montserrat, sans-serif; background: #1c1c1e; color: #f0f0f0; min-height: 100vh; }
-
-        /* TOPBAR */
-        .topbar {
-            background: #ef4444; height: 72px;
-            display: grid; grid-template-columns: 1fr auto 1fr;
-            align-items: center; padding: 0 28px;
-            position: sticky; top: 0; z-index: 100;
-        }
-        .topbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; justify-self: start; }
-        .topbar-brand img { height: 48px; }
-        .topbar-title { justify-self: center; color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: .9; }
-        .topbar-back {
-            justify-self: end; padding: 7px 16px; border-radius: 6px;
-            font-size: 12px; font-weight: 700; font-family: Montserrat, sans-serif;
-            text-decoration: none; display: flex; align-items: center; gap: 6px;
-            background: rgba(255,255,255,.15); color: #fff;
-            border: 1px solid rgba(255,255,255,.35); transition: opacity .2s;
-        }
-        .topbar-back:hover { opacity: .8; }
+        body { font-family: Montserrat, sans-serif; background: var(--papel); color: var(--texto); min-height: 100vh; }
 
         /* MAIN */
         .edit-wrapper { max-width: 620px; margin: 40px auto; padding: 0 20px 60px; }
 
-        .card {
-            background: #242426; border: 1px solid #303033;
-            border-radius: 14px; overflow: hidden;
+        /* Sin caja: el contenido se separa con una línea, como en el
+           resto del panel. */
+        .edit-cab {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--linea);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
         }
-        .card-header {
-            background: #2a2a2c; border-bottom: 1px solid #303033;
-            padding: 16px 24px; display: flex; align-items: center; gap: 10px;
-        }
-        .card-header i { color: #ef4444; font-size: 17px; }
-        .card-header h2 { font-size: 13px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 1.5px; }
-        .card-header span { margin-left: auto; font-size: 12px; color: #555; }
-        .card-body { padding: 24px; }
+        .edit-cab h2 { font-size: var(--t-titulo); font-weight: 700; }
+        .edit-cab span { font-size: var(--t-nota); color: var(--texto-medio); }
 
         /* FORM */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .field-full { grid-column: 1 / -1; }
         .field { display: flex; flex-direction: column; gap: 6px; }
-        .field label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+        .field label { font-size: var(--t-nota); font-weight: 600; color: var(--texto-medio); }
         .field input, .field select {
-            width: 100%; background: #1c1c1e; border: 1px solid #3a3a3c;
-            border-radius: 7px; color: #f0f0f0; padding: 9px 12px;
-            font-size: 13px; font-family: Montserrat, sans-serif;
+            width: 100%; background: var(--papel); border: 1px solid var(--linea);
+            border-radius: 7px; color: var(--texto); padding: 9px 12px;
+            font-size: var(--t-nota); font-family: Montserrat, sans-serif;
             transition: border-color .2s; outline: none;
         }
-        .field input:focus, .field select:focus { border-color: #ef4444; }
+        .field input:focus, .field select:focus { border-color: var(--rojo); }
         .field select {
             appearance: none; -webkit-appearance: none;
             padding-right: 36px;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat; background-position: right 12px center; cursor: pointer;
         }
-        .field select option { background: #242426; }
+        .field select option { background: var(--estante); }
 
         /* Campo fecha */
         .date-input-wrap { position: relative; }
         .date-input-wrap input[type="text"] { padding-left: 36px; }
-        .date-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #555; font-size: 14px; pointer-events: none; }
-        .date-input-wrap:focus-within .date-icon { color: #ef4444; }
-        #fecha-display.date-ok { color: #22c55e; }
+        .date-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--texto-bajo); font-size: var(--t-base); pointer-events: none; }
+        .date-input-wrap:focus-within .date-icon { color: var(--rojo); }
+        #fecha-display.date-ok { color: var(--texto); }
 
         /* Acciones */
         .form-actions {
             display: flex; gap: 12px;
             margin-top: 20px; padding-top: 20px;
-            border-top: 1px solid #303033;
+            border-top: 1px solid var(--linea);
         }
         .btn-guardar {
-            flex: 1; padding: 12px; background: #ef4444; color: #fff;
-            border: none; border-radius: 7px; font-size: 13px; font-weight: 700;
+            flex: 1; padding: 12px; background: var(--rojo); color: #fff;
+            border: none; border-radius: 7px; font-size: var(--t-nota); font-weight: 700;
             font-family: Montserrat, sans-serif; cursor: pointer;
             display: flex; align-items: center; justify-content: center; gap: 7px;
             transition: background .2s;
         }
-        .btn-guardar:hover { background: #cc2222; }
+        .btn-guardar:hover { background: var(--rojo); }
         .btn-cancelar {
-            padding: 12px 24px; background: transparent; color: #888;
-            border: 1px solid #3a3a3c; border-radius: 7px; font-size: 13px;
+            padding: 12px 24px; background: transparent; color: var(--texto-medio);
+            border: 1px solid var(--linea); border-radius: 7px; font-size: var(--t-nota);
             font-weight: 700; font-family: Montserrat, sans-serif;
             text-decoration: none; display: flex; align-items: center; gap: 7px;
             transition: border-color .2s, color .2s;
         }
-        .btn-cancelar:hover { border-color: #888; color: #ccc; }
+        .btn-cancelar:hover { border-color: var(--texto-medio); color: var(--texto-medio); }
     </style>
 </head>
 <body>
 
-<div class="topbar">
-    <a href="index.php" class="topbar-brand">
-        <img src="Imagenes/Logo-Comic-Huse.png" alt="Comic House">
-    </a>
-    <span class="topbar-title">Editar capítulo</span>
-    <a href="subir_capitulo.php" class="topbar-back">
-        <i class="bi bi-arrow-left"></i> Volver
-    </a>
-</div>
+<?php
+$titulo = 'Editar capítulo';
+$volver = ['subir_capitulo.php', 'Subir capítulo'];
+require __DIR__ . '/admin/cabecera.php';
+?>
 
 <div class="edit-wrapper">
-    <div class="card">
-        <div class="card-header">
-            <i class="bi bi-pencil-square"></i>
-            <h2>Modificar capítulo</h2>
-            <span>#<?= $capitulo['id'] ?> — <?= htmlspecialchars($capitulo['titulo']) ?></span>
-        </div>
-        <div class="card-body">
+    <div class="edit-cab">
+        <h2><?= htmlspecialchars($capitulo['titulo']) ?></h2>
+        <span>Capítulo #<?= $capitulo['id'] ?></span>
+    </div>
+    <div>
             <form action="controlador/actualizar_capitulo.php" method="POST">
                 <input type="hidden" name="id" value="<?= $capitulo['id'] ?>">
                 <input type="hidden" name="comic_id" value="<?= $capitulo['comic_id'] ?>">
@@ -172,7 +149,7 @@ if (!empty($capitulo['fecha_publicacion'])) {
                     </div>
 
                     <div class="field">
-                        <label>Fecha de publicación <span style="color:#555;font-weight:400;text-transform:none">(opcional)</span></label>
+                        <label>Fecha de publicación <span style="color:var(--texto-bajo);font-weight:400;text-transform:none">(opcional)</span></label>
                         <div class="date-input-wrap">
                             <input type="text" id="fecha-display" placeholder="dd / mm / aaaa"
                                 maxlength="14" autocomplete="off" oninput="maskFecha(this)"

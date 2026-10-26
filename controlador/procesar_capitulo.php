@@ -11,24 +11,45 @@ if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
     exit();
 }
 
+require_once __DIR__ . '/validar_capitulo.php';
+
 $comic_id = intval($_POST['comic_id']);
-$titulo   = $conexion->real_escape_string(trim($_POST['titulo']));
-$numero   = $conexion->real_escape_string(trim($_POST['numero']));
-$fecha    = $conexion->real_escape_string(trim($_POST['fecha_publicacion']));
+$titulo   = trim($_POST['titulo'] ?? '');
+$fecha    = trim($_POST['fecha_publicacion'] ?? '');
+$formato  = trim($_POST['formato'] ?? 'grapa');
+$arco     = trim($_POST['arco'] ?? '');
 
 header('Content-Type: application/json');
 
-// Verificar duplicado
-$verificar = $conexion->prepare("SELECT id FROM capitulos WHERE comic_id = ? AND numero = ?");
-$verificar->bind_param("is", $comic_id, $numero);
-$verificar->execute();
-$verificar->store_result();
-if ($verificar->num_rows > 0) {
-    $verificar->close();
-    echo json_encode(['ok' => false, 'error' => 'duplicado']);
+// El tipo de obra decide qué numeración tiene sentido.
+$obra = $conexion->prepare("SELECT tipo FROM comics WHERE id = ?");
+$obra->bind_param('i', $comic_id);
+$obra->execute();
+$obra->bind_result($tipo_obra);
+$existe = $obra->fetch();
+$obra->close();
+
+if (!$existe) {
+    echo json_encode(['ok' => false, 'error' => 'comic_inexistente']);
     exit();
 }
-$verificar->close();
+
+// La numeración se valida antes de tocar nada: dígitos, sin ceros a
+// la izquierda, rango coherente y sin pisar lo ya subido.
+$dictamen = revisarCapitulo(
+    $conexion, $comic_id, $tipo_obra, $formato,
+    $_POST['numero_desde'] ?? '', $_POST['numero_hasta'] ?? ''
+);
+
+if ($dictamen['estado'] === 'error') {
+    echo json_encode(['ok' => false, 'error' => 'numeracion',
+                      'mensaje' => $dictamen['mensaje']]);
+    exit();
+}
+
+$desde = $dictamen['desde'];
+$hasta = $dictamen['hasta'];
+$numero = etiquetaCapitulo($formato, $desde, $hasta);
 
 // Verificar archivo subido
 if (empty($_FILES['cbr_file']['tmp_name'])) {
@@ -42,10 +63,14 @@ $extension    = pathinfo($archivo_nombre, PATHINFO_EXTENSION);
 
 // Insertar capítulo (sentencia preparada: evita inyección SQL)
 $stmt_cap = $conexion->prepare(
-    "INSERT INTO capitulos (comic_id, titulo, numero, fecha_publicacion) VALUES (?, ?, ?, ?)"
+    "INSERT INTO capitulos (comic_id, titulo, numero, fecha_publicacion,
+                            formato, numero_desde, numero_hasta, arco)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 );
 $fecha_val = ($fecha !== '') ? $fecha : null;
-$stmt_cap->bind_param("isss", $comic_id, $titulo, $numero, $fecha_val);
+$arco_val  = ($arco !== '') ? $arco : null;
+$stmt_cap->bind_param("issssiis", $comic_id, $titulo, $numero, $fecha_val,
+                      $formato, $desde, $hasta, $arco_val);
 $stmt_cap->execute();
 $capitulo_id = $conexion->insert_id;
 $stmt_cap->close();

@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__) . '/controlador/miniaturas.php';
 include("../modelo/conexion.php");
 session_start();
 
@@ -184,7 +185,7 @@ $datos = $stmt->get_result();
         <div class="Comics-container-2">
             <?php while ($comic = $datos->fetch_object()) { ?>
                 <div class="Comics-btn-2" onclick="location.href='../Comics/comics.php?id=<?= $comic->id ?>'">
-                    <img class="Comics-btns-2" src="../uploads/<?= htmlspecialchars($comic->portada) ?>" alt="<?= htmlspecialchars($comic->titulo) ?>">
+                    <img class="Comics-btns-2" src="../<?= htmlspecialchars(miniatura($comic->portada, 400)) ?>" alt="<?= htmlspecialchars($comic->titulo) ?>">
                     <div class="Comics-info-2">
                         <p class="title-c-2"><?= htmlspecialchars($comic->titulo) ?></p>
                         <p class="description-c-2"><span><?= htmlspecialchars($comic->clasificacion) ?></span>

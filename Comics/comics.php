@@ -1,4 +1,26 @@
 <?php
+/**
+ * Compone «Obra: Capítulo» sin repetir el nombre de la obra.
+ *
+ * Algunos capítulos ya traen el título dentro ('Saga: Capítulo Uno'),
+ * y concatenarlo a ciegas producía «Saga: Saga: Capítulo Uno».
+ */
+function tituloCapitulo(string $obra, string $capitulo): string
+{
+    $obra = trim($obra);
+    $capitulo = trim(rtrim(trim($capitulo), ':,'));
+
+    if ($capitulo === '') {
+        return $obra;
+    }
+    // ¿El capítulo ya empieza por el nombre de la obra?
+    if (stripos($capitulo, $obra) === 0) {
+        $resto = trim(ltrim(substr($capitulo, strlen($obra)), " :-–"));
+        return $resto === '' ? $obra : $obra . ': ' . $resto;
+    }
+    return $obra . ': ' . $capitulo;
+}
+
 include("../modelo/conexion.php");
 session_start();
 
@@ -226,7 +248,7 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
             <div class="enlaces">
                 <?php while ($cap = $capitulos->fetch_assoc()): ?>
                     <a href="../Lector/lector.php?capitulo_id=<?= $cap['id'] ?>" data-capitulo="<?= $cap['id'] ?>">
-                        <span><?= htmlspecialchars($comic['titulo']) ?>: <?= $cap['titulo'] ?>     <?= $cap['numero'] ?></span>
+                        <span><?= htmlspecialchars(tituloCapitulo($comic['titulo'], $cap['titulo'])) ?> <?= htmlspecialchars($cap['numero']) ?></span>
                         <span class="fecha">
                             <?= $cap['fecha_publicacion'] ? date('d/m/Y', strtotime($cap['fecha_publicacion'])) : '' ?>
                         </span>

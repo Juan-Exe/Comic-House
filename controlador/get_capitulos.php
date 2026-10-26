@@ -18,13 +18,15 @@ $caps = $conexion->query("SELECT capitulos.*, comics.titulo AS comic_titulo
 
 $resultado = [];
 while ($cap = $caps->fetch_assoc()) {
-    // Primeras 10 páginas
-    $pags = $conexion->query("SELECT imagen_url FROM paginas WHERE capitulo_id = {$cap['id']} ORDER BY orden ASC LIMIT 11");
+    $pags = $conexion->query("SELECT imagen_url FROM paginas
+                                WHERE capitulo_id = {$cap['id']}
+                                ORDER BY orden ASC");
     $imagenes = [];
     while ($img = $pags->fetch_assoc()) {
         $imagenes[] = $img['imagen_url'];
     }
     $cap['imagenes'] = $imagenes;
+    $cap['total_paginas'] = count($imagenes);
     $resultado[] = $cap;
 }
 
