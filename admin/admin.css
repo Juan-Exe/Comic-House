@@ -1,0 +1,491 @@
+/* ===================================================================
+   admin.css · Comic House — panel de administración
+
+   El panel es la trastienda de un catálogo de cómics: el material con
+   el que se trabaja son portadas. Por eso el fondo es más oscuro que
+   el del sitio (#141416) — para que las portadas salten— y las
+   superficies se distinguen por luz, no por bordes.
+
+   La paleta sale de styles.css, el diseño del sitio público:
+       #ef4444  navbar
+       #ce4646  franja del buscador
+   =================================================================== */
+
+:root {
+    /* Superficies: tres niveles que se distinguen de verdad */
+    --papel:        #141416;
+    --estante:      #1e1e21;
+    --estante-alto: #26262a;
+    --linea:        #2e2e33;
+
+    /* Marca */
+    --rojo:       #ef4444;
+    --rojo-hondo: #ce4646;
+    --rojo-tenue: rgba(239, 68, 68, .13);
+    --rojo-linea: rgba(239, 68, 68, .35);
+
+    /* Texto */
+    --texto:       #f2f2f2;
+    --texto-medio: #8a8a8f;
+    --texto-bajo:  #5c5c63;
+
+    /* Estado: solo donde significa algo */
+    --ok:        #3fa860;
+    --ok-tenue:  rgba(63, 168, 96, .12);
+    --alerta:       #d99a2b;
+    --alerta-tenue: rgba(217, 154, 43, .12);
+
+    /* Un radio para casi todo */
+    --r:     8px;
+    --r-pil: 999px;
+
+    /* Cuatro tamaños */
+    --t-nota:   12px;
+    --t-base:   14px;
+    --t-titulo: 18px;
+    --t-grande: 30px;
+
+    --paso: .18s ease;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: Montserrat, system-ui, sans-serif;
+    background: var(--papel);
+    color: var(--texto);
+    font-size: var(--t-base);
+    line-height: 1.55;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+img { display: block; max-width: 100%; }
+
+/* ================================================= barra superior */
+/* Mismo rojo y misma altura que la navbar pública. La ruta del centro
+   siempre lleva al panel: antes cada pantalla ponía su propio botón y
+   en el catálogo la única salida era cerrar sesión. */
+.topbar {
+    background: var(--rojo);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 26px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.topbar-brand { display: flex; align-items: center; flex-shrink: 0; }
+.topbar-brand img { height: 38px; }
+
+/* Vuelta atrás: mismo tratamiento que los enlaces de la derecha, para
+   que los tres se lean como lo que son. */
+.topbar-volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border-radius: var(--r);
+    color: rgba(255, 255, 255, .88);
+    text-decoration: none;
+    font-size: var(--t-nota);
+    font-weight: 600;
+    white-space: nowrap;
+    transition: var(--paso);
+    flex-shrink: 0;
+}
+.topbar-volver:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.topbar-volver i { font-size: 15px; }
+
+/* Dónde estás: dato, no enlace. */
+.topbar-donde {
+    flex: 1;
+    color: #fff;
+    font-size: var(--t-base);
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-acciones { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.topbar-enlace {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border-radius: var(--r);
+    color: rgba(255, 255, 255, .88);
+    text-decoration: none;
+    font-size: var(--t-nota);
+    font-weight: 600;
+    transition: var(--paso);
+}
+.topbar-enlace:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.topbar-enlace i { font-size: 15px; }
+
+@media (max-width: 720px) {
+    .topbar-enlace span { display: none; }
+}
+
+/* ========================================================= página */
+.pagina {
+    flex: 1;
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 34px 26px 70px;
+}
+
+/* El título de sección con las líneas rojas a los lados es el recurso
+   propio de la portada de Comic House. Se trae aquí para que panel y
+   sitio se reconozcan. */
+.seccion {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 0 0 22px;
+}
+.seccion::after {
+    content: "";
+    flex: 1;
+    height: 3px;
+    background: var(--rojo);
+}
+.seccion h2 {
+    font-size: var(--t-titulo);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+}
+.seccion .cuenta {
+    font-size: var(--t-nota);
+    color: var(--texto-medio);
+    font-weight: 600;
+}
+
+.encabezado { margin-bottom: 26px; }
+.encabezado h1,
+.titulo-pag {
+    font-size: var(--t-grande);
+    font-weight: 800;
+    letter-spacing: -.5px;
+}
+.encabezado p,
+.sub-pag {
+    color: var(--texto-medio);
+    font-size: var(--t-base);
+    margin-top: 2px;
+    max-width: 62ch;
+}
+.sub-pag { margin-bottom: 26px; }
+
+/* Frase que explica la pantalla. El título iba antes aquí, pero
+   repetía lo que la cabecera ya dice. */
+.intro {
+    color: var(--texto-medio);
+    font-size: var(--t-base);
+    max-width: 68ch;
+    margin-bottom: 30px;
+}
+
+/* Cabecera de un bloque: título a la izquierda, controles a la derecha */
+.bloque-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+.bloque-cab h3 {
+    font-size: var(--t-titulo);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+.bloque-cab i { color: var(--rojo); }
+
+/* ======================================================== botones */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: var(--r);
+    font-family: Montserrat, sans-serif;
+    font-size: var(--t-base);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--paso);
+    white-space: nowrap;
+}
+
+.btn-rojo { background: var(--rojo); color: #fff; }
+.btn-rojo:hover { background: var(--rojo-hondo); }
+
+.btn-plano {
+    background: var(--estante-alto);
+    color: var(--texto);
+    border-color: var(--linea);
+}
+.btn-plano:hover { border-color: var(--texto-medio); }
+
+.btn-vidrio {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    border-color: rgba(255, 255, 255, .34);
+}
+.btn-vidrio:hover { background: rgba(255, 255, 255, .26); }
+
+.btn:disabled, .btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+/* Botón de icono, para acciones dentro de una fila */
+.icono {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--linea);
+    border-radius: var(--r);
+    background: var(--estante-alto);
+    color: var(--texto-medio);
+    font-size: 15px;
+    cursor: pointer;
+    transition: var(--paso);
+}
+.icono:hover:not(:disabled) { color: var(--texto); border-color: var(--texto-bajo); }
+.icono.encendido { color: var(--rojo); border-color: var(--rojo-linea); background: var(--rojo-tenue); }
+.icono.riesgo:hover:not(:disabled) { color: var(--rojo); border-color: var(--rojo-linea); }
+.icono:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ===================================================== formulario */
+.campo, .field { margin-bottom: 14px; }
+
+.campo label,
+.field label {
+    display: block;
+    font-size: var(--t-nota);
+    font-weight: 600;
+    color: var(--texto-medio);
+    margin-bottom: 5px;
+}
+
+/* Declarados en largo: el preflight de Tailwind deja los input sin
+   fondo ni borde y el panel también carga Tailwind. */
+/* `.field` es el nombre que usa el catálogo; `.campo` el del resto.
+   Se cubren los dos para no repetir la definición en cada pantalla. */
+.campo input[type=text],
+.campo input[type=number],
+.campo input[type=date],
+.campo select,
+.campo textarea,
+.field input[type=text],
+.field input[type=number],
+.field input[type=date],
+.field select,
+.field textarea {
+    width: 100%;
+    background: var(--papel);
+    border: 1px solid var(--linea);
+    border-radius: var(--r);
+    padding: 10px 12px;
+    color: var(--texto);
+    font-family: Montserrat, sans-serif;
+    font-size: var(--t-base);
+    outline: none;
+    transition: border-color var(--paso);
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--rojo); }
+.campo input::placeholder, .campo textarea::placeholder { color: var(--texto-bajo); }
+.campo textarea, .field textarea { resize: vertical; min-height: 84px; }
+
+/* Zona de subida */
+.subir {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 112px;
+    padding: 16px;
+    background: var(--papel);
+    border: 1.5px dashed var(--linea);
+    border-radius: var(--r);
+    color: var(--texto-medio);
+    font-size: var(--t-nota);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--paso);
+}
+.subir:hover { border-color: var(--rojo); color: var(--texto); }
+.subir input[type=file] { display: none; }
+.subir i { font-size: 20px; }
+.subir.cargada { border-style: solid; border-color: var(--rojo-linea); }
+
+/* ========================================================= avisos */
+.aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 15px;
+    border-radius: var(--r);
+    border: 1px solid;
+    font-size: var(--t-base);
+    margin-bottom: 20px;
+}
+.aviso i { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+.aviso strong { color: var(--texto); }
+
+.aviso-ok     { background: var(--ok-tenue);     border-color: rgba(63,168,96,.3);   color: #a5d9b7; }
+.aviso-ok i   { color: var(--ok); }
+.aviso-error  { background: var(--rojo-tenue);   border-color: var(--rojo-linea);    color: #f2b3b3; }
+.aviso-error i{ color: var(--rojo); }
+.aviso-duda   { background: var(--alerta-tenue); border-color: rgba(217,154,43,.3);  color: #e6c68a; }
+.aviso-duda i { color: var(--alerta); }
+
+/* ======================================================= píldoras */
+.pildora {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--r-pil);
+    border: 1px solid var(--linea);
+    background: var(--estante-alto);
+    color: var(--texto-medio);
+    font-size: var(--t-nota);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.pildora.roja  { color: var(--rojo); background: var(--rojo-tenue); border-color: var(--rojo-linea); }
+.pildora.verde { color: var(--ok);   background: var(--ok-tenue);   border-color: rgba(63,168,96,.3); }
+
+/* ========================================================== fichas
+   Nada de tarjetas: el contenido se separa por aire y por una línea
+   fina, no metiendo cada cosa en una caja con borde y sombra. La
+   portada es el único elemento con presencia física. */
+.fichas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+    gap: 0 40px;
+}
+
+.ficha {
+    display: grid;
+    grid-template-columns: 124px 1fr;
+    gap: 20px;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--linea);
+}
+/* Las dos últimas filas de la rejilla no llevan línea. */
+.ficha:last-child, .ficha:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+
+/* La columna ocupa toda la altura de la fila (align-self: stretch),
+   no la de la portada: así queda espacio arriba y abajo donde pintar
+   la luz de ambiente. */
+.ficha-portada {
+    position: relative;
+    align-self: stretch;
+    min-height: 240px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #0d0d0f;
+}
+.ficha-portada img { width: 100%; height: 100%; object-fit: cover; }
+/* El estado activo no se marca aquí: lo dicen el conmutador y la
+   etiqueta sobre la portada. Un contorno más solo añadía una caja. */
+
+.ficha-cuerpo { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+.ficha-titulo { font-size: 16px; font-weight: 700; line-height: 1.25; }
+.ficha-dato { font-size: var(--t-nota); color: var(--texto-medio); }
+
+/* =========================================================== lista
+   Filas separadas por una línea, sin caja por fila. */
+.lista { display: flex; flex-direction: column; }
+
+.fila {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 13px 2px;
+    border-bottom: 1px solid var(--linea);
+}
+.fila:last-child { border-bottom: none; }
+.fila:hover { background: rgba(255, 255, 255, .022); }
+.fila-centro { flex: 1; min-width: 0; }
+.fila-nombre { font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.sin-nada {
+    color: var(--texto-bajo);
+    text-align: center;
+    padding: 44px 20px;
+}
+
+/* ====================================================== estructura */
+.dos-columnas {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 50px;
+    align-items: start;
+}
+
+/* Un bloque agrupa, no encierra: sin fondo ni borde. */
+.bloque { margin-bottom: 40px; }
+
+.nota { color: var(--texto-bajo); font-size: var(--t-nota); line-height: 1.5; }
+.nota strong { color: var(--texto-medio); }
+.oculto { display: none; }
+
+/* ====================================================== respuesta */
+@media (max-width: 1000px) {
+    .dos-columnas { grid-template-columns: 1fr; }
+    .fichas { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+    .topbar { grid-template-columns: auto 1fr auto; padding: 0 14px; }
+    .topbar-title { display: none; }
+    .pagina { padding: 22px 14px 50px; }
+    .ficha { grid-template-columns: 104px 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}
+
+/* Foco visible en todo lo que se puede enfocar con teclado. */
+:focus-visible {
+    outline: 2px solid var(--rojo);
+    outline-offset: 2px;
+}
+
+/* ===================================================== suavizado
+   Las portadas son de 900x1400 y se pintan a menos de 200 px de
+   ancho. En una reducción tan fuerte Chrome usa un filtro rápido
+   que deja los bordes dentados.
+
+   `transform: translateZ(0)` lleva la imagen a su propia capa de
+   composición, donde el escalado lo hace la GPU con interpolación
+   bilineal en vez del camino rápido del pintado normal. */
+.ficha-portada img,
+.comic-card img,
+.lista-item img,
+.ultimo img,
+.pp-logo img {
+    image-rendering: -webkit-optimize-contrast;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
