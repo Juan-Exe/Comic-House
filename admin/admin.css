@@ -539,8 +539,10 @@ img { display: block; max-width: 100%; }
     border: 1px solid var(--linea);
     border-radius: var(--r);
     overflow: hidden;
-    /* sin max-height: la lista muestra todas las ediciones y la
-       pagina se desplaza con normalidad, sin una barra propia */
+    /* Con su propio scroll: un titulo puede devolver decenas de
+       ediciones y sin tope empujarian el formulario fuera de la vista. */
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .resultados-meta.visible { display: block; }

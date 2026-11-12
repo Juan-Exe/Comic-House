@@ -372,7 +372,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,.75); z-index: 9998;
             align-items: center; justify-content: center;
-            overflow-y: auto; padding: 24px 0;
+            padding: 20px;
         }
         .modal-overlay.active { display: flex; }
         .modal-box {
@@ -399,6 +399,10 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             font-family: Montserrat, sans-serif; cursor: pointer; font-size: var(--t-nota);
         }
 
+        /* Mientras el modal esta abierto, la pagina de fondo no se
+           desplaza: evita la segunda barra del catalogo. */
+        body.modal-abierto { overflow: hidden; }
+
         /* ── MODAL METADATOS ── */
         /* Reutiliza .modal-overlay y .modal-box; solo cambia el ancho
            y el contenido, que aqui es una ficha y no una pregunta. */
@@ -406,10 +410,15 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             width: 560px; max-width: calc(100vw - 32px);
             text-align: left; padding: 0;
             display: flex; flex-direction: column;
+            /* Limita el alto para que no se corte en pantallas bajas.
+               El scroll vive dentro del cuerpo, no en el overlay, asi
+               solo aparece UNA barra y nunca la del catalogo de atras. */
+            max-height: calc(100vh - 40px);
         }
         .meta-cabecera {
             display: flex; align-items: center; justify-content: space-between;
             padding: 18px 22px; border-bottom: 1px solid var(--linea);
+            flex-shrink: 0;
         }
         .meta-cabecera h3 { margin: 0; font-size: var(--t-titulo); color: #fff; }
         .meta-cerrar {
@@ -418,7 +427,11 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         }
         .meta-cerrar:hover { color: var(--texto); }
 
-        .meta-cuerpo { padding: 18px 22px; }
+        .meta-cuerpo {
+            padding: 18px 22px;
+            overflow-y: auto;
+            min-height: 0;      /* necesario para que flex permita encoger */
+        }
 
         .meta-seccion {
             display: flex; align-items: center; gap: 7px;
@@ -488,6 +501,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         .modal-meta-box .modal-actions {
             padding: 16px 22px; border-top: 1px solid var(--linea);
             justify-content: flex-end; margin: 0;
+            flex-shrink: 0;
         }
 
         /* Editorial ausente: la unica salida es crearla, nunca sustituirla */
@@ -1289,6 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function cerrar() {
             caja.classList.remove('active');
+            document.body.classList.remove('modal-abierto');
             actual = null;
         }
 
@@ -1331,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pintarVerificado(candidato);
             aplicarSugerencias(candidato);
             caja.classList.add('active');
+            document.body.classList.add('modal-abierto');
             traducirDescripcion(candidato).then(function () {
                 // El genero se sugiere desde la descripcion: si cambio al
                 // traducirse, hay que volver a mirarla.
