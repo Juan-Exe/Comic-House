@@ -1188,7 +1188,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'no la trae la fuente', !c.portada_url);
 
             h += fila('Descripción', c.descripcion
-                ? '<div class="meta-desc">' + esc(c.descripcion) + '</div>'
+                ? '<div class="meta-desc" id="meta-desc-txt">' + esc(c.descripcion) + '</div>' +
+                  '<span class="meta-pista" id="meta-desc-estado"></span>'
                 : 'no la trae la fuente', !c.descripcion);
 
             verif.innerHTML = h;
@@ -1291,12 +1292,50 @@ document.addEventListener('DOMContentLoaded', () => {
             actual = null;
         }
 
+        /**
+         * Traduce la descripcion EN -> ES (HU-06).
+         * Se lanza al abrir el modal, no durante la busqueda: asi solo
+         * se traduce la edicion que el administrador decidio mirar.
+         * Si el servicio falla queda el texto original con aviso, nunca
+         * una version inventada.
+         */
+        async function traducirDescripcion(c) {
+            if (!c.descripcion) return;
+            const caja_ = document.getElementById('meta-desc-txt');
+            const est   = document.getElementById('meta-desc-estado');
+            if (!caja_ || !est) return;
+
+            est.textContent = 'Traduciendo al español…';
+            try {
+                const r = await fetch('controlador/traducir.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: 'texto=' + encodeURIComponent(c.descripcion)
+                });
+                const d = await r.json();
+                if (!d.ok) { est.textContent = d.aviso || 'No se pudo traducir.'; return; }
+
+                // El candidato guarda el texto ya traducido: es el que
+                // acabara en el formulario si se confirma.
+                c.descripcion = d.texto;
+                caja_.textContent = d.texto;
+                est.textContent = d.aviso || '';
+            } catch (e) {
+                est.textContent = 'No se pudo traducir: queda el texto original.';
+            }
+        }
+
         function abrir(candidato, callback) {
             actual = candidato;
             alConfirmar = callback;
             pintarVerificado(candidato);
             aplicarSugerencias(candidato);
             caja.classList.add('active');
+            traducirDescripcion(candidato).then(function () {
+                // El genero se sugiere desde la descripcion: si cambio al
+                // traducirse, hay que volver a mirarla.
+                if (actual === candidato) aplicarSugerencias(candidato);
+            });
         }
 
         document.getElementById('meta-cerrar').addEventListener('click', cerrar);

@@ -296,13 +296,15 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-06.1** La descripción en inglés se traduce automáticamente.
-- [ ] **CA-06.2** Los textos de más de 500 caracteres se parten por frases y se
+- [x] **CA-06.1** La descripción en inglés se traduce automáticamente.
+- [x] **CA-06.2** Los textos de más de 500 caracteres se parten por frases y se
       traducen en bloques (límite verificado del servicio).
-- [ ] **CA-06.3** Si la traducción falla, se muestra el texto original con un
+- [x] **CA-06.3** Si la traducción falla, se muestra el texto original con un
       aviso, en vez de dejar el campo vacío.
-- [ ] **CA-06.4** El texto traducido es editable antes de guardar.
-- [ ] **CA-06.5** Se limpia el HTML que trae la fuente.
+- [x] **CA-06.4** El texto traducido es editable antes de guardar.
+- [x] **CA-06.5** Se limpia el HTML que trae la fuente.
+- [x] **CA-06.6** Si el texto ya está en español, no se traduce: se detecta
+      por marcas del idioma y se deja tal cual.
 
 ---
 
@@ -359,7 +361,7 @@ El usuario es el **administrador** de Comic House.
 |---|---|---|
 | ~~0~~ | ~~Búsqueda automática y corrección de tipeo~~ | ~~HU-04~~ ✓ hecho |
 | ~~1~~ | ~~Modal de confirmación con los datos verificados~~ | ~~HU-01, HU-02~~ ✓ hecho |
-| 2 | Traducción de la descripción | HU-06 |
+| ~~2~~ | ~~Traducción de la descripción~~ | ~~HU-06~~ ✓ hecho |
 | 3 | Descarga de la portada | HU-07 |
 | 4 | Creación de editorial faltante | HU-05 |
 | 5 | Sugerencia de tipo y género | HU-09 |
