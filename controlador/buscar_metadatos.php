@@ -121,6 +121,10 @@ function mapearEditorial(string $nombre, array $catalogo): array {
 /** Limpia el HTML que ComicVine incluye en las descripciones. */
 function limpiarTexto(?string $html, int $max = 600): string {
     if (!$html) return '';
+    // Los bloques se cierran sin espacio: "<p>uno</p><p>dos</p>" quedaria
+    // como "unodos". Se separan antes de quitar las etiquetas.
+    $html = preg_replace('#</(p|div|li|h[1-6]|br)\s*>#i', ' ', $html);
+    $html = preg_replace('#<br\s*/?>#i', ' ', $html);
     $txt = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $txt = trim(preg_replace('/\s+/u', ' ', $txt));
     if (mb_strlen($txt) > $max) {
