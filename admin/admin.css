@@ -625,3 +625,52 @@ img { display: block; max-width: 100%; }
 }
 
 .enlace-sugerencia:hover { color: var(--texto); }
+
+/* ============================================================
+   Barras de desplazamiento con la estetica del panel
+   Antes salian las grises del sistema, que desentonaban con
+   el fondo oscuro.
+   ============================================================ */
+.resultados-meta::-webkit-scrollbar,
+.meta-cuerpo::-webkit-scrollbar,
+.sidebar-form::-webkit-scrollbar,
+.buscador-lista::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.resultados-meta::-webkit-scrollbar-track,
+.meta-cuerpo::-webkit-scrollbar-track,
+.sidebar-form::-webkit-scrollbar-track,
+.buscador-lista::-webkit-scrollbar-track,
+textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.resultados-meta::-webkit-scrollbar-thumb,
+.meta-cuerpo::-webkit-scrollbar-thumb,
+.sidebar-form::-webkit-scrollbar-thumb,
+.buscador-lista::-webkit-scrollbar-thumb,
+textarea::-webkit-scrollbar-thumb {
+    background: var(--linea);
+    border-radius: var(--r-pil);
+}
+
+.resultados-meta::-webkit-scrollbar-thumb:hover,
+.meta-cuerpo::-webkit-scrollbar-thumb:hover,
+.sidebar-form::-webkit-scrollbar-thumb:hover,
+.buscador-lista::-webkit-scrollbar-thumb:hover,
+textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--rojo-hondo);
+}
+
+/* Firefox, que no admite los pseudoelementos de arriba */
+.resultados-meta,
+.meta-cuerpo,
+.sidebar-form,
+.buscador-lista,
+textarea {
+    scrollbar-width: thin;
+    scrollbar-color: var(--linea) transparent;
+}

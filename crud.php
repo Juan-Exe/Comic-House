@@ -613,7 +613,7 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
             <p class="meta-seccion"><i class="bi bi-check-circle-fill"></i> Verificado en la fuente</p>
             <div class="meta-grid" id="meta-verificado"></div>
 
-            <p class="meta-seccion decide"><i class="bi bi-person-fill"></i> Requiere tu decisión</p>
+            <p class="meta-seccion decide"><i class="bi bi-person-fill"></i> Requiere tu revisión</p>
             <div class="meta-decide">
 
                 <div class="meta-campo">
@@ -1104,8 +1104,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const opClasif = document.getElementById('meta-clasif');
         if (!caja) return { abrir: function () {} };
 
-        let actual = null;       // candidato en pantalla
-        let alConfirmar = null;  // callback
+        let actual = null;        // candidato en pantalla
+        let alConfirmar = null;   // callback
+        let portadaLista = null;  // nombre del archivo ya descargado
 
         // Editoriales que SI existen en el catalogo, leidas del propio
         // formulario para no duplicar la lista en dos sitios.
@@ -1350,10 +1351,18 @@ document.addEventListener('DOMContentLoaded', () => {
             aplicarSugerencias(candidato);
             caja.classList.add('active');
             document.body.classList.add('modal-abierto');
+
+            // Traduccion y portada arrancan A LA VEZ al abrir el modal.
+            // Antes la portada esperaba al boton "Usar estos datos" y se
+            // notaba el tiron; ahora mientras se revisa ya se descarga.
+            portadaLista = null;
             traducirDescripcion(candidato).then(function () {
                 // El genero se sugiere desde la descripcion: si cambio al
                 // traducirse, hay que volver a mirarla.
                 if (actual === candidato) aplicarSugerencias(candidato);
+            });
+            descargarPortada(candidato).then(function (archivo) {
+                if (actual === candidato) portadaLista = archivo;
             });
         }
 
@@ -1394,15 +1403,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 clasificacion: valorElegido(opClasif)
             };
 
-            boton.disabled = true;
-            boton.textContent = 'Preparando…';
-            const archivo = await descargarPortada(actual);
-            boton.disabled = false;
-            boton.textContent = 'Usar estos datos';
+            // La descarga arranco al abrir el modal. Lo normal es que ya
+            // este; solo se espera si el admin fue mas rapido que la red.
+            let archivo = portadaLista;
+            if (archivo === null && actual.portada_url) {
+                boton.disabled = true;
+                boton.textContent = 'Un momento…';
+                archivo = await descargarPortada(actual);
+                boton.disabled = false;
+                boton.textContent = 'Usar estos datos';
+            }
 
             const c = actual;
             cerrar();
-            if (alConfirmar) alConfirmar(c, decidido, archivo);
+            if (alConfirmar) alConfirmar(c, decidido, archivo || '');
         });
 
         return { abrir: abrir };
@@ -1640,8 +1654,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Busca sola 600 ms despues de dejar de escribir: ni en cada
-        // tecla (castigaria la API) ni obligando a pulsar un boton.
+        // Busca sola 350 ms despues de dejar de escribir. Se midio que
+        // el endpoint responde en ~0.22 s, asi que esperar mas solo
+        // anadia retraso percibido sin ahorrar peticiones reales.
         campoTit.addEventListener('input', function () {
             clearTimeout(reloj);
             const t = campoTit.value.trim();
@@ -1658,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reloj = setTimeout(function () {
                 ultimaBusqueda = t.toLowerCase();
                 buscar(t);
-            }, 600);
+            }, 350);
         });
 
         // Enter busca de inmediato en vez de enviar el formulario a medias.

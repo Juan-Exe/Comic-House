@@ -176,6 +176,20 @@ Nunca se inventa un género que no describa la obra.
 **Sin sugerencia, siempre.** El modal lo indica de forma explícita para que no
 parezca un olvido del sistema, sino una decisión de diseño.
 
+**Se intentó automatizarla y se descartó con evidencia.** El campo `concepts`
+de la API incluye a veces etiquetas como *Sexual Violence*, que parecían servir
+para deducir la edad. Al probarlo contra obras de clasificación conocida:
+
+| Obra | Clasificación real | Concepts devueltos |
+|---|---|---|
+| Berserk | +18 | **0** |
+| The Walking Dead | +18 | **0** |
+| Archie | ATP | 9, ninguno sobre edad |
+
+El campo está vacío en la mayoría de las obras, incluidas las más explícitas.
+Inferir de ahí marcaría contenido +18 como apto para todo público: exactamente
+el error grave que este campo debe evitar.
+
 ---
 
 ## 6 · Historias de usuario y criterios de aceptación
