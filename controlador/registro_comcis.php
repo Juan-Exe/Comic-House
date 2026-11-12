@@ -68,15 +68,32 @@ if (!empty($_POST["btnregistrar"])) {
             $capitulos = $cap_desde . ' - ' . $cap_hasta;
         }
 
-        $portada = $_FILES["portada"]["name"];
-        $ruta_destino = "uploads/" . basename($portada);
-
+        // La portada puede venir de dos sitios: subida a mano o ya
+        // descargada de la fuente por descargar_portada.php (HU-07).
+        // En el segundo caso el archivo esta en uploads/ y solo llega
+        // su nombre en un campo oculto.
+        $portada_auto = trim($_POST["portada_descargada"] ?? "");
+        $subio_archivo = !empty($_FILES["portada"]["name"])
+                         && is_uploaded_file($_FILES["portada"]["tmp_name"] ?? "");
 
         if (!is_dir("uploads")) {
             mkdir("uploads", 0777, true);
         }
 
-        if (move_uploaded_file($_FILES["portada"]["tmp_name"], $ruta_destino)) {
+        if ($subio_archivo) {
+            $portada = $_FILES["portada"]["name"];
+            $ruta_destino = "uploads/" . basename($portada);
+            $portada_lista = move_uploaded_file($_FILES["portada"]["tmp_name"], $ruta_destino);
+        } elseif ($portada_auto !== "") {
+            // basename() evita que un nombre manipulado salga de uploads/
+            $portada = basename($portada_auto);
+            $portada_lista = is_file("uploads/" . $portada);
+        } else {
+            $portada = "";
+            $portada_lista = false;
+        }
+
+        if ($portada_lista) {
             include_once("modelo/conexion.php");
 
             // La editorial llega por nombre desde el formulario; se resuelve

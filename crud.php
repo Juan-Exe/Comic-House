@@ -786,6 +786,9 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                         <i class="bi bi-image" id="portada-icon"></i>
                         <span id="portada-label">Elegir imagen</span>
                         <input type="file" name="portada" accept="image/*" id="portada-input">
+                        <!-- Si la portada vino de la fuente ya esta en
+                             uploads/ y solo viaja su nombre (HU-07). -->
+                        <input type="hidden" name="portada_descargada" id="portada-descargada">
                         <!-- El rótulo «Cambiar» solo tiene sentido cuando
                              ya hay una imagen elegida. -->
                         <div class="portada-overlay"><span><i class="bi bi-arrow-repeat"></i> Cambiar</span></div>
@@ -1361,15 +1364,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Escape' && caja.classList.contains('active')) cerrar();
         });
 
-        document.getElementById('meta-usar').addEventListener('click', function () {
+        /**
+         * Trae la portada al servidor (HU-07). Se hace al confirmar, no
+         * al buscar: asi solo se descarga la edicion que se va a usar.
+         * Si falla, queda activa la subida manual.
+         */
+        async function descargarPortada(c) {
+            if (!c.portada_url) return '';
+            try {
+                const r = await fetch('controlador/descargar_portada.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: 'url=' + encodeURIComponent(c.portada_url) +
+                          '&titulo=' + encodeURIComponent(c.titulo)
+                });
+                const d = await r.json();
+                return d.ok ? d.archivo : '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        document.getElementById('meta-usar').addEventListener('click', async function () {
             if (!actual) return;
+            const boton = this;
             const decidido = {
                 tipo: valorElegido(opTipo),
                 genero: selGen.value,
                 clasificacion: valorElegido(opClasif)
             };
+
+            boton.disabled = true;
+            boton.textContent = 'Preparando…';
+            const archivo = await descargarPortada(actual);
+            boton.disabled = false;
+            boton.textContent = 'Usar estos datos';
+
+            const c = actual;
             cerrar();
-            if (alConfirmar) alConfirmar(actual, decidido);
+            if (alConfirmar) alConfirmar(c, decidido, archivo);
         });
 
         return { abrir: abrir };
@@ -1438,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         /** Vuelca un candidato en el formulario, sin pisar lo ya escrito.
          *  decidido: lo que el administrador eligio en el modal. */
-        function rellenar(c, desdeLista, decidido) {
+        function rellenar(c, desdeLista, decidido, archivoPortada) {
             if (desdeLista || decidido) campoTit.value = c.titulo;
 
             if (decidido) {
@@ -1469,6 +1502,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const h = document.querySelector('[name="capitulo_hasta"]');
             if (d && c.capitulo_desde && (!d.value || pisar)) d.value = c.capitulo_desde;
             if (h && c.capitulo_hasta && (!h.value || pisar)) h.value = c.capitulo_hasta;
+
+            // Portada ya descargada al servidor: se guarda su nombre y
+            // se muestra la vista previa, como si se hubiera subido.
+            if (archivoPortada) {
+                const campo = document.getElementById('portada-descargada');
+                if (campo) campo.value = archivoPortada;
+                const prev = document.getElementById('portada-preview');
+                const ico  = document.getElementById('portada-icon');
+                const rot  = document.getElementById('portada-label');
+                if (prev) {
+                    prev.src = 'uploads/' + archivoPortada;
+                    prev.style.display = 'block';
+                }
+                if (ico) ico.style.display = 'none';
+                if (rot) rot.textContent = 'Portada descargada';
+                const inp = document.getElementById('portada-input');
+                if (inp) inp.removeAttribute('required');
+            }
 
             lista.classList.remove('visible');
             lista.innerHTML = '';
@@ -1541,8 +1592,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     '</span>' + marca;
 
                 b.addEventListener('click', function () {
-                    modalMeta.abrir(c, function (cc, decidido) {
-                        rellenar(cc, true, decidido);
+                    modalMeta.abrir(c, function (cc, decidido, archivo) {
+                        rellenar(cc, true, decidido, archivo);
                     });
                 });
                 lista.appendChild(b);

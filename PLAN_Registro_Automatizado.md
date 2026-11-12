@@ -315,12 +315,15 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-07.1** La portada se descarga al servidor, en `uploads/`, como
+- [x] **CA-07.1** La portada se descarga al servidor, en `uploads/`, como
       cualquier otra imagen del catálogo.
-- [ ] **CA-07.2** El nombre del archivo se genera sin colisiones.
-- [ ] **CA-07.3** Se valida que sea una imagen real antes de guardarla.
-- [ ] **CA-07.4** Si la descarga falla, el campo de subida manual queda activo.
-- [ ] **CA-07.5** El modal muestra una miniatura antes de confirmar.
+- [x] **CA-07.2** El nombre del archivo se genera sin colisiones.
+- [x] **CA-07.3** Se valida que sea una imagen real antes de guardarla
+      (`getimagesizefromstring`, no solo la extensión de la URL).
+- [x] **CA-07.4** Si la descarga falla, el campo de subida manual queda activo.
+- [x] **CA-07.5** El modal muestra una miniatura antes de confirmar.
+- [x] **CA-07.6** Solo se descargan imágenes `https` del dominio de la fuente:
+      la ruta no sirve para traer cualquier archivo de internet al servidor.
 
 ---
 
@@ -362,7 +365,7 @@ El usuario es el **administrador** de Comic House.
 | ~~0~~ | ~~Búsqueda automática y corrección de tipeo~~ | ~~HU-04~~ ✓ hecho |
 | ~~1~~ | ~~Modal de confirmación con los datos verificados~~ | ~~HU-01, HU-02~~ ✓ hecho |
 | ~~2~~ | ~~Traducción de la descripción~~ | ~~HU-06~~ ✓ hecho |
-| 3 | Descarga de la portada | HU-07 |
+| ~~3~~ | ~~Descarga de la portada~~ | ~~HU-07~~ ✓ hecho |
 | 4 | Creación de editorial faltante | HU-05 |
 | 5 | Sugerencia de tipo y género | HU-09 |
 | 6 | Repaso de casos límite | HU-03, HU-08 |
