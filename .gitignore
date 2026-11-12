@@ -19,8 +19,9 @@ export_csv/
 # Miniaturas generadas: se recrean solas desde las portadas
 uploads/miniaturas/
 
-# Material de clase ajeno al proyecto (laboratorios de otras asignaturas)
+# Material de clase ajeno al proyecto (laboratorios y guias del docente)
 Laboratorio_*.pdf
+guia_*.pdf
 
 # Informes generados: se reconstruyen con scripts/build_informe_*.py
 # El original versionado vive en E1_integridad_rendimiento/

@@ -440,6 +440,10 @@ $msgs = [
     'valor_fuera_de_dominio' => ['tipo' => 'error', 'texto' => 'Año o clasificación fuera de los valores permitidos'],
     'anio'      => ['tipo' => 'error', 'texto' => 'El año debe tener cuatro cifras y no puede ser futuro'],
     'capitulos' => ['tipo' => 'error', 'texto' => 'Revisa el rango de capítulos: solo números, y el final no puede ser menor que el inicio'],
+    // Borrado: antes se imprimia como texto suelto sobre el layout.
+    'eliminado'      => ['tipo' => 'ok',    'texto' => 'Cómic eliminado del catálogo'],
+    'no_encontrado'  => ['tipo' => 'warn',  'texto' => 'Ese cómic ya no existe en el catálogo'],
+    'error_eliminar' => ['tipo' => 'error', 'texto' => 'No se pudo eliminar el cómic'],
 ];
 $msg = $_GET['msg'] ?? '';
 if (isset($msgs[$msg])): $m = $msgs[$msg];
@@ -487,8 +491,15 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
 
             <div class="field">
                 <label for="f-titulo">Título</label>
-                <input type="text" id="f-titulo" name="titulo"
-                       placeholder="Ej. House of M" autocomplete="off" required>
+                <div class="titulo-busca">
+                    <input type="text" id="f-titulo" name="titulo"
+                           placeholder="Ej. House of M" autocomplete="off" required>
+                    <button type="button" id="btn-buscar-meta" title="Buscar metadatos del cómic">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                </div>
+                <p class="ayuda-campo" id="aviso-meta"></p>
+                <div id="resultados-meta" class="resultados-meta"></div>
             </div>
 
             <div class="field">
@@ -900,6 +911,167 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('modal-eliminar').addEventListener('click', function (e) {
         if (e.target === this) cerrarModal();
     });
+
+    /* =========================================================
+       Autocompletado de metadatos (ComicVine)
+
+       Es una REGLA, no un modelo: trae datos de una fuente externa
+       y los mapea a los campos. No inventa nada — si la API no
+       responde o no encuentra el titulo, los campos quedan vacios
+       y se llenan a mano. El administrador confirma antes de guardar.
+       ========================================================= */
+    (function () {
+        const btn      = document.getElementById('btn-buscar-meta');
+        const campoTit = document.getElementById('f-titulo');
+        const aviso    = document.getElementById('aviso-meta');
+        const lista    = document.getElementById('resultados-meta');
+        if (!btn || !campoTit) return;
+
+        function decir(texto, clase) {
+            aviso.textContent = texto;
+            aviso.className = 'ayuda-campo' + (clase ? ' ' + clase : '');
+        }
+
+        /** Marca una opcion dentro de un grupo de botones (tipo, clasificacion). */
+        function elegirOpcion(idGrupo, idCampo, valor) {
+            if (!valor) return;
+            const grupo = document.getElementById(idGrupo);
+            const campo = document.getElementById(idCampo);
+            if (!grupo || !campo) return;
+            const bt = [...grupo.querySelectorAll('.opcion')]
+                .find(b => b.dataset.valor.toLowerCase() === String(valor).toLowerCase());
+            if (!bt) return;
+            grupo.querySelectorAll('.opcion').forEach(b => b.classList.remove('activa'));
+            bt.classList.add('activa');
+            campo.value = bt.dataset.valor;
+            if (idCampo === 'f-tipo' && typeof ajustarTipo === 'function') {
+                ajustarTipo(bt.dataset.valor);
+            }
+        }
+
+        /** Vuelca un candidato en el formulario. */
+        function rellenar(c) {
+            campoTit.value = c.titulo;
+
+            if (c.anio) document.getElementById('f-anio').value = c.anio;
+
+            const desc = document.getElementById('f-descripcion');
+            if (desc && c.descripcion) desc.value = c.descripcion;
+
+            // La editorial solo se selecciona si ya existe en el catalogo:
+            // no se crea sola, porque eso lo decide el administrador.
+            const sel = document.getElementById('f-editorial');
+            if (sel && c.editorial_id) sel.value = c.editorial_id;
+
+            if (c.capitulo_desde) {
+                const d = document.querySelector('[name="capitulo_desde"]');
+                if (d) d.value = c.capitulo_desde;
+            }
+            if (c.capitulo_hasta) {
+                const h = document.querySelector('[name="capitulo_hasta"]');
+                if (h) h.value = c.capitulo_hasta;
+            }
+
+            lista.classList.remove('visible');
+            lista.innerHTML = '';
+
+            const faltan = [];
+            if (!c.anio)                   faltan.push('año');
+            if (!c.editorial_id)           faltan.push('editorial');
+            if (!c.descripcion)            faltan.push('descripción');
+
+            let txt = 'Datos cargados. Falta elegir tipo, clasificación, género y subir la portada';
+            if (faltan.length) txt += '. La fuente no trajo: ' + faltan.join(', ');
+            if (!c.editorial_id && c.editorial) {
+                txt += `. La editorial «${c.editorial}» no está en el catálogo`;
+            }
+            decir(txt + '. Revisa todo antes de guardar.', faltan.length ? 'warn' : 'ok');
+
+            if (c.ya_registrado) {
+                decir('Ojo: ya existe un cómic con ese título en el catálogo.', 'error');
+            }
+        }
+
+        /** Dibuja la lista cuando hay varias coincidencias. */
+        function mostrarLista(cands) {
+            lista.innerHTML = '';
+            cands.forEach((c) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'meta-item';
+
+                const img = c.portada_url
+                    ? `<img src="${c.portada_url}" alt="" loading="lazy">`
+                    : `<img src="" alt="">`;
+
+                let marca = '';
+                if (c.ya_registrado) {
+                    marca = '<span class="meta-marca duplicado">ya registrado</span>';
+                } else if (c.coincide_exacto) {
+                    marca = '<span class="meta-marca exacta">exacto</span>';
+                }
+
+                const sub = [c.anio || 's/f', c.editorial || 'editorial desconocida']
+                            .join(' · ');
+
+                b.innerHTML = `${img}
+                    <span class="meta-info">
+                        <span class="meta-titulo">${c.titulo}</span>
+                        <span class="meta-sub">${sub}</span>
+                    </span>${marca}`;
+
+                b.addEventListener('click', () => rellenar(c));
+                lista.appendChild(b);
+            });
+            lista.classList.add('visible');
+        }
+
+        async function buscar() {
+            const titulo = campoTit.value.trim();
+            if (titulo.length < 3) {
+                decir('Escribe al menos 3 caracteres del título.', 'warn');
+                return;
+            }
+
+            btn.disabled = true;
+            const rotulo = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Buscando…';
+            decir('Consultando la fuente de datos…');
+            lista.classList.remove('visible');
+
+            try {
+                const r = await fetch('controlador/buscar_metadatos.php?titulo='
+                                      + encodeURIComponent(titulo));
+                const d = await r.json();
+
+                if (!d.ok) {
+                    decir(d.aviso || 'No se encontraron datos.', 'warn');
+                    return;
+                }
+
+                const cands = d.datos.candidatos || [];
+                if (d.datos.coincidencia === 'exacta' && cands.length) {
+                    rellenar(cands[0]);
+                    if (cands.length > 1) mostrarLista(cands);
+                } else {
+                    decir(d.aviso, 'warn');
+                    mostrarLista(cands);
+                }
+            } catch (err) {
+                decir('No se pudo contactar la fuente de datos. Regístralo a mano.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = rotulo;
+            }
+        }
+
+        btn.addEventListener('click', buscar);
+
+        // Enter en el titulo busca, en vez de enviar el formulario a medias.
+        campoTit.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); buscar(); }
+        });
+    })();
 </script>
 </body>
 </html>

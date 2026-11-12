@@ -489,3 +489,122 @@ img { display: block; max-width: 100%; }
     transform: translateZ(0);
     backface-visibility: hidden;
 }
+
+/* ============================================================
+   Autocompletado de metadatos al registrar un comic
+   ============================================================ */
+
+.titulo-busca {
+    display: flex;
+    gap: 8px;
+}
+
+.titulo-busca input {
+    flex: 1;
+    min-width: 0;
+}
+
+#btn-buscar-meta {
+    flex-shrink: 0;
+    background: var(--rojo-tenue);
+    color: var(--rojo);
+    border: 1px solid var(--rojo-linea);
+    border-radius: var(--r);
+    padding: 0 14px;
+    font-family: inherit;
+    font-size: var(--t-nota);
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .18s, color .18s;
+}
+
+#btn-buscar-meta:hover:not(:disabled) {
+    background: var(--rojo);
+    color: #fff;
+}
+
+#btn-buscar-meta:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+.ayuda-campo {
+    margin: 6px 0 0;
+    font-size: var(--t-nota);
+    line-height: 1.45;
+    color: var(--texto-medio);
+    min-height: 0;
+}
+
+.ayuda-campo.ok    { color: var(--ok); }
+.ayuda-campo.error { color: var(--rojo); }
+.ayuda-campo.warn  { color: var(--alerta); }
+
+/* Lista de coincidencias cuando hay varias */
+.resultados-meta {
+    display: none;
+    margin-top: 10px;
+    border: 1px solid var(--linea);
+    border-radius: var(--r);
+    overflow: hidden;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.resultados-meta.visible { display: block; }
+
+.meta-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 11px;
+    background: var(--estante);
+    border: none;
+    border-bottom: 1px solid var(--linea);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--texto);
+    transition: background .15s;
+}
+
+.meta-item:last-child  { border-bottom: none; }
+.meta-item:hover       { background: var(--estante-alto); }
+
+.meta-item img {
+    width: 38px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: var(--papel);
+}
+
+.meta-item .meta-info { min-width: 0; flex: 1; }
+
+.meta-item .meta-titulo {
+    font-size: var(--t-base);
+    font-weight: 700;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta-item .meta-sub {
+    font-size: var(--t-nota);
+    color: var(--texto-medio);
+}
+
+.meta-item .meta-marca {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--r-pil);
+    flex-shrink: 0;
+}
+
+.meta-marca.exacta    { background: var(--ok-tenue);     color: var(--ok); }
+.meta-marca.duplicado { background: var(--alerta-tenue); color: var(--alerta); }
