@@ -499,6 +499,7 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                            placeholder="Ej. House of M" autocomplete="off" required>
                     <span class="estado-busca" id="estado-meta" aria-hidden="true"></span>
                 </div>
+                <p class="nota nota-meta" id="aviso-meta" hidden></p>
                 <div id="resultados-meta" class="resultados-meta"></div>
             </div>
 
@@ -925,6 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const campoTit = document.getElementById('f-titulo');
         const estado   = document.getElementById('estado-meta');
         const lista    = document.getElementById('resultados-meta');
+        const aviso    = document.getElementById('aviso-meta');
         if (!campoTit || !estado) return;
 
         let reloj = null;          // temporizador del tecleo
@@ -947,6 +949,29 @@ document.addEventListener('DOMContentLoaded', () => {
             estado.innerHTML = '<i class="bi ' + iconos[clase] + '"></i>';
             estado.className = 'estado-busca visible ' + clase;
             estado.title = titulo || '';
+        }
+
+        /**
+         * Texto visible bajo el campo. El icono solo da el color; lo que
+         * paso hay que poder leerlo sin pasar el cursor por encima.
+         * Si la fuente sugiere un titulo, se ofrece como enlace.
+         */
+        function decir(texto, sugerencia) {
+            if (!texto) { aviso.hidden = true; aviso.innerHTML = ''; return; }
+            aviso.hidden = false;
+            aviso.textContent = texto;
+            if (!sugerencia) return;
+            const a = document.createElement('button');
+            a.type = 'button';
+            a.className = 'enlace-sugerencia';
+            a.textContent = 'Usar «' + sugerencia + '»';
+            a.addEventListener('click', function () {
+                campoTit.value = sugerencia;
+                ultimaBusqueda = sugerencia.toLowerCase();
+                buscar(sugerencia);
+            });
+            aviso.appendChild(document.createTextNode(' '));
+            aviso.appendChild(a);
         }
 
         /** Vuelca un candidato en el formulario, sin pisar lo ya escrito. */
@@ -977,16 +1002,19 @@ document.addEventListener('DOMContentLoaded', () => {
             lista.innerHTML = '';
 
             if (c.ya_registrado) {
-                marcar('warn', 'Ya existe un cómic con ese título en el catálogo');
+                marcar('warn', 'Ya existe un cómic con ese título');
+                decir('Ya existe un cómic con ese título en el catálogo.');
                 return;
             }
             const faltan = [];
             if (!c.anio)         faltan.push('año');
             if (!c.editorial_id) faltan.push('editorial');
             if (!c.descripcion)  faltan.push('descripción');
-            marcar('ok', faltan.length
-                ? 'Datos cargados. La fuente no trajo: ' + faltan.join(', ')
-                : 'Datos cargados. Revísalos antes de guardar.');
+            const txt = faltan.length
+                ? 'Datos cargados. La fuente no trajo: ' + faltan.join(', ') + '.'
+                : 'Datos cargados. Revísalos antes de guardar.';
+            marcar('ok', txt);
+            decir(txt);
         }
 
         /** Dibuja la lista cuando hay varias coincidencias. */
@@ -1030,7 +1058,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const d = await r.json();
 
                 if (!d.ok) {
-                    marcar('warn', d.aviso || 'Sin resultados. Regístralo a mano.');
+                    const sug = (d.datos && d.datos.sugerencia) || '';
+                    marcar('warn', d.aviso || 'Sin resultados.');
+                    decir(d.aviso || 'Sin resultados. Regístralo a mano.', sug);
                     lista.classList.remove('visible');
                     return;
                 }
@@ -1041,10 +1071,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cands.length > 1) mostrarLista(cands);
                 } else {
                     marcar('warn', d.aviso);
+                    decir(d.aviso);
                     mostrarLista(cands);
                 }
             } catch (err) {
-                marcar('error', 'No se pudo contactar la fuente. Regístralo a mano.');
+                marcar('error', 'No se pudo contactar la fuente');
+                decir('No se pudo contactar la fuente de datos. Regístralo a mano.');
                 lista.classList.remove('visible');
             }
         }
@@ -1057,6 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (t.length < 3) {
                 marcar(null);
+                decir('');
                 lista.classList.remove('visible');
                 ultimaBusqueda = '';
                 return;

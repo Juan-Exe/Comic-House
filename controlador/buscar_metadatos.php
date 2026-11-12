@@ -22,6 +22,126 @@ require_once __DIR__ . '/../modelo/conexion.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+/**
+ * Consulta la API y devuelve los resultados crudos.
+ * Se usa tanto para la busqueda principal como para el reintento.
+ */
+function consultarApi(string $query, string $apiKey, int $limite = 8): array {
+    $url = 'https://comicvine.gamespot.com/api/search/?' . http_build_query([
+        'api_key'    => $apiKey,
+        'format'     => 'json',
+        'query'      => $query,
+        'resources'  => 'volume',      // un "volume" es la serie completa
+        'limit'      => $limite,
+        'field_list' => 'id,name,start_year,publisher,image,deck,description,count_of_issues',
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 12,
+        CURLOPT_FOLLOWLOCATION => true,
+        // ComicVine rechaza las peticiones sin User-Agent identificable.
+        CURLOPT_USERAGENT      => 'ComicHouse/1.0 (proyecto academico)',
+    ]);
+    $cuerpo = curl_exec($ch);
+    $http   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err    = curl_error($ch);
+    curl_close($ch);
+
+    return ['cuerpo' => $cuerpo, 'http' => $http, 'error' => $err];
+}
+
+/**
+ * Cuando no hay resultados, casi siempre es un error de tipeo.
+ * Se reintenta con el titulo recortado y se compara lo que vuelve
+ * contra lo escrito: si se parece lo suficiente, se sugiere.
+ *
+ * Es una comparacion de texto, no un modelo: no interpreta el
+ * significado, solo mide cuantas letras hay que cambiar.
+ */
+function buscarParecido(string $titulo, string $apiKey): string {
+    // Con menos de 5 letras cualquier cosa "se parece" y la sugerencia
+    // seria ruido en vez de ayuda.
+    if (mb_strlen($titulo) < 5) {
+        return '';
+    }
+
+    // El endpoint /search exige el titulo exacto, pero /volumes con
+    // filter=name: si busca por prefijo ("invinc" encuentra Invincible).
+    // Como el typo puede estar en medio ("invicible" le falta una n),
+    // se prueba quitando una letra cada vez hasta dar con un prefijo
+    // que exista. Es comparacion de texto, no interpretacion.
+    // El typo puede estar al principio ("invicible" falla ya en la
+    // quinta letra), asi que se prueba de largo a corto empezando por
+    // un prefijo ya recortado: saltarse las variantes largas ahorra
+    // peticiones que de todos modos no encontrarian nada.
+    $largo = mb_strlen($titulo);
+    $desde = min($largo, max(5, (int) ceil($largo * 0.6)));
+    $prefijos = [];
+    for ($i = $desde; $i >= 4; $i--) {
+        $prefijos[] = mb_substr($titulo, 0, $i);
+    }
+
+    $buscado = mb_strtolower($titulo);
+    // Se admite cambiar hasta un tercio de las letras: cubre el typo
+    // tipico sin sugerir un titulo que no tiene nada que ver.
+    $tolerancia = max(2, (int) floor(mb_strlen($titulo) / 3));
+
+    $mejor = '';
+    $menorDistancia = PHP_INT_MAX;
+    $consultas = 0;
+
+    foreach ($prefijos as $pref) {
+        // Tope de peticiones: no conviene castigar la API por un typo.
+        if ($consultas >= 4 || $mejor !== '') {
+            break;
+        }
+        $consultas++;
+
+        $url = 'https://comicvine.gamespot.com/api/volumes/?' . http_build_query([
+            'api_key'    => $apiKey,
+            'format'     => 'json',
+            'filter'     => 'name:' . $pref,
+            'limit'      => 10,
+            'field_list' => 'name',
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT      => 'ComicHouse/1.0 (proyecto academico)',
+        ]);
+        $cuerpo = curl_exec($ch);
+        $http   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($cuerpo === false || $http !== 200) {
+            continue;
+        }
+        $j = json_decode($cuerpo, true);
+        if (!is_array($j) || ($j['status_code'] ?? 0) != 1) {
+            continue;
+        }
+
+        foreach (($j['results'] ?? []) as $v) {
+            $nombre = trim($v['name'] ?? '');
+            if ($nombre === '') {
+                continue;
+            }
+            $d = levenshtein($buscado, mb_strtolower($nombre));
+            if ($d < $menorDistancia && $d <= $tolerancia) {
+                $menorDistancia = $d;
+                $mejor = $nombre;
+            }
+        }
+    }
+
+    return $mejor;
+}
+
 /** Respuesta uniforme para que el frontend no tenga que adivinar. */
 function responder(bool $ok, array $datos = [], string $aviso = ''): void {
     echo json_encode([
@@ -46,35 +166,15 @@ if ($apiKey === '') {
 // ---------------------------------------------------------------
 // Consulta a ComicVine
 // ---------------------------------------------------------------
-$url = 'https://comicvine.gamespot.com/api/search/?' . http_build_query([
-    'api_key'   => $apiKey,
-    'format'    => 'json',
-    'query'     => $titulo,
-    'resources' => 'volume',          // un "volume" es la serie completa
-    'limit'     => 8,
-    'field_list' => 'id,name,start_year,publisher,image,deck,description,count_of_issues',
-]);
+$r = consultarApi($titulo, $apiKey);
 
-$ch = curl_init($url);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 12,
-    CURLOPT_FOLLOWLOCATION => true,
-    // ComicVine rechaza las peticiones sin User-Agent identificable.
-    CURLOPT_USERAGENT      => 'ComicHouse/1.0 (proyecto academico)',
-]);
-$respuesta = curl_exec($ch);
-$httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$errCurl   = curl_error($ch);
-curl_close($ch);
-
-if ($respuesta === false || $httpCode !== 200) {
+if ($r['cuerpo'] === false || $r['http'] !== 200) {
     responder(false, [], 'No se pudo consultar la fuente de datos'
-        . ($errCurl !== '' ? ": $errCurl" : " (HTTP $httpCode)")
+        . ($r['error'] !== '' ? ": {$r['error']}" : " (HTTP {$r['http']})")
         . '. Registra los datos a mano.');
 }
 
-$json = json_decode($respuesta, true);
+$json = json_decode($r['cuerpo'], true);
 
 if (!is_array($json) || ($json['status_code'] ?? 0) != 1) {
     $detalle = $json['error'] ?? 'respuesta inesperada';
@@ -82,8 +182,18 @@ if (!is_array($json) || ($json['status_code'] ?? 0) != 1) {
 }
 
 $resultados = $json['results'] ?? [];
+
+// Sin resultados: casi siempre es un error de tipeo ("invicible").
+// Se reintenta quitando la ultima palabra incompleta y, si aun asi no
+// hay nada, se busca un titulo parecido entre los que si existen.
 if (!$resultados) {
-    responder(false, [], 'No se encontró ningún cómic con ese título. Regístralo a mano.');
+    $sugerencia = buscarParecido($titulo, $apiKey);
+    if ($sugerencia !== '') {
+        responder(false, ['sugerencia' => $sugerencia],
+            "No se encontró «{$titulo}». ¿Querías decir «{$sugerencia}»?");
+    }
+    responder(false, [],
+        "No se encontró ningún cómic llamado «{$titulo}». Revisa cómo se escribe o regístralo a mano.");
 }
 
 // ---------------------------------------------------------------

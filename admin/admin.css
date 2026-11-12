@@ -601,3 +601,25 @@ img { display: block; max-width: 100%; }
 
 .meta-marca.exacta    { background: var(--ok-tenue);     color: var(--ok); }
 .meta-marca.duplicado { background: var(--alerta-tenue); color: var(--alerta); }
+
+/* Aviso bajo el campo Titulo: el icono da el color, pero lo que paso
+   hay que poder leerlo sin pasar el cursor por encima. */
+.nota-meta {
+    margin: 6px 0 0;
+}
+
+.nota-meta[hidden] { display: none; }
+
+.enlace-sugerencia {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--rojo);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.enlace-sugerencia:hover { color: var(--texto); }
