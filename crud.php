@@ -398,6 +398,107 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             font-family: Montserrat, sans-serif; cursor: pointer; font-size: var(--t-nota);
         }
 
+        /* ── MODAL METADATOS ── */
+        /* Reutiliza .modal-overlay y .modal-box; solo cambia el ancho
+           y el contenido, que aqui es una ficha y no una pregunta. */
+        .modal-meta-box {
+            width: 560px; max-width: calc(100vw - 32px);
+            text-align: left; padding: 0;
+            max-height: 88vh; display: flex; flex-direction: column;
+        }
+        .meta-cabecera {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 22px; border-bottom: 1px solid var(--linea);
+        }
+        .meta-cabecera h3 { margin: 0; font-size: var(--t-titulo); color: #fff; }
+        .meta-cerrar {
+            background: none; border: none; color: var(--texto-medio);
+            font-size: 15px; cursor: pointer; padding: 4px 6px; line-height: 1;
+        }
+        .meta-cerrar:hover { color: var(--texto); }
+
+        .meta-cuerpo { padding: 18px 22px; overflow-y: auto; flex: 1; }
+
+        .meta-seccion {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 11px; font-weight: 700; letter-spacing: .8px;
+            text-transform: uppercase; color: var(--ok);
+            margin: 0 0 12px;
+        }
+        .meta-seccion.decide {
+            color: var(--alerta);
+            margin-top: 22px; padding-top: 18px;
+            border-top: 1px solid var(--linea);
+        }
+
+        /* Lo verificado: etiqueta a la izquierda, valor a la derecha */
+        .meta-grid { display: flex; flex-direction: column; gap: 9px; }
+        .meta-fila { display: flex; gap: 14px; align-items: flex-start; }
+        .meta-fila > .meta-et { flex-shrink: 0; width: 92px; }
+        .meta-et {
+            font-size: var(--t-nota); color: var(--texto-medio);
+            padding-top: 2px;
+        }
+        .meta-val {
+            font-size: var(--t-base); color: var(--texto);
+            flex: 1; min-width: 0; word-break: break-word;
+        }
+        .meta-val.falta { color: var(--texto-bajo); font-style: italic; }
+        .meta-val img {
+            width: 54px; height: 80px; object-fit: cover;
+            border-radius: 4px; background: var(--papel);
+        }
+        .meta-desc {
+            font-size: var(--t-nota); line-height: 1.5;
+            color: var(--texto-medio); max-height: 76px; overflow-y: auto;
+        }
+
+        /* Lo que requiere decision */
+        .meta-decide { display: flex; flex-direction: column; gap: 14px; }
+        .meta-campo { display: flex; gap: 14px; align-items: flex-start; }
+        .meta-campo > .meta-et { flex-shrink: 0; width: 92px; }
+        .meta-campo > div { flex: 1; min-width: 0; }
+
+        .meta-ops { display: flex; gap: 6px; flex-wrap: wrap; }
+        .meta-op {
+            background: var(--papel); color: var(--texto-medio);
+            border: 1px solid var(--linea); border-radius: 6px;
+            padding: 6px 14px; font-family: Montserrat, sans-serif;
+            font-size: var(--t-nota); font-weight: 600; cursor: pointer;
+        }
+        .meta-op:hover { border-color: var(--texto-bajo); color: var(--texto); }
+        .meta-op.activa {
+            background: var(--rojo-tenue); color: var(--rojo);
+            border-color: var(--rojo-linea);
+        }
+
+        #meta-genero {
+            width: 100%; background: var(--papel); color: var(--texto);
+            border: 1px solid var(--linea); border-radius: 6px;
+            padding: 7px 10px; font-family: Montserrat, sans-serif;
+            font-size: var(--t-nota);
+        }
+
+        .meta-pista {
+            display: block; margin-top: 5px;
+            font-size: 11px; color: var(--texto-bajo); line-height: 1.4;
+        }
+
+        .modal-meta-box .modal-actions {
+            padding: 16px 22px; border-top: 1px solid var(--linea);
+            justify-content: flex-end; margin: 0;
+        }
+
+        /* Editorial ausente: la unica salida es crearla, nunca sustituirla */
+        .meta-crear {
+            background: var(--alerta-tenue); color: var(--alerta);
+            border: 1px solid rgba(217,154,43,.35); border-radius: 6px;
+            padding: 5px 12px; font-family: Montserrat, sans-serif;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            margin-top: 6px;
+        }
+        .meta-crear:hover { background: var(--alerta); color: var(--papel); }
+
         /* ── TOAST ── */
         .toast-notif {
             position: fixed; top: 88px; right: 24px;
@@ -475,6 +576,61 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
         <div class="modal-actions">
             <button class="btn-cancel-m" onclick="cerrarModal()">Cancelar</button>
             <a id="btn-confirm-del" href="#" class="btn-confirm-del">Sí, eliminar</a>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR METADATOS -->
+<!-- Separa lo VERIFICADO en la fuente de lo que REQUIERE DECISION.
+     Nada se escribe en el formulario hasta que se confirma aqui. -->
+<div class="modal-overlay" id="modal-meta">
+    <div class="modal-box modal-meta-box">
+
+        <div class="meta-cabecera">
+            <h3>Datos encontrados</h3>
+            <button type="button" class="meta-cerrar" id="meta-cerrar" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="meta-cuerpo">
+
+            <p class="meta-seccion"><i class="bi bi-check-circle-fill"></i> Verificado en la fuente</p>
+            <div class="meta-grid" id="meta-verificado"></div>
+
+            <p class="meta-seccion decide"><i class="bi bi-person-fill"></i> Requiere tu decisión</p>
+            <div class="meta-decide">
+
+                <div class="meta-campo">
+                    <span class="meta-et">Tipo</span>
+                    <div>
+                        <div class="meta-ops" id="meta-tipo"></div>
+                        <span class="meta-pista" id="meta-tipo-pista"></span>
+                    </div>
+                </div>
+
+                <div class="meta-campo">
+                    <span class="meta-et">Género</span>
+                    <div>
+                        <select id="meta-genero"></select>
+                        <span class="meta-pista" id="meta-genero-pista"></span>
+                    </div>
+                </div>
+
+                <div class="meta-campo">
+                    <span class="meta-et">Clasificación</span>
+                    <div>
+                        <div class="meta-ops" id="meta-clasif"></div>
+                        <span class="meta-pista">Sin sugerencia: es control parental, lo decides tú</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel-m" id="meta-cancelar">Cancelar</button>
+            <button type="button" class="btn-confirm-del" id="meta-usar">Usar estos datos</button>
         </div>
     </div>
 </div>
@@ -914,6 +1070,256 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================
+       Modal de confirmacion de metadatos  (HU-01, HU-02)
+
+       Separa lo VERIFICADO en la fuente de lo que REQUIERE DECISION.
+       Nada se escribe en el formulario hasta que se pulsa "Usar estos
+       datos": el sistema propone, la persona confirma.
+       ========================================================= */
+    const modalMeta = (function () {
+        const caja     = document.getElementById('modal-meta');
+        const verif    = document.getElementById('meta-verificado');
+        const opTipo   = document.getElementById('meta-tipo');
+        const pistaTipo= document.getElementById('meta-tipo-pista');
+        const selGen   = document.getElementById('meta-genero');
+        const pistaGen = document.getElementById('meta-genero-pista');
+        const opClasif = document.getElementById('meta-clasif');
+        if (!caja) return { abrir: function () {} };
+
+        let actual = null;       // candidato en pantalla
+        let alConfirmar = null;  // callback
+
+        // Editoriales que SI existen en el catalogo, leidas del propio
+        // formulario para no duplicar la lista en dos sitios.
+        function editorialesLocales() {
+            const sel = document.getElementById('f-editorial');
+            if (!sel) return [];
+            return [...sel.options]
+                .filter(function (o) { return o.value; })
+                .map(function (o) { return { id: o.value, nombre: o.textContent.trim() }; });
+        }
+
+        /** Tipo segun la editorial: las de manga publican manga. */
+        const EDITORIALES_MANGA = ['shueisha', 'kodansha', 'shogakukan',
+            'hakusensha', 'young animal', 'square enix', 'kadokawa', 'shonen'];
+
+        function tipoSugerido(editorial) {
+            const e = (editorial || '').toLowerCase();
+            if (!e) return null;
+            for (let i = 0; i < EDITORIALES_MANGA.length; i++) {
+                if (e.indexOf(EDITORIALES_MANGA[i]) !== -1) return 'Manga';
+            }
+            return 'Comic';
+        }
+
+        /** Genero segun palabras de la descripcion, entre los que YA existen. */
+        /* Los nombres deben coincidir EXACTO con la constante GENEROS
+           del formulario, tildes incluidas, o la sugerencia no encaja
+           con ninguna opcion del desplegable. */
+        const PISTAS_GENERO = [
+            { genero: 'Superhéroes',      palabras: ['superhéroe','superheroe','superhéroes','supervillano','poderes','villano'] },
+            { genero: 'Fantasía oscura',  palabras: ['demonio','oscuro','oscura','maldición','infierno','espadachín'] },
+            { genero: 'Ciencia ficción',  palabras: ['espacio','futuro','nave','galaxia','alienígena','extraterrestre'] },
+            { genero: 'Cyberpunk',        palabras: ['cyberpunk','ciberpunk','implante','neón','corporación'] },
+            { genero: 'Terror',           palabras: ['terror','horror','miedo','pesadilla','zombi'] },
+            { genero: 'Post-apocalíptico',palabras: ['apocalipsis','post-apocalíptico','ruinas','devastado'] },
+            { genero: 'Sobrenatural',     palabras: ['sobrenatural','fantasma','espíritu','poseído'] },
+            { genero: 'Fantasía',         palabras: ['magia','mago','dragón','reino','hechizo'] },
+            { genero: 'Misterio',         palabras: ['misterio','detective','investigación','crimen'] },
+            { genero: 'Aventura',         palabras: ['aventura','viaje','expedición','explorador'] },
+            { genero: 'Acción',           palabras: ['pelea','batalla','combate','lucha'] }
+        ];
+
+        function generoSugerido(desc) {
+            const t = (desc || '').toLowerCase();
+            if (!t) return null;
+            for (let i = 0; i < PISTAS_GENERO.length; i++) {
+                const p = PISTAS_GENERO[i];
+                for (let j = 0; j < p.palabras.length; j++) {
+                    if (t.indexOf(p.palabras[j]) !== -1) return p.genero;
+                }
+            }
+            return null;   // sin evidencia, no se inventa
+        }
+
+        function fila(etiqueta, html, falta) {
+            return '<div class="meta-fila"><span class="meta-et">' + etiqueta +
+                   '</span><div class="meta-val' + (falta ? ' falta' : '') + '">' +
+                   html + '</div></div>';
+        }
+
+        function esc(t) {
+            return String(t == null ? '' : t)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        /** Dibuja el bloque de datos verificados. */
+        function pintarVerificado(c) {
+            let h = '';
+            h += fila('Título', esc(c.titulo));
+            h += fila('Año', c.anio ? esc(c.anio) : 'no lo trae la fuente', !c.anio);
+
+            // Editorial: si no esta en el catalogo, la unica salida es crearla.
+            if (c.editorial_id) {
+                const loc = editorialesLocales().find(function (e) { return e.id == c.editorial_id; });
+                const nombreLocal = loc ? loc.nombre : c.editorial;
+                const distinto = nombreLocal.toLowerCase() !== (c.editorial || '').toLowerCase();
+                h += fila('Editorial', distinto
+                    ? esc(c.editorial) + ' <span style="color:var(--texto-bajo)">→</span> ' + esc(nombreLocal)
+                    : esc(nombreLocal));
+            } else if (c.editorial) {
+                h += fila('Editorial',
+                    esc(c.editorial) +
+                    '<span class="meta-pista">No está en tu catálogo. Es la editorial que publicó ' +
+                    'esta obra, así que no puede sustituirse por otra.</span>' +
+                    '<button type="button" class="meta-crear" id="meta-crear-edit">' +
+                    '<i class="bi bi-plus-lg"></i> Crear «' + esc(c.editorial) + '»</button>');
+            } else {
+                h += fila('Editorial', 'no la trae la fuente', true);
+            }
+
+            h += fila('Capítulos', c.capitulo_hasta
+                ? esc(c.capitulo_desde) + ' – ' + esc(c.capitulo_hasta)
+                : 'no los trae la fuente', !c.capitulo_hasta);
+
+            h += fila('Portada', c.portada_url
+                ? '<img src="' + esc(c.portada_url) + '" alt="">'
+                : 'no la trae la fuente', !c.portada_url);
+
+            h += fila('Descripción', c.descripcion
+                ? '<div class="meta-desc">' + esc(c.descripcion) + '</div>'
+                : 'no la trae la fuente', !c.descripcion);
+
+            verif.innerHTML = h;
+
+            const btnCrear = document.getElementById('meta-crear-edit');
+            if (btnCrear) {
+                btnCrear.addEventListener('click', function () {
+                    crearEditorial(c.editorial, btnCrear);
+                });
+            }
+        }
+
+        /** Crea la editorial que falta y la deja seleccionada. */
+        async function crearEditorial(nombre, boton) {
+            boton.disabled = true;
+            boton.innerHTML = 'Creando…';
+            try {
+                const r = await fetch('controlador/crear_editorial.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'nombre=' + encodeURIComponent(nombre)
+                });
+                const d = await r.json();
+                if (!d.ok) {
+                    boton.disabled = false;
+                    boton.textContent = d.aviso || 'No se pudo crear';
+                    return;
+                }
+                // Agregar al desplegable del formulario y al candidato
+                const sel = document.getElementById('f-editorial');
+                if (sel && !sel.querySelector('option[value="' + d.id + '"]')) {
+                    const o = document.createElement('option');
+                    o.value = d.id;
+                    o.textContent = d.nombre;
+                    sel.appendChild(o);
+                }
+                actual.editorial_id = d.id;
+                actual.editorial = d.nombre;
+                pintarVerificado(actual);
+                aplicarSugerencias(actual);
+            } catch (e) {
+                boton.disabled = false;
+                boton.textContent = 'No se pudo crear';
+            }
+        }
+
+        /** Botones de opcion (tipo, clasificacion). */
+        function pintarOpciones(cont, valores, elegido) {
+            cont.innerHTML = '';
+            valores.forEach(function (v) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'meta-op' + (v === elegido ? ' activa' : '');
+                b.dataset.valor = v;
+                b.textContent = v === 'Comic' ? 'Cómic' : v;
+                b.addEventListener('click', function () {
+                    cont.querySelectorAll('.meta-op').forEach(function (x) {
+                        x.classList.remove('activa');
+                    });
+                    b.classList.add('activa');
+                });
+                cont.appendChild(b);
+            });
+        }
+
+        function valorElegido(cont) {
+            const a = cont.querySelector('.meta-op.activa');
+            return a ? a.dataset.valor : '';
+        }
+
+        /** Rellena los tres campos que la fuente no trae. */
+        function aplicarSugerencias(c) {
+            const tipo = tipoSugerido(c.editorial);
+            pintarOpciones(opTipo, ['Comic', 'Manga'], tipo);
+            pistaTipo.textContent = tipo
+                ? 'Sugerido por la editorial «' + c.editorial + '». Puedes cambiarlo.'
+                : 'Sin editorial conocida: elige el formato.';
+
+            // Generos: los del formulario, para no multiplicar variantes
+            const lista = document.getElementById('lista-generos');
+            const gens = lista
+                ? [...lista.querySelectorAll('li')].map(function (li) { return li.textContent.trim(); })
+                : [];
+            const sug = generoSugerido(c.descripcion);
+            selGen.innerHTML = '<option value="">— elegir —</option>' +
+                gens.map(function (g) {
+                    return '<option value="' + esc(g) + '"' +
+                           (g === sug ? ' selected' : '') + '>' + esc(g) + '</option>';
+                }).join('');
+            pistaGen.textContent = sug
+                ? 'Sugerido por la descripción. Puedes cambiarlo.'
+                : 'La descripción no da pistas claras: elígelo tú.';
+
+            // Clasificacion: NUNCA se sugiere (control parental)
+            pintarOpciones(opClasif, ['ATP', '+13', '+16', '+18'], null);
+        }
+
+        function cerrar() {
+            caja.classList.remove('active');
+            actual = null;
+        }
+
+        function abrir(candidato, callback) {
+            actual = candidato;
+            alConfirmar = callback;
+            pintarVerificado(candidato);
+            aplicarSugerencias(candidato);
+            caja.classList.add('active');
+        }
+
+        document.getElementById('meta-cerrar').addEventListener('click', cerrar);
+        document.getElementById('meta-cancelar').addEventListener('click', cerrar);
+        caja.addEventListener('click', function (e) { if (e.target === caja) cerrar(); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && caja.classList.contains('active')) cerrar();
+        });
+
+        document.getElementById('meta-usar').addEventListener('click', function () {
+            if (!actual) return;
+            const decidido = {
+                tipo: valorElegido(opTipo),
+                genero: selGen.value,
+                clasificacion: valorElegido(opClasif)
+            };
+            cerrar();
+            if (alConfirmar) alConfirmar(actual, decidido);
+        });
+
+        return { abrir: abrir };
+    })();
+
+    /* =========================================================
        Autocompletado de metadatos (ComicVine)
 
        Al escribir el titulo, el sistema busca solo: no hay boton.
@@ -974,29 +1380,39 @@ document.addEventListener('DOMContentLoaded', () => {
             aviso.appendChild(a);
         }
 
-        /** Vuelca un candidato en el formulario, sin pisar lo ya escrito. */
-        function rellenar(c, desdeLista) {
-            if (desdeLista) campoTit.value = c.titulo;
+        /** Vuelca un candidato en el formulario, sin pisar lo ya escrito.
+         *  decidido: lo que el administrador eligio en el modal. */
+        function rellenar(c, desdeLista, decidido) {
+            if (desdeLista || decidido) campoTit.value = c.titulo;
 
+            if (decidido) {
+                // Tipo y clasificacion son grupos de botones con input oculto
+                aplicarGrupo('g-tipo', 'f-tipo', decidido.tipo);
+                aplicarGrupo('g-clasificacion', 'f-clasificacion', decidido.clasificacion);
+                const cg = document.getElementById('f-genero-busca');
+                if (cg && decidido.genero) cg.value = decidido.genero;
+            }
+
+            const pisar = desdeLista || !!decidido;
             const anio = document.getElementById('f-anio');
-            if (anio && c.anio && (!anio.value || desdeLista)) anio.value = c.anio;
+            if (anio && c.anio && (!anio.value || pisar)) anio.value = c.anio;
 
             const desc = document.getElementById('f-descripcion');
-            if (desc && c.descripcion && (!desc.value || desdeLista)) {
+            if (desc && c.descripcion && (!desc.value || pisar)) {
                 desc.value = c.descripcion;
             }
 
             // La editorial solo se selecciona si ya existe en el catalogo:
             // no se crea sola, eso lo decide el administrador.
             const sel = document.getElementById('f-editorial');
-            if (sel && c.editorial_id && (!sel.value || desdeLista)) {
+            if (sel && c.editorial_id && (!sel.value || pisar)) {
                 sel.value = c.editorial_id;
             }
 
             const d = document.querySelector('[name="capitulo_desde"]');
             const h = document.querySelector('[name="capitulo_hasta"]');
-            if (d && c.capitulo_desde && (!d.value || desdeLista)) d.value = c.capitulo_desde;
-            if (h && c.capitulo_hasta && (!h.value || desdeLista)) h.value = c.capitulo_hasta;
+            if (d && c.capitulo_desde && (!d.value || pisar)) d.value = c.capitulo_desde;
+            if (h && c.capitulo_hasta && (!h.value || pisar)) h.value = c.capitulo_hasta;
 
             lista.classList.remove('visible');
             lista.innerHTML = '';
@@ -1015,6 +1431,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'Datos cargados. Revísalos antes de guardar.';
             marcar('ok', txt);
             decir(txt);
+        }
+
+        /** Marca una opcion en un grupo de botones del formulario. */
+        function aplicarGrupo(idGrupo, idCampo, valor) {
+            if (!valor) return;
+            const grupo = document.getElementById(idGrupo);
+            const campo = document.getElementById(idCampo);
+            if (!grupo || !campo) return;
+            const bt = [...grupo.querySelectorAll('.opcion')]
+                .find(function (b) { return b.dataset.valor === valor; });
+            if (!bt) return;
+            grupo.querySelectorAll('.opcion').forEach(function (b) { b.classList.remove('activa'); });
+            bt.classList.add('activa');
+            campo.value = valor;
+            if (idCampo === 'f-tipo' && typeof ajustarTipo === 'function') ajustarTipo(valor);
         }
 
         /** Dibuja la lista cuando hay varias coincidencias. */
@@ -1044,7 +1475,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         '<span class="meta-sub">' + sub + '</span>' +
                     '</span>' + marca;
 
-                b.addEventListener('click', function () { rellenar(c, true); });
+                b.addEventListener('click', function () {
+                    modalMeta.abrir(c, function (cc, decidido) {
+                        rellenar(cc, true, decidido);
+                    });
+                });
                 lista.appendChild(b);
             });
             lista.classList.add('visible');
@@ -1067,7 +1502,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const cands = d.datos.candidatos || [];
                 if (d.datos.coincidencia === 'exacta' && cands.length) {
-                    rellenar(cands[0], false);
+                    // El sistema propone, la persona confirma: nada se
+                    // escribe en el formulario hasta aceptar el modal.
+                    marcar('ok', 'Datos encontrados. Revísalos en la ventana.');
+                    decir('Se encontró «' + cands[0].titulo + '». Revisa los datos antes de usarlos.');
+                    modalMeta.abrir(cands[0], function (c, decidido) {
+                        rellenar(c, true, decidido);
+                    });
                     if (cands.length > 1) mostrarLista(cands);
                 } else {
                     marcar('warn', d.aviso);
