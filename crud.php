@@ -636,7 +636,7 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                     <span class="meta-et">Clasificación</span>
                     <div>
                         <div class="meta-ops" id="meta-clasif"></div>
-                        <span class="meta-pista">Sin sugerencia: es control parental, lo decides tú</span>
+                        <span class="meta-pista" id="meta-clasif-pista">Sin sugerencia: es control parental, lo decides tú</span>
                     </div>
                 </div>
 
@@ -1102,11 +1102,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const selGen   = document.getElementById('meta-genero');
         const pistaGen = document.getElementById('meta-genero-pista');
         const opClasif = document.getElementById('meta-clasif');
+        const pistaClasif = document.getElementById('meta-clasif-pista');
         if (!caja) return { abrir: function () {} };
 
         let actual = null;        // candidato en pantalla
         let alConfirmar = null;   // callback
         let portadaLista = null;  // nombre del archivo ya descargado
+        let complemento = null;   // lo verificado por la fuente secundaria
 
         // Editoriales que SI existen en el catalogo, leidas del propio
         // formulario para no duplicar la lista en dos sitios.
@@ -1301,8 +1303,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? 'Sugerido por la descripción. Puedes cambiarlo.'
                 : 'La descripción no da pistas claras: elígelo tú.';
 
-            // Clasificacion: NUNCA se sugiere (control parental)
-            pintarOpciones(opClasif, ['ATP', '+13', '+16', '+18'], null);
+            // Clasificacion: ComicVine no la trae. Solo se marca si la
+            // fuente secundaria pudo VERIFICAR la obra por titulo y anio.
+            pintarOpciones(opClasif, ['ATP', '+13', '+16', '+18'],
+                           complemento ? complemento.clasificacion : null);
+            if (complemento && complemento.clasificacion) {
+                pistaClasif.innerHTML = 'Sugerido por MangaDex («' +
+                    esc(complemento.clasificacion_cruda) + '», ' +
+                    esc(complemento.verificado_por) +
+                    '). <strong>Confírmalo:</strong> es control parental.';
+            } else {
+                pistaClasif.textContent =
+                    'Sin sugerencia: es control parental, lo decides tú';
+            }
+        }
+
+        /**
+         * Completa clasificacion y genero desde la fuente secundaria
+         * (MangaDex). Solo aplica lo que esa fuente pudo VERIFICAR
+         * contra el anio de ComicVine: si no coincide, no sugiere nada.
+         *
+         * La clasificacion se marca pero NO se da por buena: el aviso
+         * dice de donde viene para que el administrador la confirme.
+         */
+        async function complementar(c) {
+            if (!c.anio) return;
+            try {
+                const r = await fetch('controlador/buscar_clasificacion.php?titulo='
+                    + encodeURIComponent(c.titulo) + '&anio=' + encodeURIComponent(c.anio));
+                const d = await r.json();
+                if (!d.ok || actual !== c) return;
+
+                complemento = d.datos || null;
+                // Repintar: aplicarSugerencias ya tiene en cuenta el
+                // complemento, asi que no se pisan entre si.
+                aplicarSugerencias(c);
+
+                if (complemento && complemento.genero) {
+                    const op = [...selGen.options].find(function (o) {
+                        return o.value === complemento.genero;
+                    });
+                    if (op) {
+                        selGen.value = complemento.genero;
+                        pistaGen.textContent = 'Sugerido por MangaDex (' +
+                            complemento.verificado_por + '). Puedes cambiarlo.';
+                    }
+                }
+            } catch (e) {
+                /* la fuente secundaria es opcional: si falla, no pasa nada */
+            }
         }
 
         function cerrar() {
@@ -1352,10 +1401,15 @@ document.addEventListener('DOMContentLoaded', () => {
             caja.classList.add('active');
             document.body.classList.add('modal-abierto');
 
+            // Fuente secundaria: la clasificacion y el genero que
+            // ComicVine no trae. Solo se aplica si verifica la obra.
+            complementar(candidato);
+
             // Traduccion y portada arrancan A LA VEZ al abrir el modal.
             // Antes la portada esperaba al boton "Usar estos datos" y se
             // notaba el tiron; ahora mientras se revisa ya se descarga.
             portadaLista = null;
+            complemento  = null;
             traducirDescripcion(candidato).then(function () {
                 // El genero se sugiere desde la descripcion: si cambio al
                 // traducirse, hay que volver a mirarla.

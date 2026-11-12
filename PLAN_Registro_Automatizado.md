@@ -35,7 +35,7 @@ Verificado contra la API de ComicVine (clave propia, pruebas reales):
 | Editorial | API `publisher.name` | nombre suelto, hay que mapear |
 | Tipo | **no existe** | se infiere de la editorial |
 | Género | **no existe** | se sugiere desde la descripción |
-| Clasificación | **no existe** | siempre manual |
+| Clasificación | **no existe en ComicVine** | fuente secundaria verificada, o manual |
 
 ### Por qué faltan tres campos
 
@@ -189,6 +189,28 @@ para deducir la edad. Al probarlo contra obras de clasificación conocida:
 El campo está vacío en la mayoría de las obras, incluidas las más explícitas.
 Inferir de ahí marcaría contenido +18 como apto para todo público: exactamente
 el error grave que este campo debe evitar.
+
+**Solución: una segunda fuente, verificada.** MangaDex sí publica
+`contentRating` y etiquetas de género. Pero al probarla devuelve obras
+distintas con el mismo título, así que **no se usa sin comprobar**:
+
+| Consulta | MangaDex devuelve | Decisión |
+|---|---|---|
+| Berserk (1989) | Berserk, 1989, `erotica` | ✅ se sugiere **+18** |
+| Vagabond (1999) | Vagabond, 1999, `erotica` | ✅ se sugiere **+18** |
+| Invincible (2003) | otra obra, 2015 | ❌ se descarta |
+| Berserk (2018) | *Boushoku no Berserk* | ❌ se descarta |
+
+**La verificación cruzada por año es lo que lo hace fiable.** Si el año que
+devuelve MangaDex no coincide con el de ComicVine (±1), no es la misma obra y
+no se sugiere nada.
+
+Equivalencia de escalas: `safe`→ATP, `suggestive`→+13, `erotica` y
+`pornographic`→+18.
+
+Aun verificada, **la clasificación no se da por buena**: el modal muestra de
+dónde viene («sugerido por MangaDex, título y año coinciden») y pide
+confirmarla. Sigue siendo el campo donde un error es grave.
 
 ---
 
