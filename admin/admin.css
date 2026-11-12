@@ -539,8 +539,8 @@ img { display: block; max-width: 100%; }
     border: 1px solid var(--linea);
     border-radius: var(--r);
     overflow: hidden;
-    max-height: 310px;
-    overflow-y: auto;
+    /* sin max-height: la lista muestra todas las ediciones y la
+       pagina se desplaza con normalidad, sin una barra propia */
 }
 
 .resultados-meta.visible { display: block; }

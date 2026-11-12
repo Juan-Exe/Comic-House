@@ -372,6 +372,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,.75); z-index: 9998;
             align-items: center; justify-content: center;
+            overflow-y: auto; padding: 24px 0;
         }
         .modal-overlay.active { display: flex; }
         .modal-box {
@@ -404,7 +405,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         .modal-meta-box {
             width: 560px; max-width: calc(100vw - 32px);
             text-align: left; padding: 0;
-            max-height: 88vh; display: flex; flex-direction: column;
+            display: flex; flex-direction: column;
         }
         .meta-cabecera {
             display: flex; align-items: center; justify-content: space-between;
@@ -417,7 +418,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         }
         .meta-cerrar:hover { color: var(--texto); }
 
-        .meta-cuerpo { padding: 18px 22px; overflow-y: auto; flex: 1; }
+        .meta-cuerpo { padding: 18px 22px; }
 
         .meta-seccion {
             display: flex; align-items: center; gap: 7px;
@@ -450,7 +451,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         }
         .meta-desc {
             font-size: var(--t-nota); line-height: 1.5;
-            color: var(--texto-medio); max-height: 76px; overflow-y: auto;
+            color: var(--texto-medio);
         }
 
         /* Lo que requiere decision */
@@ -1448,6 +1449,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (idCampo === 'f-tipo' && typeof ajustarTipo === 'function') ajustarTipo(valor);
         }
 
+        function esc(t) {
+            return String(t == null ? '' : t)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         /** Dibuja la lista cuando hay varias coincidencias. */
         function mostrarLista(cands) {
             lista.innerHTML = '';
@@ -1467,7 +1473,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     marca = '<span class="meta-marca exacta">exacto</span>';
                 }
 
-                const sub = (c.anio || 's/f') + ' · ' + (c.editorial || 'editorial desconocida');
+                // La editorial es lo que distingue una edicion de otra
+                // ("Invincible" de Image no es el de Kodansha), asi que
+                // se muestra destacada y no como dato secundario.
+                const sub = '<strong>' + esc(c.editorial || 'editorial desconocida') +
+                            '</strong> · ' + (c.anio || 's/f');
 
                 b.innerHTML = img +
                     '<span class="meta-info">' +
@@ -1501,20 +1511,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const cands = d.datos.candidatos || [];
-                if (d.datos.coincidencia === 'exacta' && cands.length) {
-                    // El sistema propone, la persona confirma: nada se
-                    // escribe en el formulario hasta aceptar el modal.
-                    marcar('ok', 'Datos encontrados. Revísalos en la ventana.');
-                    decir('Se encontró «' + cands[0].titulo + '». Revisa los datos antes de usarlos.');
-                    modalMeta.abrir(cands[0], function (c, decidido) {
-                        rellenar(c, true, decidido);
-                    });
-                    if (cands.length > 1) mostrarLista(cands);
-                } else {
+                if (!cands.length) {
                     marcar('warn', d.aviso);
                     decir(d.aviso);
-                    mostrarLista(cands);
+                    lista.classList.remove('visible');
+                    return;
                 }
+
+                // NUNCA se abre el modal solo: un mismo titulo tiene
+                // varias ediciones ("Invincible" de Image, de Kodansha,
+                // de Delcourt...) y el sistema no puede saber cual
+                // quiere el administrador. Se listan y el elige.
+                marcar('ok', cands.length + ' ediciones encontradas');
+                decir(cands.length === 1
+                    ? 'Se encontró una edición. Pulsa sobre ella para revisar los datos.'
+                    : 'Se encontraron ' + cands.length + ' ediciones. Elige cuál corresponde.');
+                mostrarLista(cands);
             } catch (err) {
                 marcar('error', 'No se pudo contactar la fuente');
                 decir('No se pudo contactar la fuente de datos. Regístralo a mano.');

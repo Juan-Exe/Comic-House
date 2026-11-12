@@ -194,14 +194,22 @@ El usuario es el **administrador** de Comic House.
 
 - [ ] **CA-01.1** Al escribir 3 o más caracteres, la búsqueda se dispara sola
       600 ms después de dejar de teclear, sin pulsar ningún botón.
-- [ ] **CA-01.2** Si hay coincidencia exacta de título, se abre el modal con
-      los datos encontrados.
+- [x] **CA-01.2** ~~Si hay coincidencia exacta de título, se abre el modal~~
+      **Corregido tras probarlo:** un mismo título tiene varias ediciones
+      («Invincible» existe en Image, Kodansha, Delcourt, Cross Cult…), así que
+      el modal **nunca se abre solo**. Se listan las ediciones encontradas,
+      con su editorial destacada, y el administrador elige cuál corresponde.
 - [ ] **CA-01.3** El modal muestra título, año, editorial, capítulos, portada
       y descripción traducida.
 - [ ] **CA-01.4** Al confirmar, los campos del formulario quedan rellenos y el
       administrador solo pulsa «Registrar».
-- [ ] **CA-01.5** La operación completa (escribir → confirmar → guardar) no
-      exige abrir ninguna otra página.
+- [ ] **CA-01.5** La operación completa (escribir → elegir edición → confirmar
+      → guardar) no exige abrir ninguna otra página.
+- [x] **CA-01.6** Cuando un título tiene varias ediciones, se muestran todas
+      con su editorial y año, porque es lo que las distingue.
+- [x] **CA-01.7** El tipo se infiere de la editorial de **la edición elegida**,
+      no de la primera: elegir la de Kodansha sugiere Manga; la de Image,
+      Cómic.
 
 ---
 
@@ -219,6 +227,9 @@ El usuario es el **administrador** de Comic House.
 - [ ] **CA-02.3** Todos los campos son editables antes de confirmar.
 - [ ] **CA-02.4** «Cancelar» cierra el modal sin tocar el formulario.
 - [ ] **CA-02.5** Ningún dato se guarda sin confirmación explícita.
+- [x] **CA-02.6** Ni el modal ni la lista abren barras de desplazamiento
+      propias: crecen con su contenido y la página se desplaza con
+      normalidad.
 
 ---
 
@@ -347,7 +358,7 @@ El usuario es el **administrador** de Comic House.
 | Fase | Qué incluye | Historias |
 |---|---|---|
 | ~~0~~ | ~~Búsqueda automática y corrección de tipeo~~ | ~~HU-04~~ ✓ hecho |
-| 1 | Modal de confirmación con los datos verificados | HU-01, HU-02 |
+| ~~1~~ | ~~Modal de confirmación con los datos verificados~~ | ~~HU-01, HU-02~~ ✓ hecho |
 | 2 | Traducción de la descripción | HU-06 |
 | 3 | Descarga de la portada | HU-07 |
 | 4 | Creación de editorial faltante | HU-05 |
@@ -355,6 +366,23 @@ El usuario es el **administrador** de Comic House.
 | 6 | Repaso de casos límite | HU-03, HU-08 |
 
 Cada fase se verifica contra sus criterios antes de pasar a la siguiente.
+
+---
+
+## 7.1 · Lo aprendido en la Fase 1
+
+**Un título no identifica una obra.** «Invincible» devuelve 8 ediciones de
+editoriales distintas. Abrir el modal con la primera era una suposición
+equivocada: el sistema no puede saber cuál quiere el administrador. La lista
+de ediciones dejó de ser un extra para casos ambiguos y pasó a ser el paso
+normal del flujo.
+
+**La editorial es la clave de todo.** Distingue una edición de otra y además
+determina el tipo (Kodansha → Manga, Image → Cómic). Por eso se muestra
+destacada en la lista, no como dato secundario.
+
+**Las barras de desplazamiento internas rompen la estética.** El modal y la
+lista ahora crecen con su contenido.
 
 ---
 
