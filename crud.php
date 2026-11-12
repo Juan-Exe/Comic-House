@@ -491,14 +491,14 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
 
             <div class="field">
                 <label for="f-titulo">Título</label>
-                <div class="titulo-busca">
+                <!-- Al escribir, el sistema busca los metadatos solo.
+                     El indicador vive DENTRO del campo para no alterar
+                     la altura ni el ritmo del formulario. -->
+                <div class="campo-con-estado">
                     <input type="text" id="f-titulo" name="titulo"
                            placeholder="Ej. House of M" autocomplete="off" required>
-                    <button type="button" id="btn-buscar-meta" title="Buscar metadatos del cómic">
-                        <i class="bi bi-search"></i> Buscar
-                    </button>
+                    <span class="estado-busca" id="estado-meta" aria-hidden="true"></span>
                 </div>
-                <p class="ayuda-campo" id="aviso-meta"></p>
                 <div id="resultados-meta" class="resultados-meta"></div>
             </div>
 
@@ -915,161 +915,167 @@ document.addEventListener('DOMContentLoaded', () => {
     /* =========================================================
        Autocompletado de metadatos (ComicVine)
 
+       Al escribir el titulo, el sistema busca solo: no hay boton.
        Es una REGLA, no un modelo: trae datos de una fuente externa
-       y los mapea a los campos. No inventa nada — si la API no
-       responde o no encuentra el titulo, los campos quedan vacios
-       y se llenan a mano. El administrador confirma antes de guardar.
+       y los mapea a los campos. Si la API no responde o no encuentra
+       el titulo, los campos quedan vacios y se llenan a mano — nunca
+       se inventa un valor. El administrador confirma antes de guardar.
        ========================================================= */
     (function () {
-        const btn      = document.getElementById('btn-buscar-meta');
         const campoTit = document.getElementById('f-titulo');
-        const aviso    = document.getElementById('aviso-meta');
+        const estado   = document.getElementById('estado-meta');
         const lista    = document.getElementById('resultados-meta');
-        if (!btn || !campoTit) return;
+        if (!campoTit || !estado) return;
 
-        function decir(texto, clase) {
-            aviso.textContent = texto;
-            aviso.className = 'ayuda-campo' + (clase ? ' ' + clase : '');
-        }
+        let reloj = null;          // temporizador del tecleo
+        let ultimaBusqueda = '';   // evita repetir la misma consulta
 
-        /** Marca una opcion dentro de un grupo de botones (tipo, clasificacion). */
-        function elegirOpcion(idGrupo, idCampo, valor) {
-            if (!valor) return;
-            const grupo = document.getElementById(idGrupo);
-            const campo = document.getElementById(idCampo);
-            if (!grupo || !campo) return;
-            const bt = [...grupo.querySelectorAll('.opcion')]
-                .find(b => b.dataset.valor.toLowerCase() === String(valor).toLowerCase());
-            if (!bt) return;
-            grupo.querySelectorAll('.opcion').forEach(b => b.classList.remove('activa'));
-            bt.classList.add('activa');
-            campo.value = bt.dataset.valor;
-            if (idCampo === 'f-tipo' && typeof ajustarTipo === 'function') {
-                ajustarTipo(bt.dataset.valor);
+        /** Indicador dentro del campo: un icono, sin texto que descoloque. */
+        function marcar(clase, titulo) {
+            if (!clase) {
+                estado.className = 'estado-busca';
+                estado.innerHTML = '';
+                estado.title = '';
+                return;
             }
+            const iconos = {
+                cargando: 'bi-arrow-repeat',
+                ok:       'bi-check-circle-fill',
+                warn:     'bi-exclamation-circle',
+                error:    'bi-x-circle'
+            };
+            estado.innerHTML = '<i class="bi ' + iconos[clase] + '"></i>';
+            estado.className = 'estado-busca visible ' + clase;
+            estado.title = titulo || '';
         }
 
-        /** Vuelca un candidato en el formulario. */
-        function rellenar(c) {
-            campoTit.value = c.titulo;
+        /** Vuelca un candidato en el formulario, sin pisar lo ya escrito. */
+        function rellenar(c, desdeLista) {
+            if (desdeLista) campoTit.value = c.titulo;
 
-            if (c.anio) document.getElementById('f-anio').value = c.anio;
+            const anio = document.getElementById('f-anio');
+            if (anio && c.anio && (!anio.value || desdeLista)) anio.value = c.anio;
 
             const desc = document.getElementById('f-descripcion');
-            if (desc && c.descripcion) desc.value = c.descripcion;
+            if (desc && c.descripcion && (!desc.value || desdeLista)) {
+                desc.value = c.descripcion;
+            }
 
             // La editorial solo se selecciona si ya existe en el catalogo:
-            // no se crea sola, porque eso lo decide el administrador.
+            // no se crea sola, eso lo decide el administrador.
             const sel = document.getElementById('f-editorial');
-            if (sel && c.editorial_id) sel.value = c.editorial_id;
+            if (sel && c.editorial_id && (!sel.value || desdeLista)) {
+                sel.value = c.editorial_id;
+            }
 
-            if (c.capitulo_desde) {
-                const d = document.querySelector('[name="capitulo_desde"]');
-                if (d) d.value = c.capitulo_desde;
-            }
-            if (c.capitulo_hasta) {
-                const h = document.querySelector('[name="capitulo_hasta"]');
-                if (h) h.value = c.capitulo_hasta;
-            }
+            const d = document.querySelector('[name="capitulo_desde"]');
+            const h = document.querySelector('[name="capitulo_hasta"]');
+            if (d && c.capitulo_desde && (!d.value || desdeLista)) d.value = c.capitulo_desde;
+            if (h && c.capitulo_hasta && (!h.value || desdeLista)) h.value = c.capitulo_hasta;
 
             lista.classList.remove('visible');
             lista.innerHTML = '';
 
-            const faltan = [];
-            if (!c.anio)                   faltan.push('año');
-            if (!c.editorial_id)           faltan.push('editorial');
-            if (!c.descripcion)            faltan.push('descripción');
-
-            let txt = 'Datos cargados. Falta elegir tipo, clasificación, género y subir la portada';
-            if (faltan.length) txt += '. La fuente no trajo: ' + faltan.join(', ');
-            if (!c.editorial_id && c.editorial) {
-                txt += `. La editorial «${c.editorial}» no está en el catálogo`;
-            }
-            decir(txt + '. Revisa todo antes de guardar.', faltan.length ? 'warn' : 'ok');
-
             if (c.ya_registrado) {
-                decir('Ojo: ya existe un cómic con ese título en el catálogo.', 'error');
+                marcar('warn', 'Ya existe un cómic con ese título en el catálogo');
+                return;
             }
+            const faltan = [];
+            if (!c.anio)         faltan.push('año');
+            if (!c.editorial_id) faltan.push('editorial');
+            if (!c.descripcion)  faltan.push('descripción');
+            marcar('ok', faltan.length
+                ? 'Datos cargados. La fuente no trajo: ' + faltan.join(', ')
+                : 'Datos cargados. Revísalos antes de guardar.');
         }
 
         /** Dibuja la lista cuando hay varias coincidencias. */
         function mostrarLista(cands) {
             lista.innerHTML = '';
-            cands.forEach((c) => {
+            cands.forEach(function (c) {
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.className = 'meta-item';
 
                 const img = c.portada_url
-                    ? `<img src="${c.portada_url}" alt="" loading="lazy">`
-                    : `<img src="" alt="">`;
+                    ? '<img src="' + c.portada_url + '" alt="" loading="lazy">'
+                    : '<img src="" alt="">';
 
                 let marca = '';
                 if (c.ya_registrado) {
-                    marca = '<span class="meta-marca duplicado">ya registrado</span>';
+                    marca = '<span class="meta-marca duplicado">ya existe</span>';
                 } else if (c.coincide_exacto) {
                     marca = '<span class="meta-marca exacta">exacto</span>';
                 }
 
-                const sub = [c.anio || 's/f', c.editorial || 'editorial desconocida']
-                            .join(' · ');
+                const sub = (c.anio || 's/f') + ' · ' + (c.editorial || 'editorial desconocida');
 
-                b.innerHTML = `${img}
-                    <span class="meta-info">
-                        <span class="meta-titulo">${c.titulo}</span>
-                        <span class="meta-sub">${sub}</span>
-                    </span>${marca}`;
+                b.innerHTML = img +
+                    '<span class="meta-info">' +
+                        '<span class="meta-titulo">' + c.titulo + '</span>' +
+                        '<span class="meta-sub">' + sub + '</span>' +
+                    '</span>' + marca;
 
-                b.addEventListener('click', () => rellenar(c));
+                b.addEventListener('click', function () { rellenar(c, true); });
                 lista.appendChild(b);
             });
             lista.classList.add('visible');
         }
 
-        async function buscar() {
-            const titulo = campoTit.value.trim();
-            if (titulo.length < 3) {
-                decir('Escribe al menos 3 caracteres del título.', 'warn');
-                return;
-            }
-
-            btn.disabled = true;
-            const rotulo = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Buscando…';
-            decir('Consultando la fuente de datos…');
-            lista.classList.remove('visible');
-
+        async function buscar(titulo) {
+            marcar('cargando', 'Buscando metadatos…');
             try {
                 const r = await fetch('controlador/buscar_metadatos.php?titulo='
                                       + encodeURIComponent(titulo));
                 const d = await r.json();
 
                 if (!d.ok) {
-                    decir(d.aviso || 'No se encontraron datos.', 'warn');
+                    marcar('warn', d.aviso || 'Sin resultados. Regístralo a mano.');
+                    lista.classList.remove('visible');
                     return;
                 }
 
                 const cands = d.datos.candidatos || [];
                 if (d.datos.coincidencia === 'exacta' && cands.length) {
-                    rellenar(cands[0]);
+                    rellenar(cands[0], false);
                     if (cands.length > 1) mostrarLista(cands);
                 } else {
-                    decir(d.aviso, 'warn');
+                    marcar('warn', d.aviso);
                     mostrarLista(cands);
                 }
             } catch (err) {
-                decir('No se pudo contactar la fuente de datos. Regístralo a mano.', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = rotulo;
+                marcar('error', 'No se pudo contactar la fuente. Regístralo a mano.');
+                lista.classList.remove('visible');
             }
         }
 
-        btn.addEventListener('click', buscar);
+        // Busca sola 600 ms despues de dejar de escribir: ni en cada
+        // tecla (castigaria la API) ni obligando a pulsar un boton.
+        campoTit.addEventListener('input', function () {
+            clearTimeout(reloj);
+            const t = campoTit.value.trim();
 
-        // Enter en el titulo busca, en vez de enviar el formulario a medias.
-        campoTit.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); buscar(); }
+            if (t.length < 3) {
+                marcar(null);
+                lista.classList.remove('visible');
+                ultimaBusqueda = '';
+                return;
+            }
+            if (t.toLowerCase() === ultimaBusqueda) return;
+
+            reloj = setTimeout(function () {
+                ultimaBusqueda = t.toLowerCase();
+                buscar(t);
+            }, 600);
+        });
+
+        // Enter busca de inmediato en vez de enviar el formulario a medias.
+        campoTit.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            clearTimeout(reloj);
+            const t = campoTit.value.trim();
+            if (t.length >= 3) { ultimaBusqueda = t.toLowerCase(); buscar(t); }
         });
     })();
 </script>
