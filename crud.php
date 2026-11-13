@@ -414,6 +414,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
                El scroll vive dentro del cuerpo, no en el overlay, asi
                solo aparece UNA barra y nunca la del catalogo de atras. */
             max-height: calc(100vh - 40px);
+            position: relative;   /* contiene la capa de carga */
         }
         .meta-cabecera {
             display: flex; align-items: center; justify-content: space-between;
@@ -514,6 +515,49 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         }
         .meta-crear:hover { background: var(--alerta); color: var(--papel); }
 
+        /* Capa de carga del modal */
+        .meta-cargando {
+            position: absolute; inset: 0; z-index: 5;
+            background: var(--estante);
+            border-radius: 12px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 16px;
+            transition: opacity .25s;
+        }
+        /* Mientras carga, el contenido no solo se oculta: se saca del
+           flujo. Con visibility:hidden seguia ocupando su alto y el
+           modal quedaba estirado con un hueco enorme debajo. */
+        .modal-meta-box.cargando .meta-cuerpo,
+        .modal-meta-box.cargando .modal-actions { display: none; }
+        .modal-meta-box.cargando { height: 330px; }
+        /* La capa se posiciona bajo la cabecera, que sigue visible */
+        .modal-meta-box.cargando .meta-cargando { top: 58px; }
+        .meta-cargando.oculta { opacity: 0; pointer-events: none; }
+
+        .meta-spinner {
+            width: 34px; height: 34px; border-radius: 50%;
+            border: 3px solid var(--linea);
+            border-top-color: var(--rojo);
+            animation: metaGirar .8s linear infinite;
+        }
+        @keyframes metaGirar { to { transform: rotate(360deg); } }
+
+        .meta-cargando-txt {
+            margin: 0; font-size: var(--t-base); font-weight: 700; color: var(--texto);
+        }
+
+        .meta-pasos {
+            list-style: none; margin: 0; padding: 0;
+            display: flex; flex-direction: column; gap: 7px;
+        }
+        .meta-pasos li {
+            display: flex; align-items: center; gap: 8px;
+            font-size: var(--t-nota); color: var(--texto-bajo);
+            transition: color .2s;
+        }
+        .meta-pasos li i { font-size: 11px; }
+        .meta-pasos li.listo { color: var(--ok); }
+
         /* ── TOAST ── */
         .toast-notif {
             position: fixed; top: 88px; right: 24px;
@@ -600,6 +644,18 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
      Nada se escribe en el formulario hasta que se confirma aqui. -->
 <div class="modal-overlay" id="modal-meta">
     <div class="modal-box modal-meta-box">
+
+        <!-- Capa de carga: los datos llegan de cinco fuentes distintas y
+             aparecian escalonados. Se tapa hasta que todas terminan. -->
+        <div class="meta-cargando" id="meta-cargando">
+            <div class="meta-spinner"></div>
+            <p class="meta-cargando-txt" id="meta-cargando-txt">Reuniendo datos…</p>
+            <ul class="meta-pasos">
+                <li data-paso="traducir"><i class="bi bi-circle"></i> Traduciendo la descripción</li>
+                <li data-paso="portada"><i class="bi bi-circle"></i> Descargando la portada</li>
+                <li data-paso="clasificacion"><i class="bi bi-circle"></i> Buscando la clasificación</li>
+            </ul>
+        </div>
 
         <div class="meta-cabecera">
             <h3>Datos encontrados</h3>
@@ -1110,6 +1166,53 @@ document.addEventListener('DOMContentLoaded', () => {
         let portadaLista = null;  // nombre del archivo ya descargado
         let complemento = null;   // lo verificado por la fuente secundaria
 
+        const capaCarga = document.getElementById('meta-cargando');
+        const txtCarga  = document.getElementById('meta-cargando-txt');
+
+        /** Marca un paso como terminado y cierra la capa cuando no queda ninguno. */
+        function pasoListo(nombre) {
+            const li = capaCarga.querySelector('[data-paso="' + nombre + '"]');
+            if (li) {
+                li.classList.add('listo');
+                // El icono se cambia por clase: sobreescribir el
+                // ::before de Bootstrap Icons no funciona.
+                const ico = li.querySelector('i');
+                if (ico) ico.className = 'bi bi-check-circle-fill';
+            }
+            if (!capaCarga.querySelector('.meta-pasos li:not(.listo)')) {
+                clearTimeout(relojCarga);
+                txtCarga.textContent = 'Listo';
+                setTimeout(function () {
+                    capaCarga.classList.add('oculta');
+                    caja.querySelector('.modal-meta-box').classList.remove('cargando');
+                }, 180);
+            }
+        }
+
+        let relojCarga = null;
+
+        /** Devuelve la capa a su estado inicial al abrir otra edicion. */
+        function reiniciarCarga() {
+            capaCarga.classList.remove('oculta');
+            caja.querySelector('.modal-meta-box').classList.add('cargando');
+            txtCarga.textContent = 'Reuniendo datos…';
+            capaCarga.querySelectorAll('.meta-pasos li').forEach(function (li) {
+                li.classList.remove('listo');
+            });
+
+            // Red de seguridad: si una fuente no responde, la capa no
+            // debe dejar el modal tapado para siempre. A los 12 s se
+            // muestra lo que haya llegado.
+            clearTimeout(relojCarga);
+            relojCarga = setTimeout(function () {
+                if (!capaCarga.classList.contains('oculta')) {
+                    txtCarga.textContent = 'Algunas fuentes tardan: revisa lo que hay';
+                    capaCarga.classList.add('oculta');
+                    caja.querySelector('.modal-meta-box').classList.remove('cargando');
+                }
+            }, 12000);
+        }
+
         // Editoriales que SI existen en el catalogo, leidas del propio
         // formulario para no duplicar la lista en dos sitios.
         function editorialesLocales() {
@@ -1339,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // clasificacion a todo comic occidental, que es justo el
             // caso que las otras capas existen para cubrir.
             if (!c.anio) {
-                estimarClasificacion(c);
+                estimarClasificacion(c);   // cierra el paso al terminar
                 return;
             }
             try {
@@ -1348,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const d = await r.json();
                 if (actual !== c) return;
                 if (!d.ok) {
-                    estimarClasificacion(c);
+                    estimarClasificacion(c);   // cierra el paso al terminar
                     return;
                 }
 
@@ -1359,7 +1462,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si MangaDex no dio clasificacion, se intentan las
                 // capas siguientes (Wikipedia y, si hay clave, el modelo).
                 if (!complemento || !complemento.clasificacion) {
-                    estimarClasificacion(c);
+                    estimarClasificacion(c);   // cierra el paso al terminar
+                } else {
+                    pasoListo('clasificacion');
                 }
 
                 if (complemento && complemento.genero) {
@@ -1375,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 // La capa 1 es opcional, pero su fallo no debe impedir
                 // que se intenten las siguientes.
-                estimarClasificacion(c);
+                estimarClasificacion(c);   // cierra el paso al terminar
             }
         }
 
@@ -1398,6 +1503,7 @@ document.addEventListener('DOMContentLoaded', () => {
                           '&descripcion=' + encodeURIComponent(c.descripcion || '')
                 });
                 const d = await r.json();
+                pasoListo('clasificacion');
                 if (!d.ok || actual !== c) return;
 
                 const g = d.datos || {};
@@ -1425,6 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {
                 /* las capas 2 y 3 son opcionales */
+                pasoListo('clasificacion');
             }
         }
 
@@ -1442,7 +1549,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * una version inventada.
          */
         async function traducirDescripcion(c) {
-            if (!c.descripcion) return;
+            if (!c.descripcion) { pasoListo('traducir'); return; }
             const caja_ = document.getElementById('meta-desc-txt');
             const est   = document.getElementById('meta-desc-estado');
             if (!caja_ || !est) return;
@@ -1455,15 +1562,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: 'texto=' + encodeURIComponent(c.descripcion)
                 });
                 const d = await r.json();
-                if (!d.ok) { est.textContent = d.aviso || 'No se pudo traducir.'; return; }
+                if (!d.ok) {
+                    est.textContent = d.aviso || 'No se pudo traducir.';
+                    pasoListo('traducir');
+                    return;
+                }
 
                 // El candidato guarda el texto ya traducido: es el que
                 // acabara en el formulario si se confirma.
                 c.descripcion = d.texto;
                 caja_.textContent = d.texto;
                 est.textContent = d.aviso || '';
+                pasoListo('traducir');
             } catch (e) {
                 est.textContent = 'No se pudo traducir: queda el texto original.';
+                pasoListo('traducir');
             }
         }
 
@@ -1484,6 +1597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // notaba el tiron; ahora mientras se revisa ya se descarga.
             portadaLista = null;
             complemento  = null;
+            reiniciarCarga();
             traducirDescripcion(candidato).then(function () {
                 // El genero se sugiere desde la descripcion: si cambio al
                 // traducirse, hay que volver a mirarla.
@@ -1507,7 +1621,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * Si falla, queda activa la subida manual.
          */
         async function descargarPortada(c) {
-            if (!c.portada_url) return '';
+            if (!c.portada_url) { pasoListo('portada'); return ''; }
             try {
                 const r = await fetch('controlador/descargar_portada.php', {
                     method: 'POST',
@@ -1516,8 +1630,10 @@ document.addEventListener('DOMContentLoaded', () => {
                           '&titulo=' + encodeURIComponent(c.titulo)
                 });
                 const d = await r.json();
+                pasoListo('portada');
                 return d.ok ? d.archivo : '';
             } catch (e) {
+                pasoListo('portada');
                 return '';
             }
         }
