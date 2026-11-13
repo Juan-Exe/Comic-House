@@ -126,30 +126,54 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             width: 100%; height: 100%;
         }
         .portada-preview {
-            position: absolute; inset: 0;
+            position: relative;
             /* contain, no cover: las portadas son verticales (616x960) y
                la caja es ancha; recortarlas mostraba un fragmento
                ampliado en vez de la portada completa. */
             object-fit: contain;
-            width: 100%; height: 100%;
-            padding: 6px;
+            width: 100%;
+            height: 100%;
             box-sizing: border-box;
-            border-radius: 6px;
             display: none;
+            z-index: 1;
+            /* Los bordes de arriba y abajo se funden con el difuminado
+               en vez de terminar en un corte seco (igual que la ficha
+               de destacar.php). */
+            -webkit-mask-image: linear-gradient(to bottom,
+                        transparent 0%, #000 10%, #000 90%, transparent 100%);
+            mask-image: linear-gradient(to bottom,
+                        transparent 0%, #000 10%, #000 90%, transparent 100%);
+        }
+        /* El hueco que deja la portada vertical NO queda en negro: lo
+           llena una copia suya estirada y desenfocada, de modo que cada
+           zona continua hacia arriba y hacia abajo con su propio color. */
+        .portada-luz {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            filter: blur(24px) saturate(1.45) brightness(.75);
+            display: none;
+            z-index: 0;
         }
         /* Con una portada cargada la caja crece a proporcion de comic:
            con los 130px fijos la imagen vertical se veia como una
            franja recortada. */
         .portada-btn.con-imagen {
-            height: 280px;
+            height: 420px;
+            padding: 0;
             background: #0b0b0d;
             border-style: solid;
             border-color: var(--linea);
+            isolation: isolate;
         }
-        .portada-preview.visible { display: block; }
+        .portada-preview.visible,
+        .portada-luz.visible { display: block; }
         .portada-overlay {
             position: absolute; inset: 0;
             background: rgba(0,0,0,.5);
+            z-index: 2;   /* sobre la portada y su difuminado */
             display: none;
             align-items: center;
             justify-content: center;
@@ -852,6 +876,10 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                 <label>Portada</label>
                 <div class="portada-upload">
                     <label class="portada-btn" id="portada-btn">
+                        <!-- Copia desenfocada de la propia portada: llena
+                             el hueco que deja la imagen vertical en vez de
+                             dejarlo en negro, igual que en destacar.php. -->
+                        <img class="portada-luz" id="portada-luz" src="" alt="" aria-hidden="true">
                         <img class="portada-preview" id="portada-preview" src="" alt="">
                         <i class="bi bi-image" id="portada-icon"></i>
                         <span id="portada-label">Elegir imagen</span>
@@ -1115,10 +1143,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = this.files[0];
         if (!file) return;
         const preview = document.getElementById('portada-preview');
+        const luz     = document.getElementById('portada-luz');
         const icon    = document.getElementById('portada-icon');
         const label   = document.getElementById('portada-label');
-        preview.src = URL.createObjectURL(file);
+        const url     = URL.createObjectURL(file);
+        preview.src = url;
         preview.classList.add('visible');
+        // La misma imagen de fondo, para rellenar el hueco difuminada.
+        if (luz) { luz.src = url; luz.classList.add('visible'); }
         icon.style.display  = 'none';
         label.style.display = 'none';
         // Solo con imagen elegida tiene sentido ofrecer «Cambiar».
@@ -1799,11 +1831,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const campo = document.getElementById('portada-descargada');
                 if (campo) campo.value = archivoPortada;
                 const prev = document.getElementById('portada-preview');
+                const luzP = document.getElementById('portada-luz');
                 const ico  = document.getElementById('portada-icon');
                 const rot  = document.getElementById('portada-label');
                 if (prev) {
                     prev.src = 'uploads/' + archivoPortada;
                     prev.classList.add('visible');
+                }
+                // Copia desenfocada detras, para que no queden bandas negras.
+                if (luzP) {
+                    luzP.src = 'uploads/' + archivoPortada;
+                    luzP.classList.add('visible');
                 }
                 if (ico) ico.style.display = 'none';
                 if (rot) rot.textContent = 'Portada descargada';
