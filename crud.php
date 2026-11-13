@@ -127,10 +127,24 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
         }
         .portada-preview {
             position: absolute; inset: 0;
-            object-fit: cover;
+            /* contain, no cover: las portadas son verticales (616x960) y
+               la caja es ancha; recortarlas mostraba un fragmento
+               ampliado en vez de la portada completa. */
+            object-fit: contain;
             width: 100%; height: 100%;
+            padding: 6px;
+            box-sizing: border-box;
             border-radius: 6px;
             display: none;
+        }
+        /* Con una portada cargada la caja crece a proporcion de comic:
+           con los 130px fijos la imagen vertical se veia como una
+           franja recortada. */
+        .portada-btn.con-imagen {
+            height: 280px;
+            background: #0b0b0d;
+            border-style: solid;
+            border-color: var(--linea);
         }
         .portada-preview.visible { display: block; }
         .portada-overlay {
@@ -1302,8 +1316,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 h += fila('Editorial', 'no la trae la fuente', true);
             }
 
+            const rotuloEstado = {
+                'En publicacion': 'en emisión',
+                'Publicacion Terminada': 'publicación terminada',
+                'Tomo unico': 'tomo único'
+            }[c.estado] || '';
             h += fila('Capítulos', c.capitulo_hasta
-                ? esc(c.capitulo_desde) + ' – ' + esc(c.capitulo_hasta)
+                ? esc(c.capitulo_desde) + ' – ' + esc(c.capitulo_hasta) +
+                  (rotuloEstado ? ' <span style="color:var(--texto-bajo)">· ' +
+                   rotuloEstado + '</span>' : '')
                 : 'no los trae la fuente', !c.capitulo_hasta);
 
             h += fila('Portada', c.portada_url
@@ -1751,9 +1772,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // La editorial solo se selecciona si ya existe en el catalogo:
             // no se crea sola, eso lo decide el administrador.
+            // El <option> de editorial usa el NOMBRE como value, no el
+            // id: pasarle el id dejaba el desplegable sin seleccionar.
             const sel = document.getElementById('f-editorial');
-            if (sel && c.editorial_id && (!sel.value || pisar)) {
-                sel.value = c.editorial_id;
+            const nomEd = c.editorial_valor || c.editorial;
+            if (sel && c.editorial_id && nomEd && (!sel.value || pisar)) {
+                const op = [...sel.options].find(function (o) { return o.value === nomEd; });
+                if (op) sel.value = nomEd;
+            }
+
+            // Estado de publicacion, deducido del ultimo numero
+            const selEst = document.getElementById('f-estado');
+            if (selEst && c.estado && (pisar || !selEst.value)) {
+                selEst.value = c.estado;
+                if (typeof ajustarEstado === 'function') ajustarEstado();
             }
 
             const d = document.querySelector('[name="capitulo_desde"]');
@@ -1771,10 +1803,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rot  = document.getElementById('portada-label');
                 if (prev) {
                     prev.src = 'uploads/' + archivoPortada;
-                    prev.style.display = 'block';
+                    prev.classList.add('visible');
                 }
                 if (ico) ico.style.display = 'none';
                 if (rot) rot.textContent = 'Portada descargada';
+                const btnP = document.getElementById('portada-btn');
+                if (btnP) btnP.classList.add('con-imagen');
                 const inp = document.getElementById('portada-input');
                 if (inp) inp.removeAttribute('required');
             }

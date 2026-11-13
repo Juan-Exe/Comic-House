@@ -33,7 +33,7 @@ function consultarApi(string $query, string $apiKey, int $limite = 8): array {
         'query'      => $query,
         'resources'  => 'volume',      // un "volume" es la serie completa
         'limit'      => $limite,
-        'field_list' => 'id,name,start_year,publisher,image,deck,description,count_of_issues',
+        'field_list' => 'id,name,start_year,publisher,image,deck,description,count_of_issues,last_issue',
     ]);
 
     $ch = curl_init($url);
@@ -275,11 +275,25 @@ foreach ($resultados as $v) {
 
     $nIssues = (int) ($v['count_of_issues'] ?? 0);
 
+    // Estado de publicacion. La API no lo dice, pero se deduce: si el
+    // ultimo numero publicado coincide con el total, la serie llego a
+    // su final. Un solo numero es un tomo unico.
+    $ultimo = (int) ($v['last_issue']['issue_number'] ?? 0);
+    if ($nIssues === 1) {
+        $estado = 'Tomo unico';
+    } elseif ($nIssues > 0 && $ultimo > 0 && $ultimo >= $nIssues - 1) {
+        $estado = 'Publicacion Terminada';
+    } else {
+        $estado = 'En publicacion';
+    }
+
     $candidatos[] = [
         'titulo'      => $nombre,
         'anio'        => $anio,
         'editorial'   => $edit['nombre'],
         'editorial_id'=> $edit['id'],
+        'editorial_valor' => $edit['nombre'],   // el <option> usa el nombre
+        'estado'      => $estado,
         'editorial_en_catalogo' => $edit['en_catalogo'],
         'descripcion' => $desc,
         'portada_url' => $v['image']['medium_url'] ?? ($v['image']['original_url'] ?? ''),
