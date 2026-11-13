@@ -228,18 +228,18 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-01.1** Al escribir 3 o más caracteres, la búsqueda se dispara sola
+- [x] **CA-01.1** Al escribir 3 o más caracteres, la búsqueda se dispara sola
       600 ms después de dejar de teclear, sin pulsar ningún botón.
 - [x] **CA-01.2** ~~Si hay coincidencia exacta de título, se abre el modal~~
       **Corregido tras probarlo:** un mismo título tiene varias ediciones
       («Invincible» existe en Image, Kodansha, Delcourt, Cross Cult…), así que
       el modal **nunca se abre solo**. Se listan las ediciones encontradas,
       con su editorial destacada, y el administrador elige cuál corresponde.
-- [ ] **CA-01.3** El modal muestra título, año, editorial, capítulos, portada
+- [x] **CA-01.3** El modal muestra título, año, editorial, capítulos, portada
       y descripción traducida.
-- [ ] **CA-01.4** Al confirmar, los campos del formulario quedan rellenos y el
+- [x] **CA-01.4** Al confirmar, los campos del formulario quedan rellenos y el
       administrador solo pulsa «Registrar».
-- [ ] **CA-01.5** La operación completa (escribir → elegir edición → confirmar
+- [x] **CA-01.5** La operación completa (escribir → elegir edición → confirmar
       → guardar) no exige abrir ninguna otra página.
 - [x] **CA-01.6** Cuando un título tiene varias ediciones, se muestran todas
       con su editorial y año, porque es lo que las distingue.
@@ -256,13 +256,13 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-02.1** El modal distingue visualmente lo verificado en la fuente de
+- [x] **CA-02.1** El modal distingue visualmente lo verificado en la fuente de
       lo que requiere decisión.
-- [ ] **CA-02.2** Cada campo derivado indica en qué se basó la sugerencia
+- [x] **CA-02.2** Cada campo derivado indica en qué se basó la sugerencia
       («sugerido por la editorial», «sugerido por la descripción»).
-- [ ] **CA-02.3** Todos los campos son editables antes de confirmar.
-- [ ] **CA-02.4** «Cancelar» cierra el modal sin tocar el formulario.
-- [ ] **CA-02.5** Ningún dato se guarda sin confirmación explícita.
+- [x] **CA-02.3** Todos los campos son editables antes de confirmar.
+- [x] **CA-02.4** «Cancelar» cierra el modal sin tocar el formulario.
+- [x] **CA-02.5** Ningún dato se guarda sin confirmación explícita.
 - [x] **CA-02.6** Ni el modal ni la lista abren barras de desplazamiento
       propias: crecen con su contenido y la página se desplaza con
       normalidad.
@@ -294,12 +294,12 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-04.1** Si no hay coincidencia exacta pero sí un título parecido, se
+- [x] **CA-04.1** Si no hay coincidencia exacta pero sí un título parecido, se
       sugiere: «No se encontró X. ¿Querías decir Y?».
-- [ ] **CA-04.2** La sugerencia se aplica con un clic y relanza la búsqueda.
-- [ ] **CA-04.3** Un texto sin parecido real (`xyzqw123`) **no** genera
+- [x] **CA-04.2** La sugerencia se aplica con un clic y relanza la búsqueda.
+- [x] **CA-04.3** Un texto sin parecido real (`xyzqw123`) **no** genera
       sugerencia: se admite que no existe.
-- [ ] **CA-04.4** La comparación es por similitud de texto, no por
+- [x] **CA-04.4** La comparación es por similitud de texto, no por
       interpretación de significado.
 
 *Estado: implementado y verificado — `invicible → Invincible`,
@@ -314,14 +314,14 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-05.1** Si la editorial no está en el catálogo, se ofrece **crearla**
+- [x] **CA-05.1** Si la editorial no está en el catálogo, se ofrece **crearla**
       con el nombre que devolvió la fuente.
-- [ ] **CA-05.2** **No** se ofrece sustituirla por otra del catálogo.
-- [ ] **CA-05.3** Al crearla, queda seleccionada y disponible para futuras obras.
-- [ ] **CA-05.4** Si la fuente da un nombre parcial («Image») y existe uno
+- [x] **CA-05.2** **No** se ofrece sustituirla por otra del catálogo.
+- [x] **CA-05.3** Al crearla, queda seleccionada y disponible para futuras obras.
+- [x] **CA-05.4** Si la fuente da un nombre parcial («Image») y existe uno
       equivalente («Image Comics»), se muestra la equivalencia para que el
       administrador la confirme; no se asume.
-- [ ] **CA-05.5** El cómic guardado queda con `editorial_id` apuntando a una
+- [x] **CA-05.5** El cómic guardado queda con `editorial_id` apuntando a una
       fila real, no a texto suelto.
 
 ---
@@ -389,12 +389,12 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-09.1** La clasificación por edad **nunca** se sugiere.
-- [ ] **CA-09.2** El género solo se sugiere si la descripción contiene
+- [x] **CA-09.1** La clasificación por edad **nunca** se sugiere.
+- [x] **CA-09.2** El género solo se sugiere si la descripción contiene
       evidencia; si no, queda vacío.
-- [ ] **CA-09.3** El año se descarta si cae fuera de 1900–año actual.
-- [ ] **CA-09.4** Ningún campo se rellena con un valor «aproximado».
-- [ ] **CA-09.5** Cada sugerencia indica su origen.
+- [x] **CA-09.3** El año se descarta si cae fuera de 1900–año actual.
+- [x] **CA-09.4** Ningún campo se rellena con un valor «aproximado».
+- [x] **CA-09.5** Cada sugerencia indica su origen.
 
 ---
 
@@ -456,5 +456,31 @@ lista ahora crecen con su contenido.
 
 ---
 
-*Documento de trabajo. Los datos sobre la API se verificaron con consultas
-reales el 13 de noviembre de 2026.*
+## 10 · Estado final
+
+**Las 6 fases implementadas y los 47 criterios verificados.**
+
+De los 9 campos del formulario:
+
+| Origen | Campos |
+|---|---|
+| Automático desde ComicVine | título, año, editorial, capítulos, portada, descripción (traducida) |
+| Fuente secundaria verificada | clasificación, género *(solo cuando el año coincide)* |
+| Regla propia | tipo *(se infiere de la editorial)* |
+
+Lo que **nunca** hace el sistema: inventar un valor para rellenar un hueco,
+sustituir una editorial por otra, o dar por buena una clasificación sin que el
+administrador la confirme.
+
+### Pendiente para más adelante
+
+- Aplicar los mismos principios a **editar cómic** y **subir capítulos**.
+- Revisar si conviene cachear las respuestas de la API, hoy se consulta en cada
+  búsqueda.
+- La equivalencia `suggestive → +13` es una interpretación de una escala a otra;
+  conviene revisarla con casos reales según crezca el catálogo.
+
+---
+
+*Documento de trabajo. Los datos sobre las APIs se verificaron con consultas
+reales entre el 13 de noviembre de 2026 y el cierre del plan.*
