@@ -1338,6 +1338,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Repintar: aplicarSugerencias ya tiene en cuenta el
                 // complemento, asi que no se pisan entre si.
                 aplicarSugerencias(c);
+                // Si MangaDex no dio clasificacion, se intentan las
+                // capas siguientes (Wikipedia y, si hay clave, el modelo).
+                if (!complemento || !complemento.clasificacion) {
+                    estimarClasificacion(c);
+                }
 
                 if (complemento && complemento.genero) {
                     const op = [...selGen.options].find(function (o) {
@@ -1351,6 +1356,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {
                 /* la fuente secundaria es opcional: si falla, no pasa nada */
+            }
+        }
+
+        /**
+         * Capas 2 y 3 de la clasificacion: Wikipedia y, como ultimo
+         * recurso, un modelo de lenguaje.
+         *
+         * La diferencia importante es el ORIGEN. Un dato "verificado"
+         * sale de una fuente que lo publica; uno "estimado" lo deduce un
+         * modelo de la sinopsis y PUEDE EQUIVOCARSE. No se presentan
+         * igual: el estimado se marca en ambar y lo dice explicitamente.
+         */
+        async function estimarClasificacion(c) {
+            try {
+                const r = await fetch('controlador/estimar_clasificacion.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: 'titulo=' + encodeURIComponent(c.titulo) +
+                          '&tipo=' + encodeURIComponent(valorElegido(opTipo) || 'Comic') +
+                          '&descripcion=' + encodeURIComponent(c.descripcion || '')
+                });
+                const d = await r.json();
+                if (!d.ok || actual !== c) return;
+
+                const g = d.datos || {};
+                if (!g.clasificacion) return;
+
+                pintarOpciones(opClasif, ['ATP', '+13', '+16', '+18'], g.clasificacion);
+
+                if (g.origen === 'estimado') {
+                    pistaClasif.innerHTML = '<span style="color:var(--alerta)">⚠ ' +
+                        'Estimado</span> por ' + esc(g.fuente) + ': ' + esc(g.motivo) +
+                        '. <strong>No es un dato verificado:</strong> revísalo.';
+                } else {
+                    pistaClasif.innerHTML = 'Según ' + esc(g.fuente) + ': ' +
+                        esc(g.motivo) + '. <strong>Confírmalo:</strong> es control parental.';
+                }
+            } catch (e) {
+                /* las capas 2 y 3 son opcionales */
             }
         }
 

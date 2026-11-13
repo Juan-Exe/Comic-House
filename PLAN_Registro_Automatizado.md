@@ -212,6 +212,42 @@ Aun verificada, **la clasificación no se da por buena**: el modal muestra de
 dónde viene («sugerido por MangaDex, título y año coinciden») y pide
 confirmarla. Sigue siendo el campo donde un error es grave.
 
+### Tres capas, de más fiable a menos
+
+MangaDex solo acierta en manga. Para cómic occidental **no existe un dato
+público estandarizado**: Marvel usa «Rated T+», DC usa «Teen», Image no marca
+nada, y ninguna base lo recopila. Por eso se encadenan tres fuentes:
+
+| Capa | Fuente | Origen del dato |
+|---|---|---|
+| 1 | MangaDex `contentRating`, verificado por año | **verificado** |
+| 2 | Wikipedia: demografía editorial y sellos de madurez | **verificado** |
+| 3 | Modelo de lenguaje sobre la sinopsis *(requiere clave)* | **estimado** |
+
+Se detiene en la primera que responde, y **el origen viaja con el dato**: un
+«verificado» sale de una fuente que lo publica; un «estimado» lo deduce un
+modelo y puede equivocarse. El modal los distingue —el estimado va en ámbar y
+avisa «no es un dato verificado»— porque presentarlos igual sería engañoso.
+
+**Sobre la capa 2 y los falsos positivos.** El primer intento buscaba palabras
+sueltas y fallaba de forma peligrosa:
+
+| Obra | Palabra hallada | De dónde salía |
+|---|---|---|
+| Invincible | «Teen» | *Teen Team*, un grupo de personajes |
+| Saga | «explicit» | *explicitly addressed*, sobre etnia |
+
+Exigiendo contexto (`seinen manga`, `rated M`, `for mature readers`) los falsos
+positivos bajaron a cero. Verificado: Berserk y Vagabond → +18 por «seinen
+manga»; Invincible, Saga y Bone → sin sugerencia, que es la respuesta honesta.
+
+**La capa 3 es opcional.** Sin `GROQ_API_KEY` configurada, el sistema se
+comporta como antes: sugiere lo verificable y nada más. Con clave, estima la
+clasificación de los cómics occidentales marcándola claramente como estimación.
+Se pide al modelo `temperature: 0`, solo una etiqueta de la escala, y elegir la
+opción **más restrictiva** ante la duda. Si devuelve algo fuera de la escala se
+descarta en vez de adaptarlo.
+
 ---
 
 ## 6 · Historias de usuario y criterios de aceptación
