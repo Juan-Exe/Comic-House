@@ -1308,10 +1308,17 @@ document.addEventListener('DOMContentLoaded', () => {
             pintarOpciones(opClasif, ['ATP', '+13', '+16', '+18'],
                            complemento ? complemento.clasificacion : null);
             if (complemento && complemento.clasificacion) {
-                pistaClasif.innerHTML = 'Sugerido por MangaDex («' +
-                    esc(complemento.clasificacion_cruda) + '», ' +
-                    esc(complemento.verificado_por) +
-                    '). <strong>Confírmalo:</strong> es control parental.';
+                if (complemento.origen === 'estimado') {
+                    pistaClasif.innerHTML = '<span style="color:var(--alerta)">⚠ ' +
+                        'Estimado</span> por ' + esc(complemento.clasificacion_cruda) +
+                        ': ' + esc(complemento.verificado_por) +
+                        '. <strong>No es un dato verificado:</strong> revísalo.';
+                } else {
+                    pistaClasif.innerHTML = 'Sugerido por MangaDex («' +
+                        esc(complemento.clasificacion_cruda) + '», ' +
+                        esc(complemento.verificado_por) +
+                        '). <strong>Confírmalo:</strong> es control parental.';
+                }
             } else {
                 pistaClasif.textContent =
                     'Sin sugerencia: es control parental, lo decides tú';
@@ -1395,6 +1402,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const g = d.datos || {};
                 if (!g.clasificacion) return;
+
+                // Se guarda como complemento: aplicarSugerencias se
+                // ejecuta de nuevo al terminar la traduccion y borraria
+                // la marca si solo se pintara aqui.
+                complemento = Object.assign({}, complemento || {}, {
+                    clasificacion: g.clasificacion,
+                    clasificacion_cruda: g.fuente,
+                    verificado_por: g.motivo,
+                    origen: g.origen
+                });
 
                 pintarOpciones(opClasif, ['ATP', '+13', '+16', '+18'], g.clasificacion);
 
