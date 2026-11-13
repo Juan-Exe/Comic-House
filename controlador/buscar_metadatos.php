@@ -245,11 +245,16 @@ function limpiarTexto(?string $html, int $max = 600): string {
     return $txt;
 }
 
-// Titulos ya registrados, para avisar de duplicados antes de guardar
+// Titulos ya registrados. Se guarda tambien anio y editorial: el
+// catalogo tiene UNIQUE por titulo, asi que cualquier edicion con ese
+// nombre choca, pero el aviso debe decir CUAL se tiene ya registrada.
 $yaRegistrados = [];
-$r = $conexion->query("SELECT titulo FROM comics");
+$r = $conexion->query("SELECT titulo, anio, editorial FROM comics");
 while ($c = $r->fetch_assoc()) {
-    $yaRegistrados[mb_strtolower(trim($c['titulo']))] = true;
+    $yaRegistrados[mb_strtolower(trim($c['titulo']))] = [
+        'anio'      => $c['anio'],
+        'editorial' => $c['editorial'],
+    ];
 }
 
 $ANIO_ACTUAL = (int) date('Y');
@@ -281,6 +286,7 @@ foreach ($resultados as $v) {
         'capitulo_desde' => $nIssues > 0 ? 1 : null,
         'capitulo_hasta' => $nIssues > 0 ? $nIssues : null,
         'ya_registrado'  => isset($yaRegistrados[mb_strtolower($nombre)]),
+        'registrado_como' => $yaRegistrados[mb_strtolower($nombre)] ?? null,
         'coincide_exacto'=> mb_strtolower($nombre) === mb_strtolower($titulo),
     ];
 }

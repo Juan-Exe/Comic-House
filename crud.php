@@ -1593,8 +1593,13 @@ document.addEventListener('DOMContentLoaded', () => {
             lista.innerHTML = '';
 
             if (c.ya_registrado) {
+                const yaReg = c.registrado_como || {};
+                const det = [yaReg.editorial, yaReg.anio].filter(Boolean).join(' · ');
                 marcar('warn', 'Ya existe un cómic con ese título');
-                decir('Ya existe un cómic con ese título en el catálogo.');
+                decir(det
+                    ? 'En el catálogo ya está «' + c.titulo + '» (' + det +
+                      '). El título no puede repetirse, aunque sea otra edición.'
+                    : 'Ya existe un cómic con ese título en el catálogo.');
                 return;
             }
             const faltan = [];
@@ -1642,7 +1647,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let marca = '';
                 if (c.ya_registrado) {
-                    marca = '<span class="meta-marca duplicado">ya existe</span>';
+                    // El catalogo tiene UNIQUE por titulo: cualquier edicion
+                    // con ese nombre chocaria, aunque sea de otra editorial.
+                    const yaReg = c.registrado_como || {};
+                    const mismaEdicion = String(yaReg.anio || '') === String(c.anio || '');
+                    marca = '<span class="meta-marca duplicado" title="' +
+                        (mismaEdicion
+                            ? 'Esta misma edición ya está registrada'
+                            : 'Ya hay un cómic con este título (' +
+                              [yaReg.editorial, yaReg.anio].filter(Boolean).join(' · ') + ')') +
+                        '">ya existe</span>';
                 } else if (c.coincide_exacto) {
                     marca = '<span class="meta-marca exacta">exacto</span>';
                 }

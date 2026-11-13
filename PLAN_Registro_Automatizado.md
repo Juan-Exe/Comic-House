@@ -276,13 +276,14 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-03.1** Si no hay resultados, el formulario sigue funcionando
+- [x] **CA-03.1** Si no hay resultados, el formulario sigue funcionando
       exactamente como antes, con todos los campos vacíos y editables.
-- [ ] **CA-03.2** Se muestra un aviso legible explicando que no se encontró,
+- [x] **CA-03.2** Se muestra un aviso legible explicando que no se encontró,
       sin bloquear el registro manual.
-- [ ] **CA-03.3** Ningún campo se rellena con un valor inventado.
-- [ ] **CA-03.4** Si la API está caída o sin clave, el comportamiento es el
-      mismo: aviso y registro manual.
+- [x] **CA-03.3** Ningún campo se rellena con un valor inventado.
+- [x] **CA-03.4** Si la API está caída o sin clave, el comportamiento es el
+      mismo: aviso y registro manual. **Probado** con clave inválida
+      (HTTP 401) y con clave vacía: ambos avisan y dejan registrar a mano.
 
 ---
 
@@ -370,11 +371,14 @@ El usuario es el **administrador** de Comic House.
 
 **Criterios de aceptación**
 
-- [ ] **CA-08.1** Si el título ya existe en el catálogo, se avisa antes de
-      abrir el modal.
-- [ ] **CA-08.2** En la lista de coincidencias, las ya registradas se marcan.
-- [ ] **CA-08.3** La comparación ignora mayúsculas y espacios sobrantes.
-- [ ] **CA-08.4** El aviso no bloquea: puede existir una edición distinta.
+- [x] **CA-08.1** Si el título ya existe en el catálogo, se avisa al abrirlo,
+      diciendo **qué edición** se tiene ya registrada.
+- [x] **CA-08.2** En la lista de coincidencias, las ya registradas se marcan,
+      y al pasar el cursor se indica si es la misma edición u otra.
+- [x] **CA-08.3** La comparación ignora mayúsculas y espacios sobrantes.
+      **Probado**: «berserk», «BERSERK» y «Berserk» dan el mismo resultado.
+- [x] **CA-08.4** El aviso no bloquea: los datos se rellenan igual y el
+      administrador decide. El `UNIQUE` del esquema es la barrera final.
 
 ---
 
@@ -404,7 +408,7 @@ El usuario es el **administrador** de Comic House.
 | ~~3~~ | ~~Descarga de la portada~~ | ~~HU-07~~ ✓ hecho |
 | 4 | Creación de editorial faltante | HU-05 |
 | 5 | Sugerencia de tipo y género | HU-09 |
-| 6 | Repaso de casos límite | HU-03, HU-08 |
+| ~~6~~ | ~~Repaso de casos límite~~ | ~~HU-03, HU-08~~ ✓ hecho |
 
 Cada fase se verifica contra sus criterios antes de pasar a la siguiente.
 
