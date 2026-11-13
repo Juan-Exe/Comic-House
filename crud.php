@@ -1327,12 +1327,23 @@ document.addEventListener('DOMContentLoaded', () => {
          * dice de donde viene para que el administrador la confirme.
          */
         async function complementar(c) {
-            if (!c.anio) return;
+            // Capa 1: MangaDex. Si no resuelve, se encadenan las capas
+            // 2 y 3 igualmente: el `return` temprano de antes dejaba sin
+            // clasificacion a todo comic occidental, que es justo el
+            // caso que las otras capas existen para cubrir.
+            if (!c.anio) {
+                estimarClasificacion(c);
+                return;
+            }
             try {
                 const r = await fetch('controlador/buscar_clasificacion.php?titulo='
                     + encodeURIComponent(c.titulo) + '&anio=' + encodeURIComponent(c.anio));
                 const d = await r.json();
-                if (!d.ok || actual !== c) return;
+                if (actual !== c) return;
+                if (!d.ok) {
+                    estimarClasificacion(c);
+                    return;
+                }
 
                 complemento = d.datos || null;
                 // Repintar: aplicarSugerencias ya tiene en cuenta el
@@ -1355,7 +1366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (e) {
-                /* la fuente secundaria es opcional: si falla, no pasa nada */
+                // La capa 1 es opcional, pero su fallo no debe impedir
+                // que se intenten las siguientes.
+                estimarClasificacion(c);
             }
         }
 

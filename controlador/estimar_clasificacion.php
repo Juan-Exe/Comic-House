@@ -26,6 +26,28 @@
 header('Content-Type: application/json; charset=utf-8');
 @set_time_limit(45);
 
+// El .env no se carga solo: conexion.php lo hace, pero aqui no hace
+// falta la base de datos. Se lee el archivo directamente para que
+// getenv() encuentre GROQ_API_KEY.
+(function () {
+    $f = dirname(__DIR__) . '/.env';
+    if (!is_readable($f)) {
+        return;
+    }
+    foreach (file($f, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $linea) {
+        $linea = trim($linea);
+        if ($linea === '' || $linea[0] === '#' || !str_contains($linea, '=')) {
+            continue;
+        }
+        [$k, $v] = explode('=', $linea, 2);
+        $k = trim($k);
+        $v = trim($v);
+        if ($k !== '' && getenv($k) === false) {
+            putenv("$k=$v");
+        }
+    }
+})();
+
 const ESCALA = ['ATP', '+13', '+16', '+18'];
 
 function responder(array $r): void {
@@ -123,7 +145,13 @@ function porModelo(string $titulo, string $descripcion, string $tipo): ?array {
     $url    = $esGroq
         ? 'https://api.groq.com/openai/v1/chat/completions'
         : 'https://api.openai.com/v1/chat/completions';
-    $modelo = $esGroq ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini';
+    // El catalogo de Groq cambia: los modelos se retiran sin aviso y la
+    // peticion falla con model_not_found. Por eso se prueban varios en
+    // orden. Comprobado que qwen devuelve el JSON pedido; los gpt-oss
+    // responden 200 con el contenido vacio, asi que van despues.
+    $modelos = $esGroq
+        ? ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b']
+        : ['gpt-4o-mini'];
 
     // Se pide SOLO la etiqueta y el motivo, para que no haya margen de
     // redaccion libre y la respuesta sea facil de validar.
@@ -134,51 +162,61 @@ function porModelo(string $titulo, string $descripcion, string $tipo): ?array {
         . '{"clasificacion":"","motivo":"sin indicios"}. '
         . 'Ante la duda elige la clasificación MÁS restrictiva: es control parental.';
 
-    $payload = json_encode([
-        'model'       => $modelo,
-        'temperature' => 0,        // determinista en lo posible
-        'max_tokens'  => 150,
-        'messages'    => [
-            ['role' => 'system', 'content' => $sistema],
-            ['role' => 'user',   'content' => "Tipo: $tipo\nTítulo: $titulo\n"
-                                            . "Sinopsis: " . mb_substr($descripcion, 0, 900)],
-        ],
-    ], JSON_UNESCAPED_UNICODE);
+    foreach ($modelos as $modelo) {
+        $payload = json_encode([
+            'model'       => $modelo,
+            'temperature' => 0,        // determinista en lo posible
+            'max_tokens'  => 200,
+            'messages'    => [
+                ['role' => 'system', 'content' => $sistema],
+                ['role' => 'user',   'content' => "Tipo: $tipo\nTítulo: $titulo\n"
+                                                . "Sinopsis: " . mb_substr($descripcion, 0, 900)],
+            ],
+        ], JSON_UNESCAPED_UNICODE);
 
-    $cuerpo = traer($url, [
-        CURLOPT_POST       => true,
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT    => 20,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $clave,
-        ],
-    ]);
-    if ($cuerpo === null) {
-        return null;
+        $cuerpo = traer($url, [
+            CURLOPT_POST       => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_TIMEOUT    => 25,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $clave,
+            ],
+        ]);
+        if ($cuerpo === null) {
+            continue;   // modelo retirado o sin acceso: se prueba el siguiente
+        }
+
+        $j = json_decode($cuerpo, true);
+        $texto = trim($j['choices'][0]['message']['content'] ?? '');
+        if ($texto === '') {
+            continue;   // respondio vacio: se prueba el siguiente
+        }
+        // El modelo a veces envuelve el JSON en ```
+        if (preg_match('/\{.*\}/s', $texto, $m)) {
+            $texto = $m[0];
+        }
+        $r = json_decode($texto, true);
+        $clas = trim($r['clasificacion'] ?? '');
+
+        // Validacion: solo se acepta una etiqueta de la escala. Si el modelo
+        // devuelve cualquier otra cosa, se descarta en vez de adaptarla.
+        if (!in_array($clas, ESCALA, true)) {
+            continue;
+        }
+
+        // Nombre legible, sin el prefijo del proveedor
+        $nombre = preg_replace('#^[a-z-]+/#', '', $modelo);
+
+        return [
+            'clasificacion' => $clas,
+            'origen'        => 'estimado',
+            'fuente'        => $nombre,
+            'motivo'        => trim($r['motivo'] ?? 'estimado a partir de la sinopsis'),
+        ];
     }
 
-    $j = json_decode($cuerpo, true);
-    $texto = $j['choices'][0]['message']['content'] ?? '';
-    // El modelo a veces envuelve el JSON en ```
-    if (preg_match('/\{.*\}/s', $texto, $m)) {
-        $texto = $m[0];
-    }
-    $r = json_decode($texto, true);
-    $clas = trim($r['clasificacion'] ?? '');
-
-    // Validacion: solo se acepta una etiqueta de la escala. Si el modelo
-    // devuelve cualquier otra cosa, se descarta en vez de adaptarla.
-    if (!in_array($clas, ESCALA, true)) {
-        return null;
-    }
-
-    return [
-        'clasificacion' => $clas,
-        'origen'        => 'estimado',
-        'fuente'        => $esGroq ? 'Llama 3.3' : 'GPT-4o mini',
-        'motivo'        => trim($r['motivo'] ?? 'estimado a partir de la sinopsis'),
-    ];
+    return null;
 }
 
 // =================================================================
