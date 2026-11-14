@@ -71,9 +71,42 @@ $fecha_val = ($fecha !== '') ? $fecha : null;
 $arco_val  = ($arco !== '') ? $arco : null;
 $stmt_cap->bind_param("issssiis", $comic_id, $titulo, $numero, $fecha_val,
                       $formato, $desde, $hasta, $arco_val);
-$stmt_cap->execute();
+
+// El resultado SE COMPRUEBA. Antes no: si la base rechazaba la fila
+// (numero repetido, o rango que se solapa con otro capitulo) el codigo
+// seguia adelante con insert_id = 0, creaba la carpeta paginas/cap_0/ y
+// metia ahi las imagenes de un capitulo que no existe.
+//
+// Esto es tambien lo que hace la subida repetible: si se reintenta un
+// capitulo que ya entro, la base lo rechaza y se responde que ya existe,
+// en vez de duplicarlo ni dejar basura en el disco.
+// En PHP 8 mysqli lanza EXCEPCIONES por defecto, no devuelve false, asi
+// que un simple if() no bastaria: el rechazo de la base salia como un
+// error 500 en vez de un JSON que la pantalla pueda mostrar.
+try {
+    $stmt_cap->execute();
+} catch (mysqli_sql_exception $e) {
+    $stmt_cap->close();
+    // 1062 = UNIQUE repetido · 1644 = SIGNAL del trigger de solapamiento
+    $esDuplicado = in_array($e->getCode(), [1062, 1644], true);
+    echo json_encode([
+        'ok'      => false,
+        'error'   => $esDuplicado ? 'duplicado' : 'bd',
+        'mensaje' => $esDuplicado
+            ? 'Ese capítulo ya está subido en esta obra.'
+            : 'No se pudo guardar el capítulo.',
+    ]);
+    exit();
+}
+
 $capitulo_id = $conexion->insert_id;
 $stmt_cap->close();
+
+if ($capitulo_id <= 0) {
+    echo json_encode(['ok' => false, 'error' => 'bd',
+                      'mensaje' => 'No se pudo guardar el capítulo.']);
+    exit();
+}
 
 // Carpeta destino de páginas
 $paginas_dir = dirname(__DIR__) . "/paginas/cap_{$capitulo_id}/";

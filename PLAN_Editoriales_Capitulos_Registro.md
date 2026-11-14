@@ -231,14 +231,33 @@ tal, nunca como una verificación.
 > **quiero** poder repetirla sin duplicar nada,
 > **para** no tener que revisar a mano.
 
-- [ ] CA-B5.1 · Subir **el mismo archivo al mismo capítulo** dos veces no crea
+- [x] CA-B5.1 · Subir **el mismo archivo al mismo capítulo** dos veces no crea
       dos filas.
-- [ ] CA-B5.2 · La base impide dos capítulos con el mismo número en el mismo
-      cómic (`UNIQUE (comic_id, numero)`).
+- [x] CA-B5.2 · La base impide dos capítulos con el mismo número en el mismo
+      cómic (`UNIQUE (comic_id, numero)`). **Ya existía** — ver hallazgo abajo.
+- [x] CA-B5.5 · Dos capítulos del mismo cómic **no pueden solapar rangos**.
 - [ ] CA-B5.3 · Si se reintenta tras un fallo a medias, se completa lo que
-      falta en vez de empezar de cero.
+      falta en vez de empezar de cero. *(Sprint 5, con la subida múltiple.)*
 - [ ] CA-B5.4 · Las páginas de un capítulo reemplazado **se borran** antes de
       insertar las nuevas: nada de mezclar dos ediciones.
+
+> **Hallazgo del Sprint 2.** Al inspeccionar la base **antes** de tocarla
+> resultó que las restricciones ya existían, así que el riesgo que preocupaba
+> (que `UNIQUE` fallara por duplicados previos) no era real:
+>
+> ```
+> uq_capitulo_por_comic  UNIQUE (comic_id, numero)        ya existía
+> uq_capitulos_desde     UNIQUE (comic_id, numero_desde)  ya existía
+> duplicados actuales    0
+> ```
+>
+> Ambas se probaron con inserciones reales y **rechazaron** el duplicado.
+>
+> Pero la prueba destapó un hueco distinto: **los rangos pueden solaparse**.
+> Berserk tiene un capítulo `#1 - #3` y la base aceptó insertar `#2 - #4`, con
+> lo que los números 2 y 3 quedaban en dos capítulos a la vez. Ninguna
+> restricción de columna puede evitarlo, porque depende de comparar con las
+> demás filas. Eso es lo que resuelve CA-B5.5.
 
 ---
 
