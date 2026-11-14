@@ -210,6 +210,93 @@ function tomosDeVolinfo(string $texto): array {
     return $tomos;
 }
 
+/**
+ * Traduce los nombres de arco al español con el modelo.
+ *
+ * Los wikis los publican en inglés («Golden Age Arc») y el catálogo
+ * está en español («Arco de la Edad de Oro»). Se traducen TODOS en una
+ * sola llamada: son pocos y repetidos, y hacer una por tomo gastaría
+ * cuarenta peticiones para cuatro arcos distintos.
+ *
+ * Si no hay clave o el modelo falla, se devuelven en inglés sin más: es
+ * una mejora, no un requisito.
+ */
+function traducirArcos(array $arcos): array {
+    $clave = getenv('GROQ_API_KEY') ?: '';
+    if ($clave === '' || !$arcos) {
+        return [];
+    }
+
+    $lista = implode("\n", $arcos);
+    $sistema = 'Traduces nombres de arcos argumentales de manga y cómic al '
+        . 'español de España. Recibes una lista, uno por línea. Respondes '
+        . 'SOLO un JSON: {"original 1":"traducción 1","original 2":"..."}. '
+        . 'Usa la forma «Arco de…» o «Arco del…» según corresponda. '
+        . 'Ejemplos: "Golden Age Arc" → "Arco de la Edad de Oro"; '
+        . '"Black Swordsman Arc" → "Arco del Espadachín Negro". '
+        . 'Conserva los nombres propios que no se traduzcan.';
+
+    foreach (['qwen/qwen3.8-27b', 'openai/gpt-oss-120b'] as $modelo) {
+        $payload = json_encode([
+            'model'       => $modelo,
+            'temperature' => 0,
+            'max_tokens'  => 700,
+            'messages'    => [
+                ['role' => 'system', 'content' => $sistema],
+                ['role' => 'user',   'content' => $lista],
+            ],
+        ], JSON_UNESCAPED_UNICODE);
+
+        $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_TIMEOUT        => 25,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $clave,
+            ],
+        ]);
+        $cuerpo = curl_exec($ch);
+        $http   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($cuerpo === false || $http !== 200) {
+            continue;
+        }
+        $j = json_decode($cuerpo, true);
+        $txt = trim($j['choices'][0]['message']['content'] ?? '');
+        if (preg_match('/\{.*\}/s', $txt, $m)) {
+            $txt = $m[0];
+        }
+        $mapa = json_decode($txt, true);
+        if (is_array($mapa) && $mapa) {
+            return $mapa;
+        }
+    }
+    return [];
+}
+
+// El .env no se carga solo: aquí no hace falta la base de datos.
+(function () {
+    $f = dirname(__DIR__) . '/.env';
+    if (!is_readable($f)) {
+        return;
+    }
+    foreach (file($f, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $l) {
+        $l = trim($l);
+        if ($l === '' || $l[0] === '#' || !str_contains($l, '=')) {
+            continue;
+        }
+        [$k, $v] = explode('=', $l, 2);
+        $k = trim($k);
+        if ($k !== '' && getenv($k) === false) {
+            putenv("$k=" . trim($v));
+        }
+    }
+})();
+
 // =================================================================
 $titulo = trim($_GET['titulo'] ?? $_POST['titulo'] ?? '');
 if (mb_strlen($titulo) < 2) {
@@ -254,6 +341,35 @@ if (!$tomos) {
         'aviso' => 'No se encontró la lista de tomos de esta obra en Fandom. '
                  . 'Rellena los datos a mano.',
     ]);
+}
+
+// Los arcos vienen en inglés. Se traducen los DISTINTOS en una sola
+// llamada: Berserk tiene 43 tomos pero solo 5 arcos.
+$distintos = [];
+foreach ($tomos as $t) {
+    foreach (explode(',', $t['arco']) as $a) {
+        $a = trim($a);
+        if ($a !== '' && !in_array($a, $distintos, true)) {
+            $distintos[] = $a;
+        }
+    }
+}
+
+$traduccion = traducirArcos($distintos);
+
+if ($traduccion) {
+    foreach ($tomos as &$t) {
+        $partes = [];
+        foreach (explode(',', $t['arco']) as $a) {
+            $a = trim($a);
+            if ($a === '') {
+                continue;
+            }
+            $partes[] = $traduccion[$a] ?? $a;
+        }
+        $t['arco'] = implode(', ', $partes);
+    }
+    unset($t);
 }
 
 $respuesta = [

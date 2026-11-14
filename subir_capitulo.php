@@ -301,91 +301,101 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             font-family: ui-monospace, Consolas, monospace;
             font-size: 12.5px;
         }
-        /* Los números que faltan, pulsables: rellenan la numeración. */
-        .res-pendientes {
-            flex-basis: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 6px;
-            margin-top: 4px;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        .res-etiqueta {
-            color: #8f8f98;
-            font-size: 12px;
-            margin-right: 2px;
-        }
-        .chip-pendiente,
-        .chip-mas {
-            padding: 3px 9px;
-            border: 1px solid #3f3f48;
-            border-radius: 4px;
-            background: #1b1b21;
-            color: #c9c9d2;
-            font-family: ui-monospace, Consolas, monospace;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background .15s, border-color .15s, color .15s;
-        }
-        .chip-pendiente:hover {
-            background: #ce4646;
-            border-color: #ce4646;
-            color: #fff;
-        }
-        .chip-mas {
-            border-style: dashed;
-            color: #9a9aa2;
-        }
-        .chip-mas:hover { color: #fff; border-color: #ce4646; }
 
         /* ---- Tomos del wiki ----
-           Cada botón deja el formulario listo para ese tomo: rango,
-           arco y fecha de publicación. */
+           Desplegable con la estetica del panel: mismo rojo #ce4646 y
+           las mismas filas que la lista de «Ya subidos». */
         .lista-tomos {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 7px;
             margin-bottom: 14px;
-            padding: 11px 14px;
-            border-left: 3px solid #4a7fb5;
+            border: 1px solid #2a2a30;
+            border-left: 3px solid #ce4646;
             border-radius: 0 6px 6px 0;
-            background: rgba(74, 127, 181, .08);
-            max-height: 160px;
-            overflow-y: auto;
+            background: #141418;
+            overflow: hidden;
         }
-        .chip-tomo {
-            display: inline-flex;
+        .tomos-cab {
+            width: 100%;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border: 1px solid #3f4a58;
-            border-radius: 4px;
-            background: #1a1e24;
-            color: #cdd6e0;
-            font-size: 12px;
-            font-weight: 600;
+            gap: 10px;
+            padding: 11px 14px;
+            border: 0;
+            background: transparent;
+            color: #e4e4e8;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: left;
             cursor: pointer;
-            transition: background .15s, border-color .15s;
         }
-        .chip-tomo:hover { background: #4a7fb5; border-color: #4a7fb5; color: #fff; }
-        .chip-rango {
-            font-family: ui-monospace, Consolas, monospace;
+        .tomos-cab:hover { background: rgba(206, 70, 70, .07); }
+        .tomos-flecha {
+            color: #ce4646;
+            font-size: 13px;
+            transition: transform .18s ease;
+        }
+        .lista-tomos.abierto .tomos-flecha { transform: rotate(90deg); }
+        .tomos-cuenta {
+            padding: 1px 8px;
+            border-radius: 10px;
+            background: #ce4646;
+            color: #fff;
+            font-size: 11px;
+        }
+        .tomos-fuente {
+            margin-left: auto;
+            color: #76767f;
+            font-size: 11px;
             font-weight: normal;
-            opacity: .75;
         }
+        /* Cerrado por defecto: son cuarenta tomos y ocuparian la pantalla. */
+        .tomos-cuerpo { display: none; max-height: 260px; overflow-y: auto; }
+        .lista-tomos.abierto .tomos-cuerpo { display: block; }
+
+        .fila-tomo {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 14px;
+            border: 0;
+            border-top: 1px solid #222228;
+            background: transparent;
+            color: inherit;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+        .fila-tomo:hover { background: rgba(206, 70, 70, .1); }
+        .ft-num {
+            flex: 0 0 68px;
+            color: #ce4646;
+            font-size: 12.5px;
+            font-weight: bold;
+        }
+        .ft-centro { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .ft-arco {
+            color: #e8e8ec;
+            font-size: 13.5px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ft-meta { color: #85858e; font-size: 11.5px; }
+        .ft-usar { margin-left: auto; color: #4a4a52; font-size: 15px; }
+        .fila-tomo:hover .ft-usar { color: #ce4646; }
+
         /* El tomo que coincide con el rango escrito. */
         .tomo-pista {
             grid-column: 1 / -1;
             display: block;
             margin: -4px 0 2px;
-            color: #9fc0de;
+            color: #c9a0a0;
             font-size: 12px;
             line-height: 1.45;
         }
-        .tomo-pista strong { color: #cfe3f5; }
+        .tomo-pista strong { color: #e9c3c3; }
         /* Cuando no falta ninguno el aviso deja de ser rojo. */
         .cap-resumen:has(.res-completo) {
             border-left-color: #4fa06a;
@@ -659,11 +669,12 @@ require __DIR__ . '/admin/cabecera.php';
                 <!-- El tomo del wiki que coincide con ese rango. -->
                 <small class="tomo-pista" id="tomo-pista" hidden></small>
 
-                <div class="campo campo-ancho oculto" id="campo-arco">
-                    <label for="cap-arco">Arco <span class="suave">(opcional)</span></label>
-                    <input type="text" id="cap-arco" name="arco"
-                           placeholder="Ej. Arco del Espadachín Negro">
-                </div>
+                <!-- El arco NO se pide: es el propio título del capítulo
+                     («Arco del Espadachín Negro»), y como campo aparte
+                     solo guardaba una copia que no se mostraba en ninguna
+                     parte del sitio. Se sigue guardando por compatibilidad
+                     con lo ya registrado, pero se rellena solo. -->
+                <input type="hidden" id="cap-arco" name="arco">
 
                 <div class="campo campo-ancho">
                     <label for="archivo-cap">Archivo del capítulo</label>
@@ -848,92 +859,9 @@ function resumirPendientes(caps) {
 
     caja.innerHTML =
         '<span class="res-dato">La obra publicó <strong>' + desde + ' – ' + hasta +
-        '</strong> · faltan <strong>' + faltan.length + '</strong></span>' +
-        '<div class="res-pendientes" id="res-pendientes"></div>';
-
-    pintarPendientes(faltan);
+        '</strong> · faltan <strong>' + faltan.length + '</strong> números</span>';
 }
 
-/**
- * Lista los numeros que faltan como botones.
- *
- * Antes solo se veia el rango comprimido («10-380»), que dice cuantos
- * faltan pero no deja hacer nada con ellos. Pulsando uno se rellena la
- * numeracion del formulario, que es para lo que se consulta la lista.
- *
- * Con muchos pendientes no se pintan los cientos de botones: se
- * muestran los primeros y un boton para ver el resto.
- */
-const PENDIENTES_VISIBLES = 40;
-
-function pintarPendientes(faltan, todos) {
-    const caja = document.getElementById('res-pendientes');
-    if (!caja) return;
-
-    const recorta = !todos && faltan.length > PENDIENTES_VISIBLES;
-    const lista   = recorta ? faltan.slice(0, PENDIENTES_VISIBLES) : faltan;
-
-    caja.innerHTML =
-        '<span class="res-etiqueta">Pendientes:</span>' +
-        lista.map(function (n) {
-            return '<button type="button" class="chip-pendiente" data-num="' + n + '">' +
-                   n + '</button>';
-        }).join('') +
-        (recorta
-            ? '<button type="button" class="chip-mas" id="chip-ver-todos">' +
-              '+' + (faltan.length - PENDIENTES_VISIBLES) + ' más</button>'
-            : '');
-
-    caja.querySelectorAll('.chip-pendiente').forEach(function (b) {
-        b.addEventListener('click', function () {
-            usarPendiente(parseInt(b.dataset.num, 10));
-        });
-    });
-
-    const mas = document.getElementById('chip-ver-todos');
-    if (mas) {
-        mas.addEventListener('click', function () { pintarPendientes(faltan, true); });
-    }
-}
-
-/** Rellena el formulario con el numero elegido. */
-function usarPendiente(n) {
-    const sel   = document.getElementById('cap-formato');
-    const desde = document.getElementById('cap-desde');
-    const hasta = document.getElementById('cap-hasta');
-
-    // Un numero suelto: si estaba en «varios capitulos», se cambia.
-    if (sel && sel.value === 'rango') {
-        sel.value = 'grapa';
-        sel.dataset.tocado = '1';
-        if (typeof ajustarFormato === 'function') ajustarFormato();
-    }
-    if (desde) {
-        desde.value = n;
-        desde.dispatchEvent(new Event('input', { bubbles: true }));
-        desde.focus();
-    }
-    if (hasta) hasta.value = '';
-}
-
-/** «1,2,3,7,9,10» -> «1–3, 7, 9–10», para no listar cien numeros sueltos. */
-function agruparRangos(nums) {
-    const partes = [];
-    let ini = nums[0], prev = nums[0];
-    for (let i = 1; i <= nums.length; i++) {
-        const n = nums[i];
-        if (n !== prev + 1) {
-            partes.push(ini === prev ? String(ini) : ini + '–' + prev);
-            ini = n;
-        }
-        prev = n;
-    }
-    // Con muchos huecos la lista entera no aporta: se corta.
-    if (partes.length > 12) {
-        return partes.slice(0, 12).join(', ') + ' y ' + (partes.length - 12) + ' más';
-    }
-    return partes.join(', ');
-}
 
 function cargarCapitulos(comicId, comicNombre) {
     const list = document.getElementById('cap-list');
@@ -1117,7 +1045,8 @@ function ajustarFormato() {
 
     desde.classList.toggle('oculto', actual === 'tomo');
     hasta.classList.toggle('oculto', actual !== 'rango');
-    arco.classList.toggle('oculto', !esManga);
+    // El arco ya no es un campo visible: es el título del capítulo.
+    if (arco) arco.classList.toggle('oculto', !esManga);
 
     document.getElementById('cap-desde').required = actual !== 'tomo';
     document.getElementById('cap-hasta').required = actual === 'rango';
@@ -1326,10 +1255,11 @@ function tomoDe(desde, hasta) {
         t.desde === desde && (hasta ? t.hasta === hasta : t.hasta === desde)) || null;
 }
 
-/** Rellena arco y fecha cuando el rango coincide con un tomo. */
+/** Rellena titulo y fecha cuando el rango coincide con un tomo. */
 function aplicarTomo() {
     const cDesde = document.getElementById('cap-desde');
     const cHasta = document.getElementById('cap-hasta');
+    const cTit   = document.getElementById('cap-titulo');
     const cArco  = document.getElementById('cap-arco');
     const cFecha = document.getElementById('fecha-display');
     const pista  = document.getElementById('tomo-pista');
@@ -1348,13 +1278,17 @@ function aplicarTomo() {
     const t = tomoDe(d, h);
     if (!t) { decir(''); return; }
 
-    let puesto = [];
+    const puesto = [];
 
-    // El arco solo se rellena si esta vacio o lo puso el wiki antes.
-    if (cArco && t.arco && (!cArco.value.trim() || cArco.dataset.delWiki === '1')) {
-        cArco.value = t.arco;
-        cArco.dataset.delWiki = '1';
-        puesto.push('arco');
+    // El nombre del arco ES el titulo del capitulo: asi es como se
+    // nombran los tomos en el catalogo («Arco del Espadachin Negro»).
+    // El campo «arco» guardaba una copia del titulo y no se mostraba en
+    // ninguna parte del sitio, asi que se rellena por detras y se oculta.
+    if (cTit && t.arco && (!cTit.value.trim() || cTit.dataset.delWiki === '1')) {
+        cTit.value = t.arco;
+        cTit.dataset.delWiki = '1';
+        if (cArco) cArco.value = t.arco;
+        puesto.push('título');
     }
 
     if (cFecha && t.fecha && (!cFecha.value.trim() || cFecha.dataset.delWiki === '1')) {
@@ -1365,19 +1299,17 @@ function aplicarTomo() {
         puesto.push('fecha');
     }
 
-    decir('<strong>Tomo ' + t.tomo + '</strong> del wiki: episodios ' +
+    decir('<strong>Tomo ' + t.tomo + '</strong> · capítulos ' +
           t.desde + ' – ' + t.hasta +
-          (t.arco ? ' · ' + esc(t.arco) : '') +
           (t.fecha ? ' · ' + t.fecha.split('-').reverse().join('/') : '') +
-          (puesto.length ? '. Se rellenó ' + puesto.join(' y ') + '.' : '.'));
+          (puesto.length ? ' · se rellenó ' + puesto.join(' y ') : ''));
 }
 
-/** Botones con los tomos que faltan por subir. */
+/** Lista desplegable con los tomos que faltan por subir. */
 function pintarTomos() {
     const caja = document.getElementById('lista-tomos');
     if (!caja || !__tomosWiki) return;
 
-    // Que numeros estan ya cubiertos por lo subido.
     const cubierto = new Set();
     (window.__capitulos || []).forEach(c => {
         const d = parseInt(c.numero_desde, 10), h = parseInt(c.numero_hasta, 10);
@@ -1389,24 +1321,38 @@ function pintarTomos() {
         return false;
     });
 
-    if (!faltan.length) {
-        caja.hidden = true;
-        return;
-    }
+    if (!faltan.length) { caja.hidden = true; return; }
+
+    const fuente = __tomosWiki.fuente.split(' · ')[0];
 
     caja.hidden = false;
     caja.innerHTML =
-        '<span class="res-etiqueta">Tomos pendientes según ' +
-        esc(__tomosWiki.fuente.split(' · ')[0]) + ':</span>' +
-        faltan.slice(0, 24).map(t =>
-            '<button type="button" class="chip-tomo" data-d="' + t.desde +
-            '" data-h="' + t.hasta + '" title="' + esc(t.arco || '') +
-            (t.fecha ? ' · ' + t.fecha : '') + '">Tomo ' + t.tomo +
-            ' <span class="chip-rango">' + t.desde + '–' + t.hasta + '</span></button>'
-        ).join('') +
-        (faltan.length > 24 ? '<span class="res-etiqueta">y ' + (faltan.length - 24) + ' más</span>' : '');
+        '<button type="button" class="tomos-cab" id="tomos-cab">' +
+            '<i class="bi bi-chevron-right tomos-flecha"></i>' +
+            '<span class="tomos-tit">Tomos pendientes</span>' +
+            '<span class="tomos-cuenta">' + faltan.length + '</span>' +
+            '<span class="tomos-fuente">' + esc(fuente) + '</span>' +
+        '</button>' +
+        '<div class="tomos-cuerpo" id="tomos-cuerpo">' +
+            faltan.map(t =>
+                '<button type="button" class="fila-tomo" data-d="' + t.desde +
+                '" data-h="' + t.hasta + '">' +
+                    '<span class="ft-num">Tomo ' + t.tomo + '</span>' +
+                    '<span class="ft-centro">' +
+                        '<span class="ft-arco">' + esc(t.arco || 'Sin arco en el wiki') + '</span>' +
+                        '<span class="ft-meta">capítulos ' + t.desde + ' – ' + t.hasta +
+                            (t.fecha ? ' · ' + t.fecha.split('-').reverse().join('/') : '') +
+                        '</span>' +
+                    '</span>' +
+                    '<i class="bi bi-arrow-left-circle ft-usar" title="Usar este tomo"></i>' +
+                '</button>'
+            ).join('') +
+        '</div>';
 
-    caja.querySelectorAll('.chip-tomo').forEach(b => {
+    const cab = document.getElementById('tomos-cab');
+    if (cab) cab.addEventListener('click', () => caja.classList.toggle('abierto'));
+
+    caja.querySelectorAll('.fila-tomo').forEach(b => {
         b.addEventListener('click', () => usarTomo(+b.dataset.d, +b.dataset.h));
     });
 }
@@ -1437,7 +1383,7 @@ function usarTomo(d, h) {
         if (el) el.addEventListener('input', aplicarTomo);
     });
     // Si se escriben a mano, dejan de considerarse del wiki.
-    ['cap-arco', 'fecha-display'].forEach(function (id) {
+    ['cap-titulo', 'cap-arco', 'fecha-display'].forEach(function (id) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', function () { el.dataset.delWiki = '0'; });
     });
