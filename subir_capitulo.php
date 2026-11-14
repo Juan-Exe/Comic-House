@@ -524,6 +524,8 @@ require __DIR__ . '/admin/cabecera.php';
                     <label for="cap-titulo">Título del capítulo</label>
                     <input type="text" id="cap-titulo" name="titulo"
                            placeholder="Ej. El eclipse" required>
+                    <!-- De dónde salió el título, cuando lo propone el wiki. -->
+                    <small class="num-pista" id="titulo-pista" hidden></small>
                 </div>
 
                 <div class="campo">
@@ -681,6 +683,7 @@ function selectComic(card) {
 
     // Cargar capítulos del cómic
     cargarCapitulos(card.dataset.id, card.dataset.titulo);
+    cargarTitulosWiki(card.dataset.titulo);
 }
 
 function backToPicker() {
@@ -1067,6 +1070,69 @@ function proponerNumeracion(nombre) {
     // 3) No se pudo deducir: NO se inventa nada.
     decir('');
 }
+
+
+/* ---- Titulos de capitulo sugeridos por el wiki (HU-B2.4) ----
+   Se cargan UNA vez al elegir la obra y se guardan en memoria. Al
+   escribir el numero del capitulo se propone su titulo.
+
+   Es una SUGERENCIA: los wikis los escribe cualquiera y pueden tener
+   otra numeracion o estar en otro idioma. Solo rellena el campo si
+   esta vacio, y se puede cambiar. */
+let __titulosWiki = null;
+
+function cargarTitulosWiki(titulo) {
+    __titulosWiki = null;
+    fetch('controlador/buscar_capitulos_wiki.php?titulo=' + encodeURIComponent(titulo))
+        .then(r => r.json())
+        .then(d => {
+            if (!d.ok || !d.datos) return;
+            __titulosWiki = { mapa: {}, fuente: d.datos.fuente };
+            d.datos.capitulos.forEach(c => {
+                if (c.titulo) __titulosWiki.mapa[c.numero] = c.titulo;
+            });
+            proponerTitulo();
+        })
+        .catch(() => { /* el wiki es opcional: su fallo no rompe nada */ });
+}
+
+function proponerTitulo() {
+    const campoNum = document.getElementById('cap-desde');
+    const campoTit = document.getElementById('cap-titulo');
+    const pista    = document.getElementById('titulo-pista');
+    if (!campoNum || !campoTit || !__titulosWiki) return;
+
+    function decir(txt) {
+        if (!pista) return;
+        pista.textContent = txt || '';
+        pista.hidden = !txt;
+    }
+
+    const n = parseInt(campoNum.value, 10);
+    const sug = __titulosWiki.mapa[n];
+
+    if (!sug) { decir(''); return; }
+
+    // No se pisa lo que ya se escribio a mano.
+    if (campoTit.value.trim() && campoTit.dataset.delWiki !== '1') {
+        decir('El wiki lo llama «' + sug + '».');
+        return;
+    }
+
+    campoTit.value = sug;
+    campoTit.dataset.delWiki = '1';
+    decir('Título sugerido por ' + __titulosWiki.fuente + '. Puedes cambiarlo.');
+}
+
+(function () {
+    const campoNum = document.getElementById('cap-desde');
+    const campoTit = document.getElementById('cap-titulo');
+    if (campoNum) campoNum.addEventListener('input', proponerTitulo);
+    // Si se escribe a mano, deja de considerarse sugerido.
+    if (campoTit) campoTit.addEventListener('input', function () {
+        campoTit.dataset.delWiki = '0';
+    });
+})();
 
 // Interceptar submit del formulario con XHR + barra de progreso
 /**

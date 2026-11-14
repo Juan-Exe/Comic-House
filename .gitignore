@@ -26,3 +26,4 @@ guia_*.pdf
 # Informes generados: se reconstruyen con scripts/build_informe_*.py
 # El original versionado vive en E1_integridad_rendimiento/
 /Informe_E1_Comic_House.pdf
+cache/

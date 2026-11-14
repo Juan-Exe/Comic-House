@@ -188,9 +188,9 @@ tal, nunca como una verificación.
       (`watchmen-07.cbr` → 7; `cap_012.cbz` → 12).
 - [x] CA-B2.2 · Si no se puede deducir, el campo queda vacío **sin inventar**.
 - [x] CA-B2.3 · Todo lo propuesto es **editable**.
-- [ ] CA-B2.4 · Si Fandom tiene una ficha de ese capítulo, se ofrece su título
+- [x] CA-B2.4 · Si Fandom tiene una ficha de ese capítulo, se ofrece su título
       como sugerencia marcada en ámbar *(§0: propone, no rellena)*.
-- [ ] CA-B2.5 · Si Fandom no responde o no tiene la ficha, no pasa nada: se
+- [x] CA-B2.5 · Si Fandom no responde o no tiene la ficha, no pasa nada: se
       escribe a mano.
 
 ### HU-B3 · No subir un capítulo al cómic equivocado
