@@ -936,37 +936,56 @@ header {
     }
 
 }
+
 /* ===== Proximamente =====
-   Comics registrados a los que aun no se les han subido capitulos.
-   Usan la misma tarjeta del catalogo (.Comics-btn-2), asi que la
-   reticula y la tipografia son identicas: solo cambia el distintivo y
-   un atenuado leve que los separa de lo que SI se puede leer. */
+   Comics registrados sin capitulos. Usan la tarjeta del catalogo
+   (.Comics-btn-2), asi que la reticula y la tipografia son identicas.
+   Lo que cambia: no se pueden pulsar, estan mas apagados y llevan un
+   rotulo sobre la portada. Mismo criterio que Netflix con sus estrenos:
+   se anuncian, pero no se puede entrar. */
 .Comics-btn-2.es-proximamente {
     position: relative;
+    /* Sin enlace: el cursor no debe sugerir que se puede pulsar. */
+    cursor: default;
+}
+
+/* El hover de escala se hereda de .Comics-btn-2 y aqui sobra: daria
+   sensacion de elemento activo. */
+.Comics-btn-2.es-proximamente:hover {
+    transform: none;
 }
 
 .Comics-btn-2.es-proximamente .Comics-btns-2 {
-    filter: brightness(.62) saturate(.85);
-    transition: filter .3s ease;
+    /* Mas descolorido que antes: se distingue de un vistazo lo que se
+       puede leer de lo que todavia no. */
+    filter: brightness(.45) saturate(.4);
 }
 
-.Comics-btn-2.es-proximamente:hover .Comics-btns-2 {
-    filter: brightness(.85) saturate(1);
+/* El titulo tambien se apaga, para que la tarjeta entera se lea como
+   algo que aun no esta disponible. */
+.Comics-btn-2.es-proximamente .title-c-2,
+.Comics-btn-2.es-proximamente .description-c-2 {
+    opacity: .6;
 }
 
-/* El distintivo va sobre la portada, con el rojo de la casa. */
-.marca-proximamente {
+/* Rotulo centrado sobre la portada. */
+.velo-proximamente {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 2;
-    padding: 4px 10px;
+    width: max-content;
+    max-width: 90%;
+    padding: 7px 14px;
+    border: 1px solid rgba(255, 255, 255, .35);
     border-radius: 4px;
-    background: #ce4646;
+    background: rgba(0, 0, 0, .66);
     color: #fff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
-    letter-spacing: .6px;
+    letter-spacing: 1.1px;
     text-transform: uppercase;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .55);
+    text-align: center;
+    pointer-events: none;
 }

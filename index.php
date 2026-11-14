@@ -573,6 +573,49 @@ $editoriales_portada = array_slice(
 
 
 
+    <?php if ($proximamente && $proximamente->num_rows > 0): ?>
+        <!-- Comics registrados a los que aun no se les han subido capitulos.
+             Van ANTES del catalogo: son la novedad, y enterrarlos al final
+             obligaba a bajar por todo el catalogo para verlos.
+
+             No se puede entrar a su ficha (no hay nada que leer): la tarjeta
+             no es pulsable y lo dice el rotulo. Mismo criterio que usa
+             Netflix con sus estrenos anunciados.
+
+             La seccion entera desaparece si no hay ninguno. -->
+        <div class="Comics-titulo-2">
+            <div class="titulo-comics-ctn-2">
+                <h2>Próximamente</h2>
+            </div>
+        </div>
+
+        <div class="Comics-base-2">
+            <div class="Comics-container-2">
+                <?php while ($datos = $proximamente->fetch_object()) { ?>
+                    <!-- Mismas clases que el catalogo: misma reticula y
+                         tipografia. Sin onclick: no lleva a ninguna parte. -->
+                    <div class="Comics-btn-2 es-proximamente"
+                         title="<?= htmlspecialchars($datos->titulo) ?> · aún no disponible">
+                        <img class="Comics-btns-2" src="<?= htmlspecialchars(miniatura($datos->portada, 400)) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
+                        <!-- El rotulo sobre la portada sustituye al distintivo
+                             de la esquina: decia «Proximamente» justo debajo
+                             del titulo de la seccion, que ya lo decia. -->
+                        <span class="velo-proximamente">Próximamente</span>
+                        <div class="Comics-info-2">
+                            <p class="title-c-2"><?= htmlspecialchars($datos->titulo) ?></p>
+                            <!-- Aqui NO se muestra el numero de capitulos: no
+                                 hay ninguno subido y anunciarlo seria mentir. -->
+                            <p class="description-c-2">
+                                <span><?= htmlspecialchars($datos->clasificacion) ?></span>
+                                <?= htmlspecialchars($datos->anio) ?>
+                            </p>
+                        </div>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="Comics-titulo-2">
         <div class="titulo-comics-ctn-2">
             <h2>Nuestro Catalogo: Comics - Manga</h2>
@@ -593,41 +636,6 @@ $editoriales_portada = array_slice(
             <?php } ?>
         </div>
     </div>
-
-    <?php if ($proximamente && $proximamente->num_rows > 0): ?>
-        <!-- Comics registrados a los que aun no se les han subido capitulos.
-             Se anuncian en vez de ocultarse: sirven de anticipo. La seccion
-             entera desaparece cuando no hay ninguno, para no dejar un hueco
-             con un titulo y nada debajo. -->
-        <div class="Comics-titulo-2">
-            <div class="titulo-comics-ctn-2">
-                <h2>Próximamente</h2>
-            </div>
-        </div>
-
-        <div class="Comics-base-2">
-            <div class="Comics-container-2">
-                <?php while ($datos = $proximamente->fetch_object()) { ?>
-                    <!-- Mismas clases que el catalogo: misma reticula, misma
-                         tipografia. Solo cambia el distintivo y el atenuado. -->
-                    <div class="Comics-btn-2 es-proximamente"
-                         onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'">
-                        <span class="marca-proximamente">Próximamente</span>
-                        <img class="Comics-btns-2" src="<?= htmlspecialchars(miniatura($datos->portada, 400)) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
-                        <div class="Comics-info-2">
-                            <p class="title-c-2"><?= htmlspecialchars($datos->titulo) ?></p>
-                            <!-- Aqui NO se muestra el numero de capitulos: no
-                                 hay ninguno subido y anunciarlo seria mentir. -->
-                            <p class="description-c-2">
-                                <span><?= htmlspecialchars($datos->clasificacion) ?></span>
-                                <?= htmlspecialchars($datos->anio) ?>
-                            </p>
-                        </div>
-                    </div>
-                <?php } ?>
-            </div>
-        </div>
-    <?php endif; ?>
 
 
     <footer class="footer">
