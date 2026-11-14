@@ -301,6 +301,44 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             font-family: ui-monospace, Consolas, monospace;
             font-size: 12.5px;
         }
+        /* Los números que faltan, pulsables: rellenan la numeración. */
+        .res-pendientes {
+            flex-basis: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .res-etiqueta {
+            color: #8f8f98;
+            font-size: 12px;
+            margin-right: 2px;
+        }
+        .chip-pendiente,
+        .chip-mas {
+            padding: 3px 9px;
+            border: 1px solid #3f3f48;
+            border-radius: 4px;
+            background: #1b1b21;
+            color: #c9c9d2;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+        .chip-pendiente:hover {
+            background: #ce4646;
+            border-color: #ce4646;
+            color: #fff;
+        }
+        .chip-mas {
+            border-style: dashed;
+            color: #9a9aa2;
+        }
+        .chip-mas:hover { color: #fff; border-color: #ce4646; }
         /* Cuando no falta ninguno el aviso deja de ser rojo. */
         .cap-resumen:has(.res-completo) {
             border-left-color: #4fa06a;
@@ -758,7 +796,71 @@ function resumirPendientes(caps) {
     caja.innerHTML =
         '<span class="res-dato">La obra publicó <strong>' + desde + ' – ' + hasta +
         '</strong> · faltan <strong>' + faltan.length + '</strong></span>' +
-        '<span class="res-faltan">' + agruparRangos(faltan) + '</span>';
+        '<div class="res-pendientes" id="res-pendientes"></div>';
+
+    pintarPendientes(faltan);
+}
+
+/**
+ * Lista los numeros que faltan como botones.
+ *
+ * Antes solo se veia el rango comprimido («10-380»), que dice cuantos
+ * faltan pero no deja hacer nada con ellos. Pulsando uno se rellena la
+ * numeracion del formulario, que es para lo que se consulta la lista.
+ *
+ * Con muchos pendientes no se pintan los cientos de botones: se
+ * muestran los primeros y un boton para ver el resto.
+ */
+const PENDIENTES_VISIBLES = 40;
+
+function pintarPendientes(faltan, todos) {
+    const caja = document.getElementById('res-pendientes');
+    if (!caja) return;
+
+    const recorta = !todos && faltan.length > PENDIENTES_VISIBLES;
+    const lista   = recorta ? faltan.slice(0, PENDIENTES_VISIBLES) : faltan;
+
+    caja.innerHTML =
+        '<span class="res-etiqueta">Pendientes:</span>' +
+        lista.map(function (n) {
+            return '<button type="button" class="chip-pendiente" data-num="' + n + '">' +
+                   n + '</button>';
+        }).join('') +
+        (recorta
+            ? '<button type="button" class="chip-mas" id="chip-ver-todos">' +
+              '+' + (faltan.length - PENDIENTES_VISIBLES) + ' más</button>'
+            : '');
+
+    caja.querySelectorAll('.chip-pendiente').forEach(function (b) {
+        b.addEventListener('click', function () {
+            usarPendiente(parseInt(b.dataset.num, 10));
+        });
+    });
+
+    const mas = document.getElementById('chip-ver-todos');
+    if (mas) {
+        mas.addEventListener('click', function () { pintarPendientes(faltan, true); });
+    }
+}
+
+/** Rellena el formulario con el numero elegido. */
+function usarPendiente(n) {
+    const sel   = document.getElementById('cap-formato');
+    const desde = document.getElementById('cap-desde');
+    const hasta = document.getElementById('cap-hasta');
+
+    // Un numero suelto: si estaba en «varios capitulos», se cambia.
+    if (sel && sel.value === 'rango') {
+        sel.value = 'grapa';
+        sel.dataset.tocado = '1';
+        if (typeof ajustarFormato === 'function') ajustarFormato();
+    }
+    if (desde) {
+        desde.value = n;
+        desde.dispatchEvent(new Event('input', { bubbles: true }));
+        desde.focus();
+    }
+    if (hasta) hasta.value = '';
 }
 
 /** «1,2,3,7,9,10» -> «1–3, 7, 9–10», para no listar cien numeros sueltos. */
