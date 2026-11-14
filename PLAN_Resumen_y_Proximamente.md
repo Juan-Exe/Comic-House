@@ -105,15 +105,15 @@ ocultar el botón que ofrecer uno roto.
 
 **Criterios de aceptación**
 
-- [ ] CA-01.1 · Si la descripción traducida supera el umbral, se pide un resumen
+- [x] CA-01.1 · Si la descripción traducida supera el umbral, se pide un resumen
       al modelo.
-- [ ] CA-01.2 · El resumen **no supera 450 caracteres**, verificado en el
+- [x] CA-01.2 · El resumen **no supera 450 caracteres**, verificado en el
       servidor; no se confía en que el modelo cuente bien.
-- [ ] CA-01.3 · El resumen está en **español**, en prosa, sin viñetas ni comillas
+- [x] CA-01.3 · El resumen está en **español**, en prosa, sin viñetas ni comillas
       envolventes.
-- [ ] CA-01.4 · Conserva los datos concretos que distinguen la obra (autor, año,
+- [x] CA-01.4 · Conserva los datos concretos que distinguen la obra (autor, año,
       premio, personaje) en lugar de generalidades.
-- [ ] CA-01.5 · Si la descripción **ya** está por debajo del umbral, no se
+- [x] CA-01.5 · Si la descripción **ya** está por debajo del umbral, no se
       resume: no se gasta una llamada para no mejorar nada.
 
 ---
@@ -126,11 +126,11 @@ ocultar el botón que ofrecer uno roto.
 
 **Criterios de aceptación**
 
-- [ ] CA-02.1 · El modal marca la descripción resumida en **ámbar**, igual que la
+- [x] CA-02.1 · El modal marca la descripción resumida en **ámbar**, igual que la
       clasificación y el género estimados.
-- [ ] CA-02.2 · Se indica **qué modelo** la redactó y la longitud resultante.
-- [ ] CA-02.3 · El campo es **editable**: el administrador puede corregirla.
-- [ ] CA-02.4 · Puede **descartar el resumen** y recuperar la descripción
+- [x] CA-02.2 · Se indica **qué modelo** la redactó y la longitud resultante.
+- [x] CA-02.3 · El campo es **editable**: el administrador puede corregirla.
+- [x] CA-02.4 · Puede **descartar el resumen** y recuperar la descripción
       completa con un clic *(principio 2.2)*.
 
 ---
@@ -143,13 +143,13 @@ ocultar el botón que ofrecer uno roto.
 
 **Criterios de aceptación**
 
-- [ ] CA-03.1 · Sin `GROQ_API_KEY`, se guarda la traducción literal y no se
+- [x] CA-03.1 · Sin `GROQ_API_KEY`, se guarda la traducción literal y no se
       menciona el resumen.
-- [ ] CA-03.2 · Si la API falla o tarda, se usa la traducción literal y se avisa
+- [x] CA-03.2 · Si la API falla o tarda, se usa la traducción literal y se avisa
       en el modal.
-- [ ] CA-03.3 · Si el modelo devuelve algo inválido (vacío, en inglés, o más
+- [x] CA-03.3 · Si el modelo devuelve algo inválido (vacío, en inglés, o más
       largo que el original), **se descarta** y se usa el original.
-- [ ] CA-03.4 · El resumen **nunca** retrasa la apertura del modal más que los
+- [x] CA-03.4 · El resumen **nunca** retrasa la apertura del modal más que los
       pasos que ya existen.
 
 ---
@@ -166,9 +166,9 @@ ocultar el botón que ofrecer uno roto.
 
 **Criterios de aceptación**
 
-- [ ] CA-04.1 · El catálogo de `index.php` excluye los cómics sin capítulos.
-- [ ] CA-04.2 · El slider y los destacados también los excluyen.
-- [ ] CA-04.3 · Un cómic aparece en el catálogo **automáticamente** en cuanto se
+- [x] CA-04.1 · El catálogo de `index.php` excluye los cómics sin capítulos.
+- [x] CA-04.2 · El slider y los destacados también los excluyen.
+- [x] CA-04.3 · Un cómic aparece en el catálogo **automáticamente** en cuanto se
       le sube el primer capítulo, sin tocar nada más.
 
 ---
@@ -181,13 +181,13 @@ ocultar el botón que ofrecer uno roto.
 
 **Criterios de aceptación**
 
-- [ ] CA-05.1 · Hay una sección **«Próximamente»** con los cómics registrados sin
+- [x] CA-05.1 · Hay una sección **«Próximamente»** con los cómics registrados sin
       capítulos.
-- [ ] CA-05.2 · Respeta la estética del sitio: misma retícula, misma tipografía,
+- [x] CA-05.2 · Respeta la estética del sitio: misma retícula, misma tipografía,
       mismo rojo `#ce4646`.
-- [ ] CA-05.3 · Cada portada lleva un distintivo **«Próximamente»** legible.
-- [ ] CA-05.4 · La sección **no aparece** si no hay ningún cómic en ese estado.
-- [ ] CA-05.5 · No se promete ninguna fecha *(principio 2.4)*.
+- [x] CA-05.3 · Cada portada lleva un distintivo **«Próximamente»** legible.
+- [x] CA-05.4 · La sección **no aparece** si no hay ningún cómic en ese estado.
+- [x] CA-05.5 · No se promete ninguna fecha *(principio 2.4)*.
 
 ---
 
@@ -199,11 +199,11 @@ ocultar el botón que ofrecer uno roto.
 
 **Criterios de aceptación**
 
-- [ ] CA-06.1 · «Leer Primero» y «Leer Último» **no se muestran** sin capítulos
+- [x] CA-06.1 · «Leer Primero» y «Leer Último» **no se muestran** sin capítulos
       *(principio 2.5)*.
-- [ ] CA-06.2 · En su lugar hay un aviso: *«Aún no hay capítulos disponibles»*.
-- [ ] CA-06.3 · **Cero warnings de PHP** en la respuesta *(hoy son 2)*.
-- [ ] CA-06.4 · El resto de la ficha (portada, sinopsis, año, género,
+- [x] CA-06.2 · En su lugar hay un aviso: *«Aún no hay capítulos disponibles»*.
+- [x] CA-06.3 · **Cero warnings de PHP** en la respuesta *(hoy son 2)*.
+- [x] CA-06.4 · El resto de la ficha (portada, sinopsis, año, género,
       clasificación) se sigue viendo: sirve de anticipo.
 
 ---
@@ -307,6 +307,54 @@ No depende de ninguna API y se puede verificar al instante.
 
 ---
 
-*Documento de trabajo. Las longitudes, los warnings y los enlaces rotos se
-midieron con consultas y peticiones reales el 14 de noviembre de 2026, no se
-estimaron.*
+---
+
+## 8 · Resultado
+
+**CERRADO.** Los 4 sprints entregados y los 25 criterios verificados.
+
+### Sprint 1 · La ficha rota
+
+| | Antes | Ahora |
+|---|---|---|
+| Warnings de PHP | 2 | **0** |
+| Enlaces `capitulo_id=` vacíos | 2 | **0** |
+
+Berserk conserva sus enlaces correctos (`capitulo_id=1` y `3`): el arreglo no
+afectó a los cómics que sí tienen capítulos.
+
+### Sprint 2 · Catálogo y «Próximamente»
+
+```
+Watchmen    catálogo=0   próximamente=1   ← sale del catálogo
+Berserk     catálogo=4   próximamente=0   ← intacto
+Saga        catálogo=4   próximamente=0   ← intacto
+Bloodborne  catálogo=4   próximamente=0   ← intacto
+```
+
+Las dos transiciones dinámicas se probaron insertando un capítulo de verdad:
+Watchmen **pasó al catálogo solo** y la sección «Próximamente» **desapareció**
+al quedarse vacía. La prueba se revirtió.
+
+### Sprint 3 · Resumen generativo
+
+| Cómic | Antes | Después | Tiempo |
+|---|---|---|---|
+| **Watchmen** | 634 | **438** | 1.2 s |
+| Berserk *(prueba)* | 604 | **442** | 0.8 s |
+| Saga *(prueba)* | 531 | **371** | 0.6 s |
+| Ultimate Spiderman | 77 | **no se resume** | 0.04 s |
+
+El resumen de Watchmen conserva lo que identifica la obra — Alan Moore, la
+lista de la revista Time, el rango 1923, DC Comics y el eslogan «¿Quién vigila
+a los Watchmen?» — en vez de cambiarlo por generalidades.
+
+**Degradación comprobada retirando la clave del `.env`:** el endpoint devolvió
+`ok: true` con el texto original intacto y el aviso *«No se pudo resumir: se usa
+la descripción completa»*. El registro nunca se bloquea. La clave se restauró.
+
+---
+
+*Documento de trabajo. Las longitudes, los warnings, los enlaces rotos y los
+resultados de cada sprint se midieron con consultas y peticiones reales el 14 de
+noviembre de 2026, no se estimaron.*

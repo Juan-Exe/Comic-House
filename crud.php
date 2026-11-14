@@ -536,6 +536,15 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             display: block; margin-top: 5px;
             font-size: 11px; color: var(--texto-bajo); line-height: 1.4;
         }
+        /* «Usar la descripcion completa»: deshace el resumen generado.
+           Va dentro de la pista, asi que hereda su tamano. */
+        .meta-pista a {
+            color: var(--rojo);
+            text-decoration: underline;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .meta-pista a:hover { color: #ef4444; }
 
         .modal-meta-box .modal-actions {
             padding: 16px 22px; border-top: 1px solid var(--linea);
@@ -1666,10 +1675,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 c.descripcion = d.texto;
                 caja_.textContent = d.texto;
                 est.textContent = d.aviso || '';
+
+                // Encadenado aqui, no en paralelo: el resumen necesita el
+                // texto YA traducido. Va dentro del mismo paso de carga
+                // para no anadir una espera visible.
+                await resumirDescripcion(c, caja_, est);
                 pasoListo('traducir');
             } catch (e) {
                 est.textContent = 'No se pudo traducir: queda el texto original.';
                 pasoListo('traducir');
+            }
+        }
+
+        /**
+         * Resume la descripcion si se pasa de largo (HU-01).
+         *
+         * El texto lo redacta un modelo: es una ESTIMACION, no un dato.
+         * Se marca en ambar y se ofrece recuperar el original, que el
+         * endpoint devuelve siempre para no tener que volver a pedirlo.
+         */
+        async function resumirDescripcion(c, caja_, est) {
+            try {
+                const r = await fetch('controlador/resumir_descripcion.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: 'titulo=' + encodeURIComponent(c.titulo || '') +
+                          '&descripcion=' + encodeURIComponent(c.descripcion || '')
+                });
+                const d = await r.json();
+                if (!d.ok || actual !== c) return;
+
+                const g = d.datos || {};
+                if (!g.resumido) {
+                    // Cabia de sobra, o no se pudo resumir. En ambos casos
+                    // se queda el texto que ya habia: el registro sigue.
+                    if (d.aviso) est.textContent = d.aviso;
+                    return;
+                }
+
+                c.descripcion = g.descripcion;
+                c.descripcion_original = g.original;   // para poder deshacer
+                caja_.textContent = g.descripcion;
+
+                est.innerHTML = '<span style="color:var(--alerta)">⚠ Resumen</span> de ' +
+                    esc(String(g.largo_antes)) + ' a ' + esc(String(g.largo)) +
+                    ' caracteres por ' + esc(g.fuente) +
+                    '. <strong>Revísalo.</strong> ' +
+                    '<a href="#" id="meta-desc-deshacer">Usar la descripción completa</a>';
+
+                // Deshacer: devuelve el original sin pedir nada al servidor.
+                const btn = document.getElementById('meta-desc-deshacer');
+                if (btn) {
+                    btn.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        c.descripcion = g.original;
+                        caja_.textContent = g.original;
+                        est.textContent = 'Se usará la descripción completa (' +
+                                          g.largo_antes + ' caracteres).';
+                    });
+                }
+            } catch (e) {
+                /* el resumen es opcional: si falla, queda la traduccion */
             }
         }
 

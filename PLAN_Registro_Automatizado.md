@@ -520,7 +520,7 @@ había previsto. Todas corregidas y documentadas en
 |---|---|
 | El orden de ediciones de la API no es fiable: *Watchmen* devolvía la edición brasileña antes que la original de DC | DOC §5.3 |
 | ComicVine no publica el estado, pero se deduce de `last_issue` | DOC §5.4 |
-| Una respuesta tardía pisaba el resultado bueno y dejaba el aviso clavado | DOC §5.7 |
+| Una respuesta tardía pisaba el resultado bueno y dejaba el aviso clavado | DOC §5.8 |
 | El género quedaba vacío en todo cómic occidental | DOC §5.2 |
 
 **Con esto, la parte de registro queda cerrada.**

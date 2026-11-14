@@ -55,6 +55,7 @@ Seis endpoints, cada uno con una responsabilidad:
 | `crear_editorial.php` | 73 | Da de alta una editorial ausente |
 | `buscar_clasificacion.php` | 197 | Capa 1: MangaDex verificado por año |
 | `estimar_clasificacion.php` | 350 | Capas 2 y 3: Wikipedia y modelo (clasificación **y género**) |
+| `resumir_descripcion.php` | 251 | Resume la descripción si se pasa de largo |
 
 La interfaz vive en `crud.php` (modal + lógica de encadenado) y los estilos en
 `admin/admin.css`.
@@ -67,10 +68,15 @@ Al escribir (350 ms después de parar)
 
 Al elegir una edición (en paralelo)
     ├── traducir.php            ──► descripción en español
+    │       └── resumir_descripcion.php  (solo si pasa de 450 caracteres)
     ├── descargar_portada.php   ──► imagen en uploads/
     └── buscar_clasificacion.php ──► clasificación y género
             └── si no resuelve: estimar_clasificacion.php
 ```
+
+El resumen va **encadenado** tras la traducción, no en paralelo, porque necesita
+el texto ya traducido. Entra dentro del mismo paso de la pantalla de carga, así
+que no añade una espera visible.
 
 La traducción y la portada arrancan a la vez al abrir el modal, no al
 confirmar: cuando se pulsa «Usar estos datos» ya están listas.
@@ -342,7 +348,55 @@ lo publicó sería guardar un dato falso. El modal lo explica:
 > *No está en tu catálogo. Es la editorial que publicó esta obra, así que no
 > puede sustituirse por otra.*
 
-### 5.6 · Corrección de erratas
+### 5.6 · Resumen de la descripción
+
+ComicVine devuelve descripciones de longitud muy desigual y la traducción es
+**literal**, así que lo largo sigue largo. Medido en el catálogo: Watchmen tenía
+**634 caracteres** frente a los ~320 del resto, y ocupaba el doble de líneas en
+la ficha.
+
+> **Aclaración:** el límite de 500 que aparece en `traducir.php` es el de
+> **MyMemory por petición**, no de la base de datos: la columna `descripcion` es
+> `TEXT`. El problema no era que no cupiera, sino que se leía mal.
+
+Si el texto traducido supera **450 caracteres**, un modelo lo resume.
+
+| Cómic | Antes | Después | Tiempo |
+|---|---|---|---|
+| Watchmen | 634 | **438** | 1.2 s |
+| Berserk *(prueba)* | 604 | **442** | 0.8 s |
+| Saga *(prueba)* | 531 | **371** | 0.6 s |
+| Ultimate Spiderman | 77 | **sin tocar** | 0.04 s |
+
+#### Cuatro validaciones en el servidor
+
+No se confía en que el modelo cumpla las instrucciones. Un resumen se **descarta**
+—y se usa el original— si:
+
+| Comprobación | Por qué |
+|---|---|
+| Pasa de 500 caracteres | Recortarlo repetiría el problema que esto resuelve |
+| No es más corto que el original | No resumió nada |
+| Baja de 80 caracteres | Se quedó en nada útil |
+| No parece español | El modelo ignoró el idioma |
+
+La detección de idioma compara la frecuencia de palabras funcionales (`el`, `la`,
+`de`, `que`…) contra las inglesas (`the`, `of`, `and`…). No es un detector
+general: solo cubre el caso real de que responda en inglés.
+
+#### El original nunca se pierde
+
+El endpoint devuelve **siempre** el texto completo junto al resumen, y el modal
+ofrece «Usar la descripción completa», que lo restaura sin pedir nada al
+servidor. Un resumen es una estimación: se marca en ámbar y el campo es editable.
+
+#### Si falla, el registro sigue
+
+Comprobado retirando `GROQ_API_KEY` del `.env`: el endpoint devolvió `ok: true`
+con el texto intacto y el aviso *«No se pudo resumir: se usa la descripción
+completa»*. Una mejora opcional no puede volverse un requisito para registrar.
+
+### 5.7 · Corrección de erratas
 
 Si no hay resultados, se reintenta contra el endpoint `/volumes` de ComicVine
 con `filter=name:`, que sí busca por prefijo, probando prefijos cada vez más
@@ -357,7 +411,7 @@ xyzqw123   → sin sugerencia
 Se admite cambiar hasta un tercio de las letras. Es comparación de texto, no
 interpretación: por eso una cadena sin parecido real no sugiere nada.
 
-### 5.7 · Respuestas que llegan tarde
+### 5.8 · Respuestas que llegan tarde
 
 Al escribir se lanza una búsqueda por cada estado intermedio del título. Si una
 de las primeras tarda más que la última, **su respuesta llega después y pisa el
