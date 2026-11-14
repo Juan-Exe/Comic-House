@@ -280,6 +280,39 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
         }
         .progress-overlay.visible { display: flex; }
 
+        /* ---- Resumen de capítulos pendientes ----
+           Distingue lo que la obra PUBLICÓ de lo que está SUBIDO. */
+        .cap-resumen {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 6px 14px;
+            margin-bottom: 14px;
+            padding: 11px 14px;
+            border-left: 3px solid #ce4646;
+            border-radius: 0 6px 6px 0;
+            background: rgba(206, 70, 70, .08);
+            font-size: 13px;
+            color: #b8b8c0;
+        }
+        .cap-resumen strong { color: #fff; }
+        .res-faltan {
+            color: #e9a5a5;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12.5px;
+        }
+        /* Cuando no falta ninguno el aviso deja de ser rojo. */
+        .cap-resumen:has(.res-completo) {
+            border-left-color: #4fa06a;
+            background: rgba(79, 160, 106, .09);
+        }
+        .res-completo {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: #8fd0a4;
+        }
+
         /* ---- Fecha de publicación ----
            La clase date-ok ya se usaba en el JS pero no tenía estilo:
            una fecha correcta no se distinguía de una a medio escribir. */
@@ -293,6 +326,16 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             display: block;
             margin-top: 6px;
             color: #e98888;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        /* De dónde salió la numeración propuesta. En gris: es una
+           sugerencia que se puede cambiar, no un aviso de error. */
+        .num-pista {
+            grid-column: 1 / -1;
+            display: block;
+            margin: -6px 0 2px;
+            color: #8f8f98;
             font-size: 12px;
             line-height: 1.4;
         }
@@ -523,6 +566,10 @@ require __DIR__ . '/admin/cabecera.php';
                     </div>
                 </div>
 
+                <!-- De dónde salió la numeración, cuando se dedujo del
+                     nombre del archivo. Es una propuesta, no un dato. -->
+                <small class="num-pista" id="num-pista" hidden></small>
+
                 <div class="campo campo-ancho oculto" id="campo-arco">
                     <label for="cap-arco">Arco <span class="suave">(opcional)</span></label>
                     <input type="text" id="cap-arco" name="arco"
@@ -551,6 +598,10 @@ require __DIR__ . '/admin/cabecera.php';
             <div class="seccion">
                 <h2>Ya subidos</h2>
             </div>
+            <!-- Resumen de lo que falta por subir. Se rellena desde el
+                 JS al cargar los capítulos y se oculta si la obra no
+                 declara cuántos números publicó. -->
+            <div class="cap-resumen" id="cap-resumen" hidden></div>
             <div class="cap-list" id="cap-list">
                 <p class="empty">Cargando…</p>
             </div>
@@ -638,6 +689,94 @@ function backToPicker() {
     document.querySelectorAll('.comic-card').forEach(c => c.classList.remove('selected'));
 }
 
+/**
+ * Resume que numeros faltan por subir (HU-B1).
+ *
+ * Son dos cosas DISTINTAS que se confundian con facilidad:
+ *   - la columna `capitulos` del comic: los numeros que PUBLICO la obra
+ *     («1 - 12» en Watchmen), un dato informativo de la fuente
+ *   - las filas de la tabla: los capitulos SUBIDOS, que son los unicos
+ *     que se pueden leer
+ *
+ * Si la obra no declara su rango, no se inventa nada: solo se dice
+ * cuantos hay subidos.
+ */
+function resumirPendientes(caps) {
+    const caja = document.getElementById('cap-resumen');
+    if (!caja) return;
+
+    const subidos = caps.length;
+    const declarado = (window.__obra && window.__obra.capitulos || '').trim();
+
+    // El rango viene como «1 - 12», «6» o «Tomo Unico».
+    const m = declarado.match(/(\d+)\s*-\s*(\d+)/);
+    let desde = null, hasta = null;
+    if (m) {
+        desde = parseInt(m[1], 10);
+        hasta = parseInt(m[2], 10);
+    } else if (/^\d+$/.test(declarado)) {
+        desde = 1;
+        hasta = parseInt(declarado, 10);
+    }
+
+    if (desde === null || hasta < desde) {
+        // Sin rango declarado solo se informa de lo que hay.
+        caja.hidden = subidos === 0;
+        caja.innerHTML = subidos === 0 ? '' :
+            '<span class="res-dato"><strong>' + subidos + '</strong> capítulo' +
+            (subidos === 1 ? '' : 's') + ' subido' + (subidos === 1 ? '' : 's') + '</span>';
+        return;
+    }
+
+    // Que numeros cubre lo ya subido.
+    const cubierto = new Set();
+    caps.forEach(function (c) {
+        const d = parseInt(c.numero_desde, 10);
+        const h = parseInt(c.numero_hasta, 10);
+        if (!isNaN(d) && !isNaN(h)) {
+            for (let i = d; i <= h; i++) cubierto.add(i);
+        }
+    });
+
+    const faltan = [];
+    for (let i = desde; i <= hasta; i++) {
+        if (!cubierto.has(i)) faltan.push(i);
+    }
+
+    caja.hidden = false;
+
+    if (!faltan.length) {
+        caja.innerHTML = '<span class="res-completo">' +
+            '<i class="bi bi-check-circle-fill"></i> Están los ' +
+            (hasta - desde + 1) + ' números publicados (' + desde + ' – ' + hasta + ').</span>';
+        return;
+    }
+
+    caja.innerHTML =
+        '<span class="res-dato">La obra publicó <strong>' + desde + ' – ' + hasta +
+        '</strong> · faltan <strong>' + faltan.length + '</strong></span>' +
+        '<span class="res-faltan">' + agruparRangos(faltan) + '</span>';
+}
+
+/** «1,2,3,7,9,10» -> «1–3, 7, 9–10», para no listar cien numeros sueltos. */
+function agruparRangos(nums) {
+    const partes = [];
+    let ini = nums[0], prev = nums[0];
+    for (let i = 1; i <= nums.length; i++) {
+        const n = nums[i];
+        if (n !== prev + 1) {
+            partes.push(ini === prev ? String(ini) : ini + '–' + prev);
+            ini = n;
+        }
+        prev = n;
+    }
+    // Con muchos huecos la lista entera no aporta: se corta.
+    if (partes.length > 12) {
+        return partes.slice(0, 12).join(', ') + ' y ' + (partes.length - 12) + ' más';
+    }
+    return partes.join(', ');
+}
+
 function cargarCapitulos(comicId, comicNombre) {
     const list = document.getElementById('cap-list');
     const titulo = document.getElementById('cap-comic-nombre');
@@ -650,6 +789,8 @@ function cargarCapitulos(comicId, comicNombre) {
         .then(caps => {
             if (caps.length === 0) {
                 list.innerHTML = '<p class="empty">Este cómic todavía no tiene capítulos.</p>';
+                window.__capitulos = [];
+                resumirPendientes([]);
                 return;
             }
             list.innerHTML = caps.map((cap, i) => {
@@ -681,6 +822,7 @@ function cargarCapitulos(comicId, comicNombre) {
 
             // Se guardan las páginas para montarlas al desplegar.
             window.__capitulos = caps;
+            resumirPendientes(caps);
         })
         .catch(() => {
             list.innerHTML = '<p class="empty">No se pudieron cargar los capítulos.</p>';
@@ -857,7 +999,73 @@ function handleUpload(input) {
         label.style.display = 'none';
         count.style.display = 'block';
         count.textContent = input.files[0].name;
+        proponerNumeracion(input.files[0].name);
     }
+}
+
+/**
+ * Propone la numeracion a partir del nombre del archivo (HU-B2).
+ *
+ * Subir doce capitulos obliga a teclear doce veces lo mismo cuando el
+ * numero ya esta en el nombre. Se lee de ahi.
+ *
+ * Solo RELLENA CAMPOS VACIOS: si ya se escribio algo a mano, no se
+ * pisa. Y si no se puede deducir, se deja vacio en vez de inventar.
+ */
+function proponerNumeracion(nombre) {
+    const desde = document.getElementById('cap-desde');
+    const hasta = document.getElementById('cap-hasta');
+    const sel   = document.getElementById('cap-formato');
+    const pista = document.getElementById('num-pista');
+
+    function decir(txt) {
+        if (!pista) return;
+        pista.textContent = txt || '';
+        pista.hidden = !txt;
+    }
+
+    if (!desde) { return; }
+
+    // Se quita la extension y se normaliza antes de buscar numeros.
+    const base = nombre.replace(/\.(cbr|cbz)$/i, '');
+
+    // 1) Rango explicito: «#1-2», «01 - 03», «c1_a_3»
+    let m = base.match(/(\d{1,4})\s*(?:-|a|to)\s*#?(\d{1,4})(?!\d)/i);
+    if (m) {
+        const d = parseInt(m[1], 10), h = parseInt(m[2], 10);
+        if (d >= 1 && h > d && h <= 9999) {
+            if (sel && !sel.value.includes('tomo')) {
+                sel.value = 'rango';
+                sel.dataset.tocado = '1';
+                if (typeof ajustarFormato === 'function') ajustarFormato();
+            }
+            if (!desde.value) desde.value = d;
+            if (hasta && !hasta.value) hasta.value = h;
+            decir('Numeración tomada del nombre del archivo: ' + d + ' – ' + h + '. Puedes cambiarla.');
+            return;
+        }
+    }
+
+    // 2) Un solo numero. Se ignora lo que claramente no es capitulo:
+    //    el año de «Saga (2012) 05.cbr» o la resolucion «1920x1080».
+    const limpio = base
+        .replace(/\(\s*(19|20)\d{2}\s*\)/g, ' ')
+        .replace(/\d{3,4}\s*x\s*\d{3,4}/gi, ' ');
+    const nums = [...limpio.matchAll(/(\d{1,4})(?!\d)/g)]
+        .map(x => parseInt(x[1], 10))
+        .filter(n => n >= 1 && n <= 9999);
+
+    if (nums.length) {
+        // El ultimo numero del nombre suele ser el del capitulo:
+        // «Berserk v01 c05.cbz» -> 5.
+        const n = nums[nums.length - 1];
+        if (!desde.value) desde.value = n;
+        decir('Número tomado del nombre del archivo: ' + n + '. Puedes cambiarlo.');
+        return;
+    }
+
+    // 3) No se pudo deducir: NO se inventa nada.
+    decir('');
 }
 
 // Interceptar submit del formulario con XHR + barra de progreso

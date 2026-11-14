@@ -172,10 +172,10 @@ tal, nunca como una verificación.
 > **quiero** ver qué capítulos tiene la obra y cuáles me faltan por subir,
 > **para** saber por dónde voy.
 
-- [ ] CA-B1.1 · La pantalla lista los capítulos **ya subidos**.
-- [ ] CA-B1.2 · Muestra el rango publicado de la columna `capitulos` (`1 - 12`).
-- [ ] CA-B1.3 · Señala los números **que faltan** (en Watchmen: del 1 al 12).
-- [ ] CA-B1.4 · Distingue «publicados por la obra» de «subidos al sitio»: son
+- [x] CA-B1.1 · La pantalla lista los capítulos **ya subidos**.
+- [x] CA-B1.2 · Muestra el rango publicado de la columna `capitulos` (`1 - 12`).
+- [x] CA-B1.3 · Señala los números **que faltan** (en Watchmen: del 1 al 12).
+- [x] CA-B1.4 · Distingue «publicados por la obra» de «subidos al sitio»: son
       cosas distintas *(ya documentado en DOC §5.4)*.
 
 ### HU-B2 · Proponer los datos del capítulo desde el archivo
@@ -184,10 +184,10 @@ tal, nunca como una verificación.
 > **quiero** que al elegir el archivo se rellenen número y título,
 > **para** no teclear doce veces lo mismo.
 
-- [ ] CA-B2.1 · El número se extrae del nombre del archivo
+- [x] CA-B2.1 · El número se extrae del nombre del archivo
       (`watchmen-07.cbr` → 7; `cap_012.cbz` → 12).
-- [ ] CA-B2.2 · Si no se puede deducir, el campo queda vacío **sin inventar**.
-- [ ] CA-B2.3 · Todo lo propuesto es **editable**.
+- [x] CA-B2.2 · Si no se puede deducir, el campo queda vacío **sin inventar**.
+- [x] CA-B2.3 · Todo lo propuesto es **editable**.
 - [ ] CA-B2.4 · Si Fandom tiene una ficha de ese capítulo, se ofrece su título
       como sugerencia marcada en ámbar *(§0: propone, no rellena)*.
 - [ ] CA-B2.5 · Si Fandom no responde o no tiene la ficha, no pasa nada: se
