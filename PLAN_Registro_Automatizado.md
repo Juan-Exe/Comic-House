@@ -494,19 +494,36 @@ lista ahora crecen con su contenido.
 
 ## 10 · Estado final
 
-**Las 6 fases implementadas y los 47 criterios verificados.**
+**CERRADO.** Las 6 fases implementadas y los 47 criterios verificados.
 
 De los 9 campos del formulario:
 
 | Origen | Campos |
 |---|---|
 | Automático desde ComicVine | título, año, editorial, capítulos, portada, descripción (traducida) |
-| Fuente secundaria verificada | clasificación, género *(solo cuando el año coincide)* |
+| Deducido de ComicVine | estado de publicación *(`last_issue` vs. total)* |
+| Fuente secundaria verificada | clasificación *(MangaDex o Wikipedia)* |
+| Estimado por modelo | clasificación y género, cuando ninguna fuente los publica |
 | Regla propia | tipo *(se infiere de la editorial)* |
 
 Lo que **nunca** hace el sistema: inventar un valor para rellenar un hueco,
 sustituir una editorial por otra, o dar por buena una clasificación sin que el
 administrador la confirme.
+
+### Trabajo posterior al plan
+
+Cerrados los 47 criterios, el uso real destapó cuatro cosas que el plan no
+había previsto. Todas corregidas y documentadas en
+[DOC_Automatizacion_Registro.md](DOC_Automatizacion_Registro.md):
+
+| Hallazgo | Dónde |
+|---|---|
+| El orden de ediciones de la API no es fiable: *Watchmen* devolvía la edición brasileña antes que la original de DC | DOC §5.3 |
+| ComicVine no publica el estado, pero se deduce de `last_issue` | DOC §5.4 |
+| Una respuesta tardía pisaba el resultado bueno y dejaba el aviso clavado | DOC §5.7 |
+| El género quedaba vacío en todo cómic occidental | DOC §5.2 |
+
+**Con esto, la parte de registro queda cerrada.**
 
 ### Pendiente para más adelante
 

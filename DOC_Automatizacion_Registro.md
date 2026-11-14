@@ -2,7 +2,7 @@
 
 **Proyecto:** Comic House · Panel de administración
 **Alcance:** pantalla *Registrar cómic* (`crud.php`)
-**Estado:** implementado y verificado · noviembre de 2026
+**Estado:** **cerrado** · implementado y verificado · noviembre de 2026
 
 > Documento de referencia del sistema ya construido. El diseño, las historias de
 > usuario y los criterios de aceptación están en
@@ -33,9 +33,13 @@ Escribir título  →  Elegir edición  →  Revisar en el modal  →  Guardar
 | Capítulos | ComicVine `count_of_issues` | verificado |
 | Portada | ComicVine, descargada al servidor | verificado |
 | Descripción | ComicVine, traducida al español | verificado |
+| Estado de publicación | ComicVine `last_issue` + `count_of_issues` | deducido |
 | Tipo | regla propia según la editorial | inferido |
-| Género | MangaDex, o palabras de la descripción | sugerido |
+| **Género** | **MangaDex, palabras clave o modelo** | **sugerido o estimado** |
 | **Clasificación** | **cadena de 3 capas** | **verificado o estimado** |
+
+Los nueve campos del formulario llegan propuestos. Ninguno se guarda sin que el
+administrador pulse «Usar estos datos».
 
 ---
 
@@ -45,12 +49,12 @@ Seis endpoints, cada uno con una responsabilidad:
 
 | Archivo | Líneas | Función |
 |---|---|---|
-| `buscar_metadatos.php` | 308 | Consulta ComicVine, mapea editoriales, detecta duplicados y corrige erratas |
+| `buscar_metadatos.php` | 425 | Consulta ComicVine, ordena ediciones, mapea editoriales, detecta duplicados y corrige erratas |
 | `traducir.php` | 166 | Traduce la descripción EN → ES |
 | `descargar_portada.php` | 116 | Trae la imagen al servidor |
 | `crear_editorial.php` | 73 | Da de alta una editorial ausente |
 | `buscar_clasificacion.php` | 197 | Capa 1: MangaDex verificado por año |
-| `estimar_clasificacion.php` | 255 | Capas 2 y 3: Wikipedia y modelo de lenguaje |
+| `estimar_clasificacion.php` | 350 | Capas 2 y 3: Wikipedia y modelo (clasificación **y género**) |
 
 La interfaz vive en `crud.php` (modal + lógica de encadenado) y los estilos en
 `admin/admin.css`.
@@ -118,6 +122,10 @@ recopila de forma uniforme.
 
 Se detiene en la primera que responde, y **el origen viaja con el dato**.
 
+> **Matiz tras añadir el género:** la cadena se detiene para la *clasificación*,
+> pero la capa 3 se consulta igualmente si falta el *género*, porque ni MangaDex
+> ni Wikipedia lo resuelven para cómics occidentales. Detalle en §5.2.
+
 #### Capa 1 · MangaDex
 
 Publica `contentRating`, pero al buscar por título devuelve obras distintas.
@@ -159,11 +167,16 @@ Bone       → sin sugerencia
 
 #### Capa 3 · Modelo de lenguaje (opcional)
 
-Último recurso, solo si hay clave configurada. Tres salvaguardas:
+Último recurso, solo si hay clave configurada. Devuelve **clasificación y
+género en la misma llamada** (§5.2). Tres salvaguardas:
 
 - `temperature: 0`, para que sea lo más determinista posible
-- Solo acepta una etiqueta de la escala; cualquier otra cosa **se descarta**
+- Solo acepta etiquetas de las listas cerradas (4 clasificaciones, 18 géneros);
+  cualquier otra cosa **se descarta** en vez de adaptarse
 - Se le pide elegir la opción **más restrictiva** ante la duda
+
+Si uno de los dos campos no valida, el otro se conserva: un género inventado no
+tira abajo una clasificación correcta.
 
 Resultados verificados:
 
@@ -203,16 +216,122 @@ Manga; la de Image, Cómic.
 
 ### 5.2 · Género
 
-Dos vías, en orden:
+Tres vías, en orden:
 
 1. **MangaDex** — etiquetas del grupo `genre`. Los grupos `theme` y `content`
    se ignoran: describen elementos de la trama, no el género.
 2. **Palabras de la descripción** ya traducida, contrastadas con los géneros
    que **ya existen** en el catálogo, para no multiplicar variantes.
+3. **Modelo de lenguaje** — a partir de la sinopsis, cuando las dos anteriores
+   fallan.
 
-Si ninguna da resultado, el campo queda vacío.
+Las dos primeras cubren bien el manga, pero un cómic occidental no está en
+MangaDex y sus sinopsis rara vez contienen la palabra exacta del género. El
+resultado era que el campo quedaba vacío justo en el caso más común:
 
-### 5.3 · Editorial ausente
+> *La descripción no da pistas claras: elígelo tú.*
+
+La tercera vía cubre ese hueco. Se pide en **la misma llamada** que ya hacía la
+capa 3 para la clasificación: es la misma lectura de la misma sinopsis, así que
+no añade ni una petición ni latencia perceptible.
+
+**Resultados verificados contra el endpoint real:**
+
+| Cómic | Género devuelto | Quién lo resolvió |
+|---|---|---|
+| Watchmen | Superhéroes | modelo |
+| Cyberpunk 2077: Big City Dreams | Cyberpunk | modelo |
+| Saga | Ciencia ficción | modelo |
+| Berserk | Fantasía oscura | modelo (la clasificación la dio Wikipedia) |
+
+#### Tres restricciones deliberadas
+
+**El modelo no puede inventar géneros.** Solo se acepta uno de los 18 del
+formulario. Si devuelve «Western» o «Drama psicológico», se descarta en vez de
+adaptarlo: adaptar a ojo es justo donde se cuelan los errores.
+
+**Las tildes se comparan, pero no se devuelven del modelo.** El modelo acierta
+la palabra y falla el acento con frecuencia. La comparación ignora tildes y
+mayúsculas, pero lo que se devuelve es **siempre** la forma exacta de la lista,
+porque el `<option>` compara por valor literal: `Ciencia ficcion` sin tilde no
+seleccionaría nada.
+
+**Si ya se sabe el género, no se pregunta.** El frontend envía el género que las
+capas anteriores hayan resuelto; si viene, el modelo no lo estima.
+
+#### Por qué el género siempre se marca como estimado
+
+Ninguna de las tres fuentes publica el género como dato verificable, ni siquiera
+MangaDex (sus etiquetas las ponen los usuarios). Por eso se presenta en ámbar,
+igual que la clasificación estimada:
+
+> ⚠ **Estimado** por qwen3.8-27b: Es una deconstrucción directa del género de
+> superhéroes. **Revísalo.**
+
+Una excepción importante del encadenado: **Wikipedia resuelve la clasificación
+pero nunca el género.** Antes, que la capa 2 acertara dejaba el género sin
+estimar para siempre, porque el modelo ya no llegaba a ejecutarse. Ahora la capa
+3 se consulta cuando falta *cualquiera* de los dos.
+
+### 5.3 · Orden de las ediciones
+
+Un mismo título devuelve muchas ediciones y **el orden de la API no es fiable**.
+Comprobado con consultas reales:
+
+| Búsqueda | Qué devolvía primero | Dónde estaba la original |
+|---|---|---|
+| `all star superman` | Panini Verlag (alemán), 2006 | **5.ª** — DC 2006, 12 números |
+| `watchmen` | Abril (brasileño), 1999 | **3.ª** — DC 1986 |
+
+El nombre no sirve para distinguirlas: las ocho ediciones de *All Star Superman*
+se llaman **exactamente igual**. Por eso el distintivo «exacto» aparecía en
+todas y no informaba de nada.
+
+```
+18139 | All Star Superman | DC Comics          | 2006 | 12 núms  ← la original
+41739 | All Star Superman | Panini Verlag      | 2006 |  6 núms  ← alemán
+78614 | All Star Superman | Planeta DeAgostini | 2009 |  1 núm   ← español
+43166 | All Star Superman | DC Comics          | 2011 |  1 núm   ← recopilatorio
+```
+
+Lo que sí las separa son tres señales, que ahora se puntúan:
+
+| Señal | Peso | Por qué |
+|---|---|---|
+| Título idéntico a lo escrito | 1000 | Separa *All Star Superman* de *Man Of Steel: All-Star Superman* |
+| Editorial **no** traductora | 300 | Panini, Planeta, Saldapress, Glénat… traducen; la original está en otra parte |
+| Proporción de entregas | 0–250 | La edición completa tiene más que un recopilatorio (145 vs 25) |
+| Un solo número | −120 | Casi siempre es un tomo suelto |
+| Año más antiguo | 0–80 | La original precede a sus traducciones |
+
+Es una **regla determinista**, no un modelo: con los mismos datos puntúa igual.
+
+**Ninguna edición se descarta**, solo se reordenan — registrar la edición de
+Planeta puede ser justo lo que se quiere. La mejor puntuada se marca como
+`original`, y la decisión sigue siendo del administrador.
+
+| Búsqueda | Antes | Ahora |
+|---|---|---|
+| all star superman | 5.ª | **1.ª** ✓ |
+| watchmen | 3.ª | **1.ª** ✓ |
+| invincible | 1.ª | 1.ª ✓ |
+| saga | 1.ª | 1.ª ✓ |
+
+### 5.4 · Estado de publicación
+
+ComicVine **no publica** si una serie terminó, pero se deduce comparando el
+último número con el total:
+
+| Condición | Estado |
+|---|---|
+| 1 solo número | Tomo único |
+| `last_issue >= count_of_issues - 1` | Publicación terminada |
+| resto | En publicación |
+
+Verificado: *Invincible* tiene 145 números y `last_issue` es el #144 → terminada,
+que es correcto (acabó en 2018).
+
+### 5.5 · Editorial ausente
 
 Si la fuente dice que la publicó una editorial que no está en el catálogo, la
 **única** salida es crearla.
@@ -223,7 +342,7 @@ lo publicó sería guardar un dato falso. El modal lo explica:
 > *No está en tu catálogo. Es la editorial que publicó esta obra, así que no
 > puede sustituirse por otra.*
 
-### 5.4 · Corrección de erratas
+### 5.6 · Corrección de erratas
 
 Si no hay resultados, se reintenta contra el endpoint `/volumes` de ComicVine
 con `filter=name:`, que sí busca por prefijo, probando prefijos cada vez más
@@ -237,6 +356,34 @@ xyzqw123   → sin sugerencia
 
 Se admite cambiar hasta un tercio de las letras. Es comparación de texto, no
 interpretación: por eso una cadena sin parecido real no sugiere nada.
+
+### 5.7 · Respuestas que llegan tarde
+
+Al escribir se lanza una búsqueda por cada estado intermedio del título. Si una
+de las primeras tarda más que la última, **su respuesta llega después y pisa el
+resultado bueno**: el campo decía `watchmen` y debajo seguía el aviso de que no
+se encontró `watcj`.
+
+No era el buscador quedándose quieto, sino una carrera entre peticiones. Tres
+medidas:
+
+1. **Turnos.** Cada búsqueda lleva un número. Al volver la respuesta, si ya hay
+   otra en marcha, llega tarde y se descarta.
+2. **Aborto.** La petición anterior se cancela con `AbortController`, para no
+   esperar por algo que de todos modos se ignorará.
+3. **Limpieza inmediata.** El aviso del título anterior se borra al pulsar la
+   tecla, no al terminar la búsqueda nueva.
+
+Comprobado simulando la carrera con los tiempos invertidos:
+
+```
+SIN arreglo  →  No se encontró «watcj»      ← el fallo
+CON arreglo  →  No se encontró «watchmen»   ← correcto
+```
+
+Un segundo fallo del mismo origen: `ultimaBusqueda` se fijaba **antes** de la
+petición, así que un fallo de red dejaba ese título marcado como «ya buscado» y
+no se reintentaba nunca. Ahora un fallo lo libera.
 
 ---
 
@@ -306,6 +453,12 @@ comporta como antes de esta automatización.
 
 - **La clasificación de cómics occidentales es una estimación**, no un dato.
   Conviene revisarla siempre.
+- **El género es siempre una estimación**, incluso vía MangaDex: sus etiquetas
+  las ponen los usuarios. Se marca en ámbar por eso.
+- **El orden de ediciones es una heurística.** Acierta en los cuatro casos
+  probados, pero una serie cuya edición original tenga menos números que una
+  recopilación extranjera podría ordenarse mal. No descarta nada, así que el
+  coste de un fallo es tener que bajar un puesto en la lista.
 - **La equivalencia `suggestive → +13`** es una interpretación de una escala a
   otra; merece revisión según crezca el catálogo.
 - **El catálogo de modelos de Groq cambia sin aviso.** Por eso se prueban varios
@@ -329,11 +482,14 @@ Luego http://localhost:8080/crud.php y escribir un título.
 
 | Escribe | Qué debe pasar |
 |---|---|
-| `Invincible` | 8 ediciones; al elegir Image 2003 → Cómic, Superhéroes, +18 estimado |
+| `Invincible` | 8 ediciones; Image 2003 (145 núms) primera, marcada `original` |
+| `all star superman` | 8 ediciones; **DC 2006** primera, no la de Panini |
+| `watchmen` | **DC 1986** primera, no la de Abril; género → Superhéroes estimado |
 | `Berserk` | avisa que ya existe (Young Animal · 1989) |
 | `Vagabond` | Manga, +18 **verificado** por MangaDex |
 | `invicible` | sugiere «Invincible» |
 | `xyzqw123` | sin resultados, registro manual |
+| escribir rápido y corregir | el aviso corresponde **siempre** al título final |
 
 ### Endpoints por separado
 
@@ -344,10 +500,31 @@ curl "http://localhost:8080/controlador/buscar_metadatos.php?titulo=Invincible"
 # Clasificación verificada
 curl "http://localhost:8080/controlador/buscar_clasificacion.php?titulo=Berserk&anio=1989"
 
-# Estimación
+# Estimación de clasificación Y género
 curl -X POST --data-urlencode "titulo=Saga" --data-urlencode "tipo=Comic" \
      --data-urlencode "descripcion=Opera espacial con desnudos y violencia." \
      "http://localhost:8080/controlador/estimar_clasificacion.php"
+
+# Con el género ya conocido: el modelo no lo estima
+curl -X POST --data-urlencode "titulo=Berserk" --data-urlencode "tipo=Manga" \
+     --data-urlencode "genero=Fantasía oscura" \
+     --data-urlencode "descripcion=Guts lucha contra apóstoles demoníacos." \
+     "http://localhost:8080/controlador/estimar_clasificacion.php"
+```
+
+Respuesta esperada del primero:
+
+```json
+{
+  "ok": true,
+  "datos": {
+    "clasificacion": "+18",
+    "origen":        "estimado",
+    "fuente":        "qwen3.8-27b",
+    "genero":        "Ciencia ficción",
+    "genero_origen": "estimado"
+  }
+}
 ```
 
 ---
@@ -365,6 +542,13 @@ curl -X POST --data-urlencode "titulo=Saga" --data-urlencode "tipo=Comic" \
 | `d2739b2` | Fase 6: casos límite |
 | `acecc50` | Clasificación en tres capas |
 | `7873a68` | Activación de Groq y corrección del encadenado |
+| `9581e60` | La estimación dejaba de borrarse al terminar la traducción |
+| `914d421` | Pantalla de carga mientras llegan los datos |
+| `709099e` | Editorial, estado de publicación y vista previa de portada |
+| `247d4f9` | La portada rellena su hueco con un difuminado propio |
+| `1d39420` | Las ediciones se ordenan: la original primero |
+| `aee222e` | Una respuesta tardía ya no deja clavado el aviso |
+| `162ccce` | El género se estima con el modelo cuando nada más lo resuelve |
 
 ---
 
