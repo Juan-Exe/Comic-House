@@ -36,6 +36,40 @@ if (!$existe) {
 
 // La numeración se valida antes de tocar nada: dígitos, sin ceros a
 // la izquierda, rango coherente y sin pisar lo ya subido.
+// La fecha es opcional, pero si viene tiene que ser una fecha REAL.
+//
+// No se validaba nada: iba de $_POST directa al INSERT. El navegador
+// tampoco ayudaba, porque new Date('2000-02-30') no falla en
+// JavaScript, se desborda al 1 de marzo. Aqui se comprueba que el dia
+// que se escribio es el mismo que queda despues de interpretarlo.
+if ($fecha !== '') {
+    // El «!» pone la hora a 00:00. Sin el, createFromFormat hereda la
+    // hora ACTUAL, y una fecha de hoy salia «mayor que hoy a las 00:00»
+    // y se rechazaba por futura.
+    $d = DateTime::createFromFormat('!Y-m-d', $fecha);
+    $errores = DateTime::getLastErrors();
+    $malFormada = !$d
+        || ($errores && ($errores['warning_count'] || $errores['error_count']))
+        || $d->format('Y-m-d') !== $fecha;
+
+    if ($malFormada) {
+        echo json_encode(['ok' => false, 'error' => 'fecha',
+                          'mensaje' => 'Esa fecha no existe. Revisa el día, el mes y el año.'],
+                         JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+
+    // Un capitulo no puede haberse publicado en el futuro, ni antes de
+    // que existieran los comics.
+    $anio = (int) $d->format('Y');
+    if ($anio < 1900 || $d > new DateTime('today')) {
+        echo json_encode(['ok' => false, 'error' => 'fecha',
+                          'mensaje' => 'La fecha debe estar entre 1900 y hoy.'],
+                         JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+}
+
 $dictamen = revisarCapitulo(
     $conexion, $comic_id, $tipo_obra, $formato,
     $_POST['numero_desde'] ?? '', $_POST['numero_hasta'] ?? ''

@@ -280,6 +280,23 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
         }
         .progress-overlay.visible { display: flex; }
 
+        /* ---- Fecha de publicación ----
+           La clase date-ok ya se usaba en el JS pero no tenía estilo:
+           una fecha correcta no se distinguía de una a medio escribir. */
+        #fecha-display.date-ok {
+            border-color: rgba(80, 180, 120, .6);
+        }
+        #fecha-display.date-mal {
+            border-color: rgba(239, 68, 68, .75);
+        }
+        .fecha-aviso {
+            display: block;
+            margin-top: 6px;
+            color: #e98888;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
         /* ---- Modal «comprueba el cómic» ----
            Va por encima de la capa de progreso (z-index mayor), pero esa
            se oculta antes de mostrarlo: no tiene sentido decir «subiendo»
@@ -474,6 +491,10 @@ require __DIR__ . '/admin/cabecera.php';
                         <i class="bi bi-calendar3"></i>
                         <input type="hidden" name="fecha_publicacion" id="fecha-hidden">
                     </div>
+                    <!-- Dice por que una fecha no vale. Antes el campo se
+                         quedaba callado: aceptaba «32/32/2333» a la vista
+                         y simplemente no enviaba nada. -->
+                    <small class="fecha-aviso" id="fecha-aviso" hidden></small>
                 </div>
 
                 <!-- La numeración cambia según la obra: un manga agrupa
@@ -716,22 +737,59 @@ function maskFecha(input) {
 
     // Validar y alimentar el hidden
     const hidden = document.getElementById('fecha-hidden');
-    if (val.length === 8) {
-        const dd = val.substring(0, 2);
-        const mm = val.substring(2, 4);
-        const yyyy = val.substring(4, 8);
-        const fecha = new Date(`${yyyy}-${mm}-${dd}`);
-        if (!isNaN(fecha.getTime())) {
-            hidden.value = `${yyyy}-${mm}-${dd}`;
-            input.classList.add('date-ok');
-        } else {
-            hidden.value = '';
-            input.classList.remove('date-ok');
+    const aviso  = document.getElementById('fecha-aviso');
+
+    function marcar(ok, texto) {
+        input.classList.toggle('date-ok', ok === true);
+        input.classList.toggle('date-mal', ok === false);
+        if (aviso) {
+            aviso.textContent = texto || '';
+            aviso.hidden = !texto;
         }
-    } else {
-        hidden.value = '';
-        input.classList.remove('date-ok');
     }
+
+    if (val.length !== 8) {
+        hidden.value = '';
+        // A medio escribir no se avisa de nada: seria molestar por algo
+        // que la persona todavia esta tecleando.
+        marcar(null, '');
+        return;
+    }
+
+    const dd   = parseInt(val.substring(0, 2), 10);
+    const mm   = parseInt(val.substring(2, 4), 10);
+    const yyyy = parseInt(val.substring(4, 8), 10);
+
+    // new Date('2000-02-30') NO falla en JavaScript: se desborda al 1 de
+    // marzo. Por eso no basta con isNaN; hay que comprobar que el dia
+    // que queda es el mismo que se escribio.
+    const f = new Date(yyyy, mm - 1, dd);
+    const existe = f.getFullYear() === yyyy
+                && f.getMonth() === mm - 1
+                && f.getDate() === dd;
+
+    if (!existe) {
+        hidden.value = '';
+        marcar(false, 'Esa fecha no existe.');
+        return;
+    }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    if (yyyy < 1900) {
+        hidden.value = '';
+        marcar(false, 'El año debe ser 1900 o posterior.');
+        return;
+    }
+    if (f > hoy) {
+        hidden.value = '';
+        marcar(false, 'La fecha no puede estar en el futuro.');
+        return;
+    }
+
+    const pad = n => String(n).padStart(2, '0');
+    hidden.value = `${yyyy}-${pad(mm)}-${pad(dd)}`;
+    marcar(true, '');
 }
 
 /* ---- Numeración según el tipo de obra ----
@@ -924,7 +982,9 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                     });
                     return;
                 }
-                if (res.error === 'numeracion') {
+                if (res.error === 'fecha') {
+                    msg = res.mensaje || 'La fecha de publicación no es válida.';
+                } else if (res.error === 'numeracion') {
                     msg = res.mensaje || 'La numeración no es válida.';
                 } else if (res.error === 'duplicado') {
                     msg = 'Ya existe un capítulo con ese número para este cómic.';
