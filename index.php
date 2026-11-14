@@ -597,10 +597,9 @@ $editoriales_portada = array_slice(
                     <div class="Comics-btn-2 es-proximamente"
                          title="<?= htmlspecialchars($datos->titulo) ?> · aún no disponible">
                         <img class="Comics-btns-2" src="<?= htmlspecialchars(miniatura($datos->portada, 400)) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
-                        <!-- El rotulo sobre la portada sustituye al distintivo
-                             de la esquina: decia «Proximamente» justo debajo
-                             del titulo de la seccion, que ya lo decia. -->
-                        <span class="velo-proximamente">Próximamente</span>
+                        <!-- Sin rotulo sobre la portada: el titulo de la
+                             seccion ya dice «Proximamente» y la portada
+                             apagada lo confirma. Repetirlo tapaba la imagen. -->
                         <div class="Comics-info-2">
                             <p class="title-c-2"><?= htmlspecialchars($datos->titulo) ?></p>
                             <!-- Aqui NO se muestra el numero de capitulos: no

@@ -967,25 +967,3 @@ header {
 .Comics-btn-2.es-proximamente .description-c-2 {
     opacity: .6;
 }
-
-/* Rotulo centrado sobre la portada. */
-.velo-proximamente {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2;
-    width: max-content;
-    max-width: 90%;
-    padding: 7px 14px;
-    border: 1px solid rgba(255, 255, 255, .35);
-    border-radius: 4px;
-    background: rgba(0, 0, 0, .66);
-    color: #fff;
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    text-align: center;
-    pointer-events: none;
-}
