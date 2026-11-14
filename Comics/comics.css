@@ -788,3 +788,37 @@ button:hover {
     font-size: 17px;
     color: #ce4646;
 }
+
+/* Estado vacio de la lista de capitulos. Sin esto quedaba el titulo
+   «Capitulos» con su linea roja y nada debajo, que parecia un fallo de
+   carga en vez de un comic que aun no tiene capitulos subidos. */
+.capitulos-vacio {
+    padding: 26px 4px 10px;
+}
+
+.capitulos-vacio-txt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #cfcfcf;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.capitulos-vacio-txt i {
+    color: #ce4646;
+    font-size: 18px;
+}
+
+/* El dato de cuantos numeros publico la obra. Es informativo y va en
+   segundo plano: no son capitulos que se puedan leer aqui. */
+.capitulos-vacio-dato {
+    margin: 9px 0 0;
+    color: #8f8f8f;
+    font-size: 14px;
+}
+
+.capitulos-vacio-dato strong {
+    color: #ce4646;
+}

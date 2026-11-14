@@ -259,14 +259,35 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
             <h2>Capítulos</h2>
             <div class="linea"></div>
             <div class="enlaces">
-                <?php while ($cap = $capitulos->fetch_assoc()): ?>
-                    <a href="../Lector/lector.php?capitulo_id=<?= $cap['id'] ?>" data-capitulo="<?= $cap['id'] ?>">
-                        <span><?= htmlspecialchars(tituloCapitulo($comic['titulo'], $cap['titulo'])) ?> <?= htmlspecialchars($cap['numero']) ?></span>
-                        <span class="fecha">
-                            <?= $cap['fecha_publicacion'] ? date('d/m/Y', strtotime($cap['fecha_publicacion'])) : '' ?>
-                        </span>
-                    </a>
-                <?php endwhile; ?>
+                <?php if ($capitulos->num_rows > 0): ?>
+                    <?php while ($cap = $capitulos->fetch_assoc()): ?>
+                        <a href="../Lector/lector.php?capitulo_id=<?= $cap['id'] ?>" data-capitulo="<?= $cap['id'] ?>">
+                            <span><?= htmlspecialchars(tituloCapitulo($comic['titulo'], $cap['titulo'])) ?> <?= htmlspecialchars($cap['numero']) ?></span>
+                            <span class="fecha">
+                                <?= $cap['fecha_publicacion'] ? date('d/m/Y', strtotime($cap['fecha_publicacion'])) : '' ?>
+                            </span>
+                        </a>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <!-- Sin capitulos subidos quedaba un titulo «Capitulos»
+                         con la linea roja y nada debajo. Aqui se explica el
+                         estado y se aprovecha el dato que SI existe: la
+                         columna `capitulos` guarda cuantos numeros tiene la
+                         obra publicados (1 - 12 en Watchmen), que es distinto
+                         de cuantos estan subidos al sitio. -->
+                    <div class="capitulos-vacio">
+                        <p class="capitulos-vacio-txt">
+                            <i class="bi bi-clock-history"></i>
+                            Todavía no se ha subido ningún capítulo.
+                        </p>
+                        <?php if (trim($comic['capitulos']) !== ''): ?>
+                            <p class="capitulos-vacio-dato">
+                                La obra publicó los números
+                                <strong><?= htmlspecialchars($comic['capitulos']) ?></strong>.
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
