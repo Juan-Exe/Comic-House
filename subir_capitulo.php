@@ -712,11 +712,17 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
     const status   = document.getElementById('prog-status');
     const filename = document.getElementById('prog-filename');
 
+    // En una funcion para poder REENVIAR el mismo formulario cuando el
+    // servidor avisa de que el archivo parece de otra obra y la persona
+    // confirma que aun asi quiere subirlo.
+    function enviar(confirmado) {
+
     filename.textContent = file ? file.name : '';
     overlay.classList.add('visible');
 
     const xhr = new XMLHttpRequest();
     const fd  = new FormData(form);
+    if (confirmado) fd.append('confirmar_obra', '1');
 
     // Fase 1: progreso de upload (red)
     xhr.upload.addEventListener('progress', function(ev) {
@@ -752,6 +758,19 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                 // El servidor explica qué regla frenó la subida; se
                 // muestra tal cual en vez de un error genérico.
                 let msg;
+                if (res.error === 'posible_obra_distinta') {
+                    // El nombre del archivo menciona otra obra del
+                    // catalogo. NO se bloquea: es una sospecha por el
+                    // nombre, no una comprobacion del contenido, y el
+                    // archivo puede llamarse como sea y estar bien.
+                    if (confirm(res.mensaje + '\n\n¿Subirlo de todas formas?')) {
+                        // Se reintenta marcando que ya se confirmo.
+                        enviar(true);
+                        return;
+                    }
+                    showError('Subida cancelada. Revisa el archivo o el cómic elegido.');
+                    return;
+                }
                 if (res.error === 'numeracion') {
                     msg = res.mensaje || 'La numeración no es válida.';
                 } else if (res.error === 'duplicado') {
@@ -776,6 +795,10 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
 
     xhr.open('POST', 'controlador/procesar_capitulo.php');
     xhr.send(fd);
+
+    }   // fin de enviar()
+
+    enviar(false);
 });
 
 // Auto-seleccionar cómic si viene ?comic_id= en la URL

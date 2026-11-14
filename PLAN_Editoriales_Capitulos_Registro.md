@@ -199,17 +199,30 @@ tal, nunca como una verificación.
 > **quiero** que el sistema me avise si el archivo parece de otra obra,
 > **para** no ensuciar el catálogo.
 
-- [ ] CA-B3.1 · Si el nombre del archivo menciona **otro cómic del catálogo**,
+- [x] CA-B3.1 · Si el nombre del archivo menciona **otro cómic del catálogo**,
       se avisa y se exige confirmación explícita.
-- [ ] CA-B3.2 · El aviso dice que es una **sospecha por el nombre**, no una
+- [x] CA-B3.2 · El aviso dice que es una **sospecha por el nombre**, no una
       comprobación del contenido.
-- [ ] CA-B3.3 · Si el número ya existe en ese cómic, se **bloquea** salvo que se
+- [x] CA-B3.3 · Si el número ya existe en ese cómic, se **bloquea** salvo que se
       pida reemplazar.
 - [ ] CA-B3.4 · Si el número se sale del rango publicado, se avisa.
 - [ ] CA-B3.5 · Si el archivo no es `.cbr`/`.cbz` válido o no tiene imágenes, se
       **rechaza**.
-- [ ] CA-B3.6 · Nunca se bloquea por la heurística del nombre: el administrador
+- [x] CA-B3.6 · Nunca se bloquea por la heurística del nombre: el administrador
       puede tener razón y el archivo llamarse como sea.
+
+> **Hallazgo durante la prueba real.** Se intentó subir `Invencible #1-2.cbr`
+> a Berserk y **solo se detuvo porque esos números ya estaban ocupados**. Con
+> números libres habría entrado sin una palabra.
+>
+> Comparar el nombre contra los títulos del catálogo no bastaba: «Invencible»
+> no está entre los 7 registrados, así que no tenía con qué chocar. Por eso la
+> detección usa **dos señales**: que el nombre mencione otra obra del catálogo,
+> y que **ninguna** de sus palabras aparezca en el título de destino.
+>
+> Verificado con 20 nombres reales, 0 fallos: avisa en `Invencible #1-2.cbr`,
+> `Watchmen 01.cbr` y `Demon Slayer 12.cbz`; calla en `Berserk #10.cbr`,
+> `cap01.cbr`, `chapter12.cbz` y `Cyberpunk 2077 01.cbr`.
 
 ### HU-B4 · Subir varios capítulos de una vez
 

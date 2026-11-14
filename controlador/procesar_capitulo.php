@@ -61,6 +61,34 @@ $archivo_tmp  = $_FILES['cbr_file']['tmp_name'];
 $archivo_nombre = strtolower($_FILES['cbr_file']['name']);
 $extension    = pathinfo($archivo_nombre, PATHINFO_EXTENSION);
 
+// ¿El nombre del archivo menciona OTRA obra del catálogo?
+//
+// Caso real: se subió «Invencible #1-2.cbr» a Berserk. Solo se detuvo
+// porque esos números ya estaban ocupados; con números libres habría
+// entrado sin avisar.
+//
+// Es una sospecha por el NOMBRE, no una comprobación del contenido: un
+// .cbr no dice de qué obra es. Por eso se pide confirmación en vez de
+// bloquear — el archivo puede llamarse como sea y estar bien.
+$sosp = archivoPareceDeOtraObra($conexion, $comic_id, $_FILES['cbr_file']['name']);
+if ($sosp['sospecha'] && empty($_POST['confirmar_obra'])) {
+    echo json_encode([
+        'ok'      => false,
+        'error'   => 'posible_obra_distinta',
+        'obra'    => $sosp['obra'],
+        // Dos mensajes: uno cuando el nombre menciona otra obra del
+        // catalogo, y otro cuando simplemente no se parece al destino
+        // (el caso de subir una obra que aun no esta registrada).
+        'mensaje' => $sosp['obra'] !== ''
+            ? 'El archivo se llama «' . $_FILES['cbr_file']['name']
+              . '» y en el catálogo existe «' . $sosp['obra']
+              . '». Comprueba que es el cómic correcto.'
+            : 'El archivo se llama «' . $_FILES['cbr_file']['name']
+              . '» y no se parece al cómic elegido. Comprueba que es el correcto.',
+    ], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
 // Insertar capítulo (sentencia preparada: evita inyección SQL)
 $stmt_cap = $conexion->prepare(
     "INSERT INTO capitulos (comic_id, titulo, numero, fecha_publicacion,
