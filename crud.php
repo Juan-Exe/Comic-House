@@ -1211,6 +1211,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let alConfirmar = null;   // callback
         let portadaLista = null;  // nombre del archivo ya descargado
         let complemento = null;   // lo verificado por la fuente secundaria
+        // Genero deducido por el modelo. Se guarda aparte porque
+        // aplicarSugerencias() vuelve a construir el <select> entero al
+        // terminar la traduccion y borraria la estimacion.
+        let generoEstimado = null;
 
         const capaCarga = document.getElementById('meta-cargando');
         const txtCarga  = document.getElementById('meta-cargando-txt');
@@ -1449,15 +1453,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const gens = lista
                 ? [...lista.querySelectorAll('li')].map(function (li) { return li.textContent.trim(); })
                 : [];
-            const sug = generoSugerido(c.descripcion);
+            // Lo que ya dedujo el modelo manda sobre las palabras clave:
+            // llego despues y mira la sinopsis entera, no un listado fijo.
+            const sug = (generoEstimado && generoEstimado.genero)
+                ? generoEstimado.genero
+                : generoSugerido(c.descripcion);
             selGen.innerHTML = '<option value="">— elegir —</option>' +
                 gens.map(function (g) {
                     return '<option value="' + esc(g) + '"' +
                            (g === sug ? ' selected' : '') + '>' + esc(g) + '</option>';
                 }).join('');
-            pistaGen.textContent = sug
-                ? 'Sugerido por la descripción. Puedes cambiarlo.'
-                : 'La descripción no da pistas claras: elígelo tú.';
+
+            if (generoEstimado && generoEstimado.genero) {
+                pistaGen.innerHTML = '<span style="color:var(--alerta)">⚠ ' +
+                    'Estimado</span> por ' +
+                    esc(generoEstimado.genero_fuente || generoEstimado.fuente) +
+                    (generoEstimado.genero_motivo
+                        ? ': ' + esc(generoEstimado.genero_motivo) : '') +
+                    '. <strong>Revísalo.</strong>';
+            } else {
+                pistaGen.textContent = sug
+                    ? 'Sugerido por la descripción. Puedes cambiarlo.'
+                    : 'La descripción no da pistas claras: elígelo tú.';
+            }
 
             // Clasificacion: ComicVine no la trae. Solo se marca si la
             // fuente secundaria pudo VERIFICAR la obra por titulo y anio.
@@ -1551,8 +1569,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const r = await fetch('controlador/estimar_clasificacion.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    // Se manda el genero que ya se sepa (MangaDex o las
+                    // palabras clave): si viene, el modelo no lo estima.
                     body: 'titulo=' + encodeURIComponent(c.titulo) +
                           '&tipo=' + encodeURIComponent(valorElegido(opTipo) || 'Comic') +
+                          '&genero=' + encodeURIComponent(selGen.value || '') +
                           '&descripcion=' + encodeURIComponent(c.descripcion || '')
                 });
                 const d = await r.json();
@@ -1560,6 +1581,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!d.ok || actual !== c) return;
 
                 const g = d.datos || {};
+
+                // Genero estimado por el modelo. Ninguna de las fuentes
+                // lo publica como dato para comics occidentales, asi que
+                // se marca en ambar igual que la clasificacion estimada:
+                // es una deduccion de la sinopsis, no un dato verificado.
+                if (g.genero && !selGen.value) {
+                    const opG = [...selGen.options].find(function (o) {
+                        return o.value === g.genero;
+                    });
+                    if (opG) {
+                        selGen.value = g.genero;
+                        generoEstimado = g;   // para que no lo borre un repintado
+                        pistaGen.innerHTML = '<span style="color:var(--alerta)">⚠ ' +
+                            'Estimado</span> por ' + esc(g.genero_fuente || g.fuente) +
+                            (g.genero_motivo ? ': ' + esc(g.genero_motivo) : '') +
+                            '. <strong>Revísalo.</strong>';
+                    }
+                }
+
                 if (!g.clasificacion) return;
 
                 // Se guarda como complemento: aplicarSugerencias se
@@ -1636,6 +1676,15 @@ document.addEventListener('DOMContentLoaded', () => {
         function abrir(candidato, callback) {
             actual = candidato;
             alConfirmar = callback;
+
+            // Se limpia ANTES de arrancar nada: si se reseteara despues
+            // de lanzar complementar(), una respuesta rapida llegaria a
+            // tiempo de ser borrada. Y sin limpiar, la estimacion de la
+            // edicion anterior se quedaria pegada a esta.
+            complemento    = null;
+            generoEstimado = null;
+            portadaLista   = null;
+
             pintarVerificado(candidato);
             aplicarSugerencias(candidato);
             caja.classList.add('active');
@@ -1648,8 +1697,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Traduccion y portada arrancan A LA VEZ al abrir el modal.
             // Antes la portada esperaba al boton "Usar estos datos" y se
             // notaba el tiron; ahora mientras se revisa ya se descarga.
-            portadaLista = null;
-            complemento  = null;
             reiniciarCarga();
             traducirDescripcion(candidato).then(function () {
                 // El genero se sugiere desde la descripcion: si cambio al

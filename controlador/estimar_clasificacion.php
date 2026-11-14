@@ -50,6 +50,51 @@ header('Content-Type: application/json; charset=utf-8');
 
 const ESCALA = ['ATP', '+13', '+16', '+18'];
 
+/**
+ * Los generos del formulario, EXACTAMENTE como estan en la constante
+ * GENEROS de crud.php, tildes incluidas. El <select> compara por valor
+ * literal: «Superheroes» sin tilde no selecciona nada.
+ *
+ * El modelo solo puede responder con uno de estos. Si inventa otro
+ * ("Western", "Drama psicologico") se descarta en vez de adaptarlo:
+ * adaptar a ojo es justo donde se cuelan los errores.
+ */
+const GENEROS = [
+    'Superhéroes', 'Fantasía oscura', 'Ciencia ficción', 'Fantasía',
+    'Acción', 'Aventura', 'Terror', 'Misterio', 'Drama', 'Comedia',
+    'Romance', 'Histórico', 'Deportes', 'Slice of life', 'Cyberpunk',
+    'Post-apocalíptico', 'Sobrenatural', 'Thriller',
+];
+
+/**
+ * Devuelve el genero de la lista que corresponde al texto dado, o ''
+ * si no es ninguno.
+ *
+ * Compara sin tildes ni mayusculas porque el modelo acierta la palabra
+ * y falla el acento mucho mas a menudo de lo que falla el concepto. Lo
+ * que se devuelve es SIEMPRE la forma exacta de GENEROS: el <option>
+ * del formulario compara por valor literal y «Ciencia ficcion» sin
+ * tilde no seleccionaria nada.
+ */
+function normalizarGenero(string $texto): string {
+    $plano = function (string $s): string {
+        $s = mb_strtolower(trim($s));
+        return strtr($s, [
+            'á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'n',
+        ]);
+    };
+    $buscado = $plano($texto);
+    if ($buscado === '') {
+        return '';
+    }
+    foreach (GENEROS as $g) {
+        if ($plano($g) === $buscado) {
+            return $g;
+        }
+    }
+    return '';
+}
+
 function responder(array $r): void {
     echo json_encode($r, JSON_UNESCAPED_UNICODE);
     exit();
@@ -153,13 +198,22 @@ function porModelo(string $titulo, string $descripcion, string $tipo): ?array {
         ? ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b']
         : ['gpt-4o-mini'];
 
-    // Se pide SOLO la etiqueta y el motivo, para que no haya margen de
-    // redaccion libre y la respuesta sea facil de validar.
-    $sistema = 'Clasificas cómics y mangas por edad recomendada usando esta '
-        . 'escala exacta: ATP (todo público), +13, +16, +18. Respondes SOLO '
-        . 'un JSON: {"clasificacion":"...","motivo":"razón breve en español"}. '
-        . 'Si la descripción no da indicios suficientes, responde '
-        . '{"clasificacion":"","motivo":"sin indicios"}. '
+    // Se pide SOLO las etiquetas y el motivo, para que no haya margen
+    // de redaccion libre y la respuesta sea facil de validar.
+    //
+    // Clasificacion y genero se piden en la MISMA llamada: son la misma
+    // lectura de la misma sinopsis, y separarlas costaria otra peticion
+    // (~1.6 s) sin mejorar el resultado.
+    $sistema = 'Clasificas cómics y mangas a partir de su sinopsis. '
+        . 'Devuelves DOS cosas:' . "\n"
+        . '1) "clasificacion": edad recomendada en esta escala exacta: '
+        . 'ATP (todo público), +13, +16, +18.' . "\n"
+        . '2) "genero": UNO de esta lista exacta, copiado literalmente '
+        . 'con sus tildes: ' . implode(', ', GENEROS) . '.' . "\n"
+        . 'Respondes SOLO un JSON: {"clasificacion":"...","motivo":"razón '
+        . 'breve en español","genero":"...","motivo_genero":"razón muy breve"}. '
+        . 'Si la descripción no da indicios para un campo, déjalo en "". '
+        . 'No inventes un género que no esté en la lista. '
         . 'Ante la duda elige la clasificación MÁS restrictiva: es control parental.';
 
     foreach ($modelos as $modelo) {
@@ -198,10 +252,25 @@ function porModelo(string $titulo, string $descripcion, string $tipo): ?array {
         }
         $r = json_decode($texto, true);
         $clas = trim($r['clasificacion'] ?? '');
+        $gen  = trim($r['genero'] ?? '');
 
         // Validacion: solo se acepta una etiqueta de la escala. Si el modelo
         // devuelve cualquier otra cosa, se descarta en vez de adaptarla.
         if (!in_array($clas, ESCALA, true)) {
+            $clas = '';
+        }
+
+        // Lo mismo con el genero, pero comparando sin tildes ni mayusculas:
+        // el modelo suele acertar la palabra y fallar el acento
+        // («Ciencia ficcion» por «Ciencia ficción»). Se devuelve SIEMPRE
+        // la forma exacta de la lista, que es la que el <select> entiende.
+        if ($gen !== '') {
+            $gen = normalizarGenero($gen);
+        }
+
+        // Si no se pudo validar ninguno de los dos, este modelo no
+        // sirvio: se prueba el siguiente.
+        if ($clas === '' && $gen === '') {
             continue;
         }
 
@@ -213,6 +282,8 @@ function porModelo(string $titulo, string $descripcion, string $tipo): ?array {
             'origen'        => 'estimado',
             'fuente'        => $nombre,
             'motivo'        => trim($r['motivo'] ?? 'estimado a partir de la sinopsis'),
+            'genero'        => $gen,
+            'genero_motivo' => trim($r['motivo_genero'] ?? ''),
         ];
     }
 
@@ -228,12 +299,28 @@ if (mb_strlen($titulo) < 2) {
     responder(['ok' => false, 'aviso' => 'Falta el título']);
 }
 
+// Se recibe el genero que las fuentes anteriores ya resolvieron. Si
+// viene, no hace falta estimarlo.
+$generoYa = normalizarGenero($_POST['genero'] ?? $_GET['genero'] ?? '');
+
 // Capa 2 (la 1, MangaDex, la resuelve buscar_clasificacion.php antes)
 $r = porWikipedia($titulo, $tipo);
 
-// Capa 3
-if ($r === null) {
-    $r = porModelo($titulo, $desc, $tipo);
+// Capa 3. Se llama al modelo cuando falta la clasificacion O el
+// genero: Wikipedia resuelve la primera pero NUNCA el segundo, y antes
+// su acierto dejaba el genero sin estimar para siempre.
+if ($r === null || $generoYa === '') {
+    $m = porModelo($titulo, $desc, $tipo);
+
+    if ($r === null) {
+        $r = $m;                      // el modelo aporta ambas cosas
+    } elseif ($m !== null && ($m['genero'] ?? '') !== '') {
+        // Wikipedia ya dio una clasificacion VERIFICADA: esa manda.
+        // Del modelo se toma solo el genero, que nadie mas da.
+        $r['genero']        = $m['genero'];
+        $r['genero_motivo'] = $m['genero_motivo'] ?? '';
+        $r['genero_fuente'] = $m['fuente'];
+    }
 }
 
 if ($r === null) {
@@ -242,6 +329,14 @@ if ($r === null) {
         'aviso' => 'Ninguna fuente pudo determinar la clasificación. Márcala tú.',
     ]);
 }
+
+// El genero SIEMPRE es una estimacion: ninguna fuente de las tres lo
+// publica como dato. Se marca como tal para que no se confunda con la
+// clasificacion cuando esa venga verificada de Wikipedia.
+$r['genero']        = $r['genero'] ?? '';
+$r['genero_motivo'] = $r['genero_motivo'] ?? '';
+$r['genero_fuente'] = $r['genero_fuente'] ?? $r['fuente'];
+$r['genero_origen'] = 'estimado';
 
 $verificado = $r['origen'] === 'verificado';
 
