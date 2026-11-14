@@ -279,6 +279,86 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             padding: 20px;
         }
         .progress-overlay.visible { display: flex; }
+
+        /* ---- Modal «comprueba el cómic» ----
+           Va por encima de la capa de progreso (z-index mayor), pero esa
+           se oculta antes de mostrarlo: no tiene sentido decir «subiendo»
+           mientras se pregunta si hay que subir. */
+        .modal-obra {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 12, .9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 600;
+            padding: 20px;
+        }
+        .modal-obra.visible { display: flex; }
+        .modal-obra-box {
+            width: 100%;
+            max-width: 480px;
+            background: #141418;
+            border: 1px solid #2a2a30;
+            border-top: 3px solid #ce4646;
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+        }
+        .modal-obra-cab {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-bottom: 14px;
+        }
+        .modal-obra-cab i { color: #ce4646; font-size: 22px; }
+        .modal-obra-cab h3 {
+            margin: 0;
+            font-size: 19px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .modal-obra-txt {
+            margin: 0 0 12px;
+            color: #dcdcdc;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        /* La aclaración de que es una sospecha, no una comprobación. */
+        .modal-obra-nota {
+            margin: 0 0 20px;
+            padding: 10px 12px;
+            border-left: 2px solid #3a3a42;
+            color: #9a9aa2;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .modal-obra-nota strong { color: #c4c4cc; }
+        .modal-obra-botones {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-obra-botones button {
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        /* La opción segura se ve primero y es la que destaca menos. */
+        .btn-obra-cancelar {
+            background: transparent;
+            border-color: #3a3a42;
+            color: #c4c4cc;
+        }
+        .btn-obra-cancelar:hover { background: #1e1e24; color: #fff; }
+        .btn-obra-seguir {
+            background: #ce4646;
+            color: #fff;
+        }
+        .btn-obra-seguir:hover { background: #d95555; }
         .progress-box { width: 100%; max-width: 420px; text-align: center; }
         .progress-title {
             display: flex;
@@ -472,6 +552,32 @@ require __DIR__ . '/admin/cabecera.php';
         </div>
         <div class="progress-pct" id="prog-pct">0%</div>
         <div class="progress-status" id="prog-status">Enviando archivo…</div>
+    </div>
+</div>
+
+<!-- Aviso de que el archivo parece de otra obra.
+     Es un modal propio y no el confirm() del navegador: aquel aparecia
+     SOBRE la pantalla de progreso, que ya decia «Subiendo capitulo…
+     Procesando paginas» cuando todavia no se habia decidido nada. -->
+<div class="modal-obra" id="modal-obra">
+    <div class="modal-obra-box">
+        <div class="modal-obra-cab">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <h3>Comprueba el cómic</h3>
+        </div>
+        <p class="modal-obra-txt" id="modal-obra-txt"></p>
+        <p class="modal-obra-nota">
+            Es una sospecha por el <strong>nombre del archivo</strong>, no una
+            comprobación de su contenido. Si sabes que es correcto, continúa.
+        </p>
+        <div class="modal-obra-botones">
+            <button type="button" class="btn-obra-cancelar" id="obra-cancelar">
+                Revisar
+            </button>
+            <button type="button" class="btn-obra-seguir" id="obra-seguir">
+                Subir de todas formas
+            </button>
+        </div>
     </div>
 </div>
 
@@ -697,6 +803,49 @@ function handleUpload(input) {
 }
 
 // Interceptar submit del formulario con XHR + barra de progreso
+/**
+ * Pregunta si subir un archivo que parece de otra obra.
+ *
+ * Sustituye al confirm() del navegador, que aparecia SOBRE la pantalla
+ * de progreso: esa ya decia «Subiendo capitulo… Procesando paginas»
+ * cuando todavia no se habia decidido nada.
+ *
+ * Llama a alSalir(true) si se continua, alSalir(false) si se revisa.
+ */
+function preguntarObra(mensaje, alSalir) {
+    const caja    = document.getElementById('modal-obra');
+    const texto   = document.getElementById('modal-obra-txt');
+    const seguir  = document.getElementById('obra-seguir');
+    const revisar = document.getElementById('obra-cancelar');
+
+    // Sin el modal en la pagina, se cae al confirm() de siempre antes
+    // que dejar la subida bloqueada sin preguntar nada.
+    if (!caja || !texto || !seguir || !revisar) {
+        alSalir(window.confirm(mensaje + '\n\n¿Subirlo de todas formas?'));
+        return;
+    }
+
+    texto.textContent = mensaje;
+    caja.classList.add('visible');
+
+    function cerrar(resp) {
+        caja.classList.remove('visible');
+        seguir.removeEventListener('click', alSeguir);
+        revisar.removeEventListener('click', alRevisar);
+        document.removeEventListener('keydown', alTeclado);
+        alSalir(resp);
+    }
+    function alSeguir()  { cerrar(true); }
+    function alRevisar() { cerrar(false); }
+    // Escape equivale a «Revisar»: la salida segura.
+    function alTeclado(ev) { if (ev.key === 'Escape') cerrar(false); }
+
+    seguir.addEventListener('click', alSeguir);
+    revisar.addEventListener('click', alRevisar);
+    document.addEventListener('keydown', alTeclado);
+    revisar.focus();
+}
+
 document.getElementById('form-capitulo').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -759,16 +908,20 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                 // muestra tal cual en vez de un error genérico.
                 let msg;
                 if (res.error === 'posible_obra_distinta') {
-                    // El nombre del archivo menciona otra obra del
-                    // catalogo. NO se bloquea: es una sospecha por el
-                    // nombre, no una comprobacion del contenido, y el
-                    // archivo puede llamarse como sea y estar bien.
-                    if (confirm(res.mensaje + '\n\n¿Subirlo de todas formas?')) {
-                        // Se reintenta marcando que ya se confirmo.
-                        enviar(true);
-                        return;
-                    }
-                    showError('Subida cancelada. Revisa el archivo o el cómic elegido.');
+                    // El archivo parece de otra obra. NO se bloquea: es
+                    // una sospecha por el nombre, no una comprobacion del
+                    // contenido, y puede llamarse como sea y estar bien.
+                    //
+                    // La capa de progreso ya se oculto arriba, asi que no
+                    // queda diciendo «Subiendo capitulo» mientras se
+                    // pregunta si hay que subirlo.
+                    preguntarObra(res.mensaje, function (seguir) {
+                        if (seguir) {
+                            enviar(true);   // reintento ya confirmado
+                        } else {
+                            showError('Subida cancelada. Revisa el archivo o el cómic elegido.');
+                        }
+                    });
                     return;
                 }
                 if (res.error === 'numeracion') {
