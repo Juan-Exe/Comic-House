@@ -767,3 +767,24 @@ button:hover {
         display: none;
     }
 }
+/* Aviso que sustituye a los botones de lectura cuando el comic esta
+   registrado pero todavia no tiene capitulos. Mantiene el rojo de la
+   casa, pero en version apagada: informa, no invita a pulsar. */
+.aviso-sin-capitulos {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    padding: 9px 18px;
+    border: 1px solid rgba(206, 70, 70, .55);
+    border-radius: 5px;
+    background: rgba(206, 70, 70, .12);
+    color: #e7a9a9;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.aviso-sin-capitulos i {
+    font-size: 17px;
+    color: #ce4646;
+}

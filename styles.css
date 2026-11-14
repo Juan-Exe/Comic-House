@@ -936,3 +936,37 @@ header {
     }
 
 }
+/* ===== Proximamente =====
+   Comics registrados a los que aun no se les han subido capitulos.
+   Usan la misma tarjeta del catalogo (.Comics-btn-2), asi que la
+   reticula y la tipografia son identicas: solo cambia el distintivo y
+   un atenuado leve que los separa de lo que SI se puede leer. */
+.Comics-btn-2.es-proximamente {
+    position: relative;
+}
+
+.Comics-btn-2.es-proximamente .Comics-btns-2 {
+    filter: brightness(.62) saturate(.85);
+    transition: filter .3s ease;
+}
+
+.Comics-btn-2.es-proximamente:hover .Comics-btns-2 {
+    filter: brightness(.85) saturate(1);
+}
+
+/* El distintivo va sobre la portada, con el rojo de la casa. */
+.marca-proximamente {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #ce4646;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .55);
+}

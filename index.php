@@ -1,9 +1,19 @@
 <?php
 require_once __DIR__ . '/controlador/miniaturas.php'; include("modelo/conexion.php");
 session_start();
-$slider      = $conexion->query("SELECT * FROM comics WHERE destacado = 1 ORDER BY id ASC");
-$destacados  = $conexion->query("SELECT * FROM comics WHERE imprescindible = 1 ORDER BY id ASC LIMIT 4");
-$catalogo    = $conexion->query("SELECT * FROM comics ORDER BY id ASC LIMIT 100");
+// Un comic se puede LEER solo si tiene al menos un capitulo. Registrarlo
+// y subirle los capitulos son dos momentos distintos, asi que el catalogo
+// filtra por eso en vez de mostrarlo todo: antes un comic recien
+// registrado aparecia en portada y su ficha no tenia nada que leer.
+const TIENE_CAPITULOS = 'EXISTS (SELECT 1 FROM capitulos cap WHERE cap.comic_id = comics.id)';
+
+$slider      = $conexion->query("SELECT * FROM comics WHERE destacado = 1 AND " . TIENE_CAPITULOS . " ORDER BY id ASC");
+$destacados  = $conexion->query("SELECT * FROM comics WHERE imprescindible = 1 AND " . TIENE_CAPITULOS . " ORDER BY id ASC LIMIT 4");
+$catalogo    = $conexion->query("SELECT * FROM comics WHERE " . TIENE_CAPITULOS . " ORDER BY id ASC LIMIT 100");
+
+// Lo contrario: registrados pero aun sin capitulos. Se anuncian en vez de
+// esconderse, para que el catalogo muestre que sigue creciendo.
+$proximamente = $conexion->query("SELECT * FROM comics WHERE NOT " . TIENE_CAPITULOS . " ORDER BY id DESC LIMIT 12");
 $generos     = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'manga'");
 $generosn    = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'Comic'");
 // Las destacadas, en su orden. El formato (5 o 10 espacios) se elige en
@@ -583,6 +593,41 @@ $editoriales_portada = array_slice(
             <?php } ?>
         </div>
     </div>
+
+    <?php if ($proximamente && $proximamente->num_rows > 0): ?>
+        <!-- Comics registrados a los que aun no se les han subido capitulos.
+             Se anuncian en vez de ocultarse: sirven de anticipo. La seccion
+             entera desaparece cuando no hay ninguno, para no dejar un hueco
+             con un titulo y nada debajo. -->
+        <div class="Comics-titulo-2">
+            <div class="titulo-comics-ctn-2">
+                <h2>Próximamente</h2>
+            </div>
+        </div>
+
+        <div class="Comics-base-2">
+            <div class="Comics-container-2">
+                <?php while ($datos = $proximamente->fetch_object()) { ?>
+                    <!-- Mismas clases que el catalogo: misma reticula, misma
+                         tipografia. Solo cambia el distintivo y el atenuado. -->
+                    <div class="Comics-btn-2 es-proximamente"
+                         onclick="location.href='Comics/comics.php?id=<?= $datos->id ?>'">
+                        <span class="marca-proximamente">Próximamente</span>
+                        <img class="Comics-btns-2" src="<?= htmlspecialchars(miniatura($datos->portada, 400)) ?>" alt="<?= htmlspecialchars($datos->titulo) ?>">
+                        <div class="Comics-info-2">
+                            <p class="title-c-2"><?= htmlspecialchars($datos->titulo) ?></p>
+                            <!-- Aqui NO se muestra el numero de capitulos: no
+                                 hay ninguno subido y anunciarlo seria mentir. -->
+                            <p class="description-c-2">
+                                <span><?= htmlspecialchars($datos->clasificacion) ?></span>
+                                <?= htmlspecialchars($datos->anio) ?>
+                            </p>
+                        </div>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
+    <?php endif; ?>
 
 
     <footer class="footer">

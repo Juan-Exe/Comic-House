@@ -230,10 +230,23 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
                 </div>
 
                 <div class="button-div">
-                    <button onclick="location.href='../Lector/lector.php?capitulo_id=<?= $primerCapitulo['id'] ?>'">Leer
-                        Primero</button>
-                    <button onclick="location.href='../Lector/lector.php?capitulo_id=<?= $ultimoCapitulo['id'] ?>'">Leer
-                        Último</button>
+                    <?php if ($primerCapitulo && $ultimoCapitulo): ?>
+                        <!-- Los botones de lectura solo existen si hay algo que
+                             leer. Sin esta comprobacion, $primerCapitulo es null
+                             y se generaba «capitulo_id=» vacio: dos avisos de
+                             PHP y dos enlaces que no llevaban a ninguna parte. -->
+                        <button onclick="location.href='../Lector/lector.php?capitulo_id=<?= $primerCapitulo['id'] ?>'">Leer
+                            Primero</button>
+                        <button onclick="location.href='../Lector/lector.php?capitulo_id=<?= $ultimoCapitulo['id'] ?>'">Leer
+                            Último</button>
+                    <?php else: ?>
+                        <!-- El comic esta registrado pero aun no tiene capitulos.
+                             Se dice lo que es cierto, sin prometer una fecha. -->
+                        <p class="aviso-sin-capitulos">
+                            <i class="bi bi-clock-history"></i>
+                            Aún no hay capítulos disponibles
+                        </p>
+                    <?php endif; ?>
 
                     <button class="btn-add" onclick="agregarComic(<?= $comic['id'] ?>)">+</button>
                 </div>
