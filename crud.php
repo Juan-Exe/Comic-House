@@ -1951,12 +1951,35 @@ document.addEventListener('DOMContentLoaded', () => {
             lista.classList.add('visible');
         }
 
+        // Cada busqueda lleva un numero. Si al volver la respuesta ya
+        // hay otra busqueda en marcha, esta llega tarde y se descarta.
+        //
+        // Sin esto pasaba lo siguiente: al escribir «watchmen» salian
+        // peticiones para «watcj» y para «watchmen»; si la primera
+        // tardaba mas, su respuesta pisaba a la segunda y el aviso se
+        // quedaba clavado hablando de un titulo que ya no estaba
+        // escrito. La peticion anterior tambien se aborta, para no
+        // esperar por una respuesta que de todos modos se ignora.
+        let turno = 0;
+        let peticionEnCurso = null;
+
         async function buscar(titulo) {
+            const miTurno = ++turno;
+
+            if (peticionEnCurso) peticionEnCurso.abort();
+            const corte = new AbortController();
+            peticionEnCurso = corte;
+
             marcar('cargando', 'Buscando metadatos…');
             try {
                 const r = await fetch('controlador/buscar_metadatos.php?titulo='
-                                      + encodeURIComponent(titulo));
+                                      + encodeURIComponent(titulo),
+                                      { signal: corte.signal });
                 const d = await r.json();
+
+                // Mientras se esperaba empezo otra busqueda: lo que
+                // llega ahora corresponde a un titulo viejo.
+                if (miTurno !== turno) return;
 
                 if (!d.ok) {
                     const sug = (d.datos && d.datos.sugerencia) || '';
@@ -1984,9 +2007,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     : 'Se encontraron ' + cands.length + ' ediciones. Elige cuál corresponde.');
                 mostrarLista(cands);
             } catch (err) {
+                // Abortada a proposito porque se siguio escribiendo:
+                // no es un fallo y no debe avisar de nada.
+                if (err.name === 'AbortError' || miTurno !== turno) return;
                 marcar('error', 'No se pudo contactar la fuente');
                 decir('No se pudo contactar la fuente de datos. Regístralo a mano.');
                 lista.classList.remove('visible');
+                // Un fallo de red no debe dejar el titulo bloqueado:
+                // al volver a escribirlo tiene que reintentar.
+                ultimaBusqueda = '';
             }
         }
 
@@ -2005,6 +2034,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (t.toLowerCase() === ultimaBusqueda) return;
+
+            // El aviso en pantalla habla del titulo ANTERIOR. Se borra
+            // ya, al pulsar la tecla, para que no quede un mensaje
+            // sobre «watcj» debajo de un campo que dice «watchmen».
+            marcar('cargando', 'Escribiendo…');
+            decir('');
+            lista.classList.remove('visible');
 
             reloj = setTimeout(function () {
                 ultimaBusqueda = t.toLowerCase();
