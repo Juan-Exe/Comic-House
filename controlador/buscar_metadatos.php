@@ -257,6 +257,84 @@ while ($c = $r->fetch_assoc()) {
     ];
 }
 
+/**
+ * Editoriales que publican TRADUCCIONES, no la edicion original.
+ *
+ * COMPROBADO contra la API: al buscar "all star superman" las 8
+ * ediciones se llaman EXACTAMENTE igual, asi que el nombre no sirve
+ * para distinguirlas. Lo que las separa es quien las publica:
+ *
+ *    18139  DC Comics          2006  12 numeros  <- la original
+ *    41739  Panini Verlag      2006   6 numeros  <- aleman
+ *    78614  Planeta DeAgostini 2009   1 numero   <- espanol
+ *
+ * Y en "watchmen" la API devuelve PRIMERO la edicion brasilena de
+ * Abril y la original de DC 1986 en TERCER lugar: el orden de la API
+ * no es fiable, por eso se reordena aqui.
+ *
+ * No se descartan: una edicion traducida puede ser justo la que se
+ * quiere registrar. Solo bajan de posicion.
+ */
+const EDITORIALES_TRADUCCION = [
+    'panini', 'planeta deagostini', 'saldapress', 'glenat', 'glénat',
+    'delcourt', 'cross cult', 'urban comics', 'ediciones zinco',
+    'norma editorial', 'abril', 'europe comics', 'mangaline',
+    'japonica polonica', 'elvifrance', 'ivrea', 'kodansha comics',
+];
+
+/**
+ * Puntua una edicion para que la ORIGINAL salga primero.
+ *
+ * Tres senales, de mas a menos decisiva:
+ *   1. El numero de entregas. La edicion completa tiene mas que
+ *      cualquier recopilatorio o tomo suelto (145 frente a 25 en
+ *      Invincible; 12 frente a 1 en All Star Superman).
+ *   2. La editorial. Si traduce, la original esta en otra parte.
+ *   3. El anio. La original precede siempre a sus traducciones.
+ *
+ * Es una REGLA, no un modelo: con los mismos datos puntua igual.
+ */
+function puntuarEdicion(array $c, int $maxIssues): int {
+    $p = 0;
+
+    // El titulo identico a lo escrito pesa mas que todo lo demas:
+    // separa "All Star Superman" de "Man Of Steel: All-Star Superman".
+    if ($c['coincide_exacto']) {
+        $p += 1000;
+    }
+
+    $editorial = mb_strtolower($c['editorial_api'] ?? '');
+    $traduce = false;
+    foreach (EDITORIALES_TRADUCCION as $sello) {
+        if (str_contains($editorial, $sello)) {
+            $traduce = true;
+            break;
+        }
+    }
+    if (!$traduce) {
+        $p += 300;
+    }
+
+    // Proporcion de entregas respecto a la edicion mas completa:
+    // premia a la serie entera sin que un numero grande aplaste al
+    // resto de senales.
+    $n = (int) $c['n_issues'];
+    if ($maxIssues > 0) {
+        $p += (int) round(250 * ($n / $maxIssues));
+    }
+    // Un solo numero casi siempre es un recopilatorio o un tomo suelto.
+    if ($n === 1) {
+        $p -= 120;
+    }
+
+    // A igualdad de todo lo anterior, la mas antigua es la original.
+    if (!empty($c['anio'])) {
+        $p += max(0, 80 - ((int) $c['anio'] - 1900) / 2);
+    }
+
+    return (int) $p;
+}
+
 $ANIO_ACTUAL = (int) date('Y');
 $candidatos = [];
 
@@ -302,6 +380,11 @@ foreach ($resultados as $v) {
         'ya_registrado'  => isset($yaRegistrados[mb_strtolower($nombre)]),
         'registrado_como' => $yaRegistrados[mb_strtolower($nombre)] ?? null,
         'coincide_exacto'=> mb_strtolower($nombre) === mb_strtolower($titulo),
+        // Para puntuar: la editorial TAL CUAL la da la API, porque
+        // mapearEditorial() ya la normalizo contra el catalogo y se
+        // perderia el sello que delata una traduccion.
+        'editorial_api'  => $v['publisher']['name'] ?? '',
+        'n_issues'       => $nIssues,
     ];
 }
 
@@ -309,8 +392,28 @@ if (!$candidatos) {
     responder(false, [], 'Los resultados no traían datos utilizables. Regístralo a mano.');
 }
 
-// Si uno coincide exactamente con lo escrito, va primero.
-usort($candidatos, fn($a, $b) => ($b['coincide_exacto'] <=> $a['coincide_exacto']));
+// La API devuelve las ediciones en un orden poco fiable: con
+// "watchmen" la primera es la brasilena de Abril y la original de DC
+// de 1986 aparece TERCERA. Se reordena por puntuacion para que la
+// edicion original quede arriba, que es la que casi siempre se busca.
+$maxIssues = max(array_column($candidatos, 'n_issues')) ?: 0;
+
+foreach ($candidatos as &$c) {
+    $c['puntos'] = puntuarEdicion($c, $maxIssues);
+}
+unset($c);
+
+usort($candidatos, fn($a, $b) => $b['puntos'] <=> $a['puntos']);
+
+// La mejor puntuada se marca para que la interfaz pueda senalarla:
+// sigue siendo el administrador quien elige, no se guarda nada solo.
+$candidatos[0]['recomendado'] = true;
+
+// Los campos de trabajo no viajan al navegador.
+foreach ($candidatos as &$c) {
+    unset($c['editorial_api'], $c['n_issues'], $c['puntos']);
+}
+unset($c);
 
 $exacto = $candidatos[0]['coincide_exacto'];
 

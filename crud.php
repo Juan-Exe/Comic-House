@@ -1919,8 +1919,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             : 'Ya hay un cómic con este título (' +
                               [yaReg.editorial, yaReg.anio].filter(Boolean).join(' · ') + ')') +
                         '">ya existe</span>';
-                } else if (c.coincide_exacto) {
-                    marca = '<span class="meta-marca exacta">exacto</span>';
+                } else if (c.recomendado) {
+                    // «exacto» salia en TODAS: las 8 ediciones de All Star
+                    // Superman se llaman igual, asi que no distinguia nada.
+                    // Se marca la que el orden situa como edicion original.
+                    marca = '<span class="meta-marca exacta" ' +
+                        'title="Edición más completa de la editorial original. ' +
+                        'Las demás suelen ser traducciones o recopilatorios.">' +
+                        'original</span>';
                 }
 
                 // La editorial es lo que distingue una edicion de otra
