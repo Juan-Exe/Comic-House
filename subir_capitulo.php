@@ -339,6 +339,53 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             color: #9a9aa2;
         }
         .chip-mas:hover { color: #fff; border-color: #ce4646; }
+
+        /* ---- Tomos del wiki ----
+           Cada botón deja el formulario listo para ese tomo: rango,
+           arco y fecha de publicación. */
+        .lista-tomos {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 14px;
+            padding: 11px 14px;
+            border-left: 3px solid #4a7fb5;
+            border-radius: 0 6px 6px 0;
+            background: rgba(74, 127, 181, .08);
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .chip-tomo {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border: 1px solid #3f4a58;
+            border-radius: 4px;
+            background: #1a1e24;
+            color: #cdd6e0;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, border-color .15s;
+        }
+        .chip-tomo:hover { background: #4a7fb5; border-color: #4a7fb5; color: #fff; }
+        .chip-rango {
+            font-family: ui-monospace, Consolas, monospace;
+            font-weight: normal;
+            opacity: .75;
+        }
+        /* El tomo que coincide con el rango escrito. */
+        .tomo-pista {
+            grid-column: 1 / -1;
+            display: block;
+            margin: -4px 0 2px;
+            color: #9fc0de;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .tomo-pista strong { color: #cfe3f5; }
         /* Cuando no falta ninguno el aviso deja de ser rojo. */
         .cap-resumen:has(.res-completo) {
             border-left-color: #4fa06a;
@@ -609,6 +656,8 @@ require __DIR__ . '/admin/cabecera.php';
                 <!-- De dónde salió la numeración, cuando se dedujo del
                      nombre del archivo. Es una propuesta, no un dato. -->
                 <small class="num-pista" id="num-pista" hidden></small>
+                <!-- El tomo del wiki que coincide con ese rango. -->
+                <small class="tomo-pista" id="tomo-pista" hidden></small>
 
                 <div class="campo campo-ancho oculto" id="campo-arco">
                     <label for="cap-arco">Arco <span class="suave">(opcional)</span></label>
@@ -642,6 +691,9 @@ require __DIR__ . '/admin/cabecera.php';
                  JS al cargar los capítulos y se oculta si la obra no
                  declara cuántos números publicó. -->
             <div class="cap-resumen" id="cap-resumen" hidden></div>
+            <!-- Tomos del wiki que faltan por subir. Al pulsar uno se
+                 rellena el rango, el arco y la fecha de publicación. -->
+            <div class="lista-tomos" id="lista-tomos" hidden></div>
             <div class="cap-list" id="cap-list">
                 <p class="empty">Cargando…</p>
             </div>
@@ -722,6 +774,7 @@ function selectComic(card) {
     // Cargar capítulos del cómic
     cargarCapitulos(card.dataset.id, card.dataset.titulo);
     cargarTitulosWiki(card.dataset.titulo);
+    cargarTomosWiki(card.dataset.titulo);
 }
 
 function backToPicker() {
@@ -1233,6 +1286,160 @@ function proponerTitulo() {
     // Si se escribe a mano, deja de considerarse sugerido.
     if (campoTit) campoTit.addEventListener('input', function () {
         campoTit.dataset.delWiki = '0';
+    });
+})();
+
+
+
+/** Escapa texto que llega de un wiki antes de meterlo en el HTML. */
+function esc(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ---- Tomos del wiki (arco, fecha y rango) ----
+   Los capitulos no se suben de uno en uno: se suben TOMOS que agrupan
+   un rango de episodios, cada uno con su arco y su fecha. Todo eso se
+   tecleaba a mano mirando el wiki.
+
+   Se carga una vez al elegir la obra. Cuando el rango del formulario
+   coincide con el de un tomo, se rellenan arco y fecha solos. */
+let __tomosWiki = null;
+
+function cargarTomosWiki(titulo) {
+    __tomosWiki = null;
+    fetch('controlador/buscar_tomos_wiki.php?titulo=' + encodeURIComponent(titulo))
+        .then(r => r.json())
+        .then(d => {
+            if (!d.ok || !d.datos) return;
+            __tomosWiki = d.datos;
+            pintarTomos();
+        })
+        .catch(() => { /* el wiki es opcional */ });
+}
+
+/** Busca el tomo que cubre exactamente ese rango. */
+function tomoDe(desde, hasta) {
+    if (!__tomosWiki) return null;
+    return __tomosWiki.tomos.find(t =>
+        t.desde === desde && (hasta ? t.hasta === hasta : t.hasta === desde)) || null;
+}
+
+/** Rellena arco y fecha cuando el rango coincide con un tomo. */
+function aplicarTomo() {
+    const cDesde = document.getElementById('cap-desde');
+    const cHasta = document.getElementById('cap-hasta');
+    const cArco  = document.getElementById('cap-arco');
+    const cFecha = document.getElementById('fecha-display');
+    const pista  = document.getElementById('tomo-pista');
+    if (!cDesde) return;
+
+    function decir(txt) {
+        if (!pista) return;
+        pista.innerHTML = txt || '';
+        pista.hidden = !txt;
+    }
+
+    const d = parseInt(cDesde.value, 10);
+    const h = cHasta && cHasta.value ? parseInt(cHasta.value, 10) : null;
+    if (!d) { decir(''); return; }
+
+    const t = tomoDe(d, h);
+    if (!t) { decir(''); return; }
+
+    let puesto = [];
+
+    // El arco solo se rellena si esta vacio o lo puso el wiki antes.
+    if (cArco && t.arco && (!cArco.value.trim() || cArco.dataset.delWiki === '1')) {
+        cArco.value = t.arco;
+        cArco.dataset.delWiki = '1';
+        puesto.push('arco');
+    }
+
+    if (cFecha && t.fecha && (!cFecha.value.trim() || cFecha.dataset.delWiki === '1')) {
+        const p = t.fecha.split('-');            // aaaa-mm-dd
+        cFecha.value = p[2] + ' / ' + p[1] + ' / ' + p[0];
+        cFecha.dataset.delWiki = '1';
+        if (typeof maskFecha === 'function') maskFecha(cFecha);
+        puesto.push('fecha');
+    }
+
+    decir('<strong>Tomo ' + t.tomo + '</strong> del wiki: episodios ' +
+          t.desde + ' – ' + t.hasta +
+          (t.arco ? ' · ' + esc(t.arco) : '') +
+          (t.fecha ? ' · ' + t.fecha.split('-').reverse().join('/') : '') +
+          (puesto.length ? '. Se rellenó ' + puesto.join(' y ') + '.' : '.'));
+}
+
+/** Botones con los tomos que faltan por subir. */
+function pintarTomos() {
+    const caja = document.getElementById('lista-tomos');
+    if (!caja || !__tomosWiki) return;
+
+    // Que numeros estan ya cubiertos por lo subido.
+    const cubierto = new Set();
+    (window.__capitulos || []).forEach(c => {
+        const d = parseInt(c.numero_desde, 10), h = parseInt(c.numero_hasta, 10);
+        if (!isNaN(d) && !isNaN(h)) for (let i = d; i <= h; i++) cubierto.add(i);
+    });
+
+    const faltan = __tomosWiki.tomos.filter(t => {
+        for (let i = t.desde; i <= t.hasta; i++) if (!cubierto.has(i)) return true;
+        return false;
+    });
+
+    if (!faltan.length) {
+        caja.hidden = true;
+        return;
+    }
+
+    caja.hidden = false;
+    caja.innerHTML =
+        '<span class="res-etiqueta">Tomos pendientes según ' +
+        esc(__tomosWiki.fuente.split(' · ')[0]) + ':</span>' +
+        faltan.slice(0, 24).map(t =>
+            '<button type="button" class="chip-tomo" data-d="' + t.desde +
+            '" data-h="' + t.hasta + '" title="' + esc(t.arco || '') +
+            (t.fecha ? ' · ' + t.fecha : '') + '">Tomo ' + t.tomo +
+            ' <span class="chip-rango">' + t.desde + '–' + t.hasta + '</span></button>'
+        ).join('') +
+        (faltan.length > 24 ? '<span class="res-etiqueta">y ' + (faltan.length - 24) + ' más</span>' : '');
+
+    caja.querySelectorAll('.chip-tomo').forEach(b => {
+        b.addEventListener('click', () => usarTomo(+b.dataset.d, +b.dataset.h));
+    });
+}
+
+/** Deja el formulario listo para ese tomo. */
+function usarTomo(d, h) {
+    const sel    = document.getElementById('cap-formato');
+    const cDesde = document.getElementById('cap-desde');
+    const cHasta = document.getElementById('cap-hasta');
+
+    const esRango = h > d;
+    if (sel) {
+        sel.value = esRango ? 'rango' : 'grapa';
+        sel.dataset.tocado = '1';
+        if (typeof ajustarFormato === 'function') ajustarFormato();
+    }
+    if (cDesde) cDesde.value = d;
+    if (cHasta) cHasta.value = esRango ? h : '';
+
+    aplicarTomo();
+    if (typeof proponerTitulo === 'function') proponerTitulo();
+    if (cDesde) cDesde.focus();
+}
+
+(function () {
+    ['cap-desde', 'cap-hasta'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', aplicarTomo);
+    });
+    // Si se escriben a mano, dejan de considerarse del wiki.
+    ['cap-arco', 'fecha-display'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', function () { el.dataset.delWiki = '0'; });
     });
 })();
 
