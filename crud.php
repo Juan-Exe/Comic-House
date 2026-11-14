@@ -532,6 +532,35 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             font-size: var(--t-nota);
         }
 
+        /* Aviso de campos que faltan, sobre el boton de registrar. */
+        .aviso-faltan {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 10px;
+            padding: 9px 12px;
+            border: 1px solid rgba(239, 68, 68, .45);
+            border-radius: 6px;
+            background: rgba(239, 68, 68, .1);
+            color: #f0a9a9;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .aviso-faltan i { color: var(--rojo); font-size: 14px; }
+
+        /* El boton sigue visible, pero se ve que no se puede pulsar. */
+        .btn-desactivado {
+            opacity: .45;
+            cursor: not-allowed;
+            filter: grayscale(.35);
+        }
+
+        /* El <select> de editorial cuando esta sin elegir: es el campo
+           que mas se pasa por alto, porque arranca con un texto puesto. */
+        .campo-falta {
+            border-color: rgba(239, 68, 68, .65) !important;
+        }
+
         .meta-pista {
             display: block; margin-top: 5px;
             font-size: 11px; color: var(--texto-bajo); line-height: 1.4;
@@ -761,7 +790,7 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
         <h2><i class="bi bi-plus-circle-fill"></i> Registrar cómic</h2>
         <!-- autocomplete="off": el navegador proponía lo escrito antes
              y pintaba una flecha que parecía un desplegable. -->
-        <form enctype="multipart/form-data" method="POST" autocomplete="off">
+        <form enctype="multipart/form-data" method="POST" autocomplete="off" id="form-registro">
 
             <div class="field">
                 <label for="f-titulo">Título</label>
@@ -903,7 +932,11 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                 </div>
             </div>
 
-            <button type="submit" name="btnregistrar" value="ok" class="btn btn-rojo" style="width:100%">
+            <!-- Dice QUE falta, en vez de dejar enviar y responder «todos los
+                 campos son obligatorios» perdiendo lo ya escrito. -->
+            <p class="aviso-faltan" id="aviso-faltan" hidden></p>
+
+            <button type="submit" name="btnregistrar" value="ok" class="btn btn-rojo" id="btn-registrar" style="width:100%">
                 <i class="bi bi-plus-lg"></i> Registrar cómic
             </button>
         </form>
@@ -2160,6 +2193,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 buscar(t);
             }, 350);
         });
+
+        /* ---- Campos obligatorios ----
+           El servidor ya rechaza el alta incompleta, pero respondia
+           «Todos los campos son obligatorios» SIN decir cual faltaba y
+           perdiendo todo lo escrito. Aqui se dice que falta mientras se
+           rellena, y el boton no deja enviar hasta que no falte nada.
+
+           Esto es ayuda visual: la validacion que manda sigue siendo la
+           de registro_comcis.php, que no se puede saltar desde fuera. */
+        (function () {
+            const form = document.getElementById('form-registro');
+            const boton = document.getElementById('btn-registrar');
+            const aviso = document.getElementById('aviso-faltan');
+            if (!form || !boton || !aviso) return;
+
+            // Mismos campos que exige el servidor, con su nombre visible.
+            const OBLIGATORIOS = [
+                ['titulo',        'el título'],
+                ['editorial',     'la editorial'],
+                ['clasificacion', 'la clasificación'],
+                ['tipo',          'el tipo'],
+                ['genero',        'el género'],
+                ['anio',          'el año'],
+                ['descripcion',   'la descripción'],
+            ];
+
+            function faltantes() {
+                return OBLIGATORIOS.filter(function (par) {
+                    const campo = form.querySelector('[name="' + par[0] + '"]');
+                    return !campo || !String(campo.value || '').trim();
+                }).map(function (par) { return par[1]; });
+            }
+
+            function revisar() {
+                const faltan = faltantes();
+                boton.disabled = faltan.length > 0;
+                boton.classList.toggle('btn-desactivado', faltan.length > 0);
+
+                if (!faltan.length) {
+                    aviso.hidden = true;
+                    aviso.textContent = '';
+                } else {
+                    aviso.hidden = false;
+                    aviso.innerHTML = '<i class="bi bi-exclamation-circle"></i> Falta ' +
+                        (faltan.length === 1
+                            ? faltan[0]
+                            : faltan.slice(0, -1).join(', ') + ' y ' + faltan[faltan.length - 1]) +
+                        '.';
+                }
+
+                // La editorial se marca aparte: es el caso que mas se cuela,
+                // porque el <select> arranca en «Elegir editorial».
+                const sel = document.getElementById('f-editorial');
+                if (sel) sel.classList.toggle('campo-falta', !String(sel.value || '').trim());
+            }
+
+            // input y change cubren texto, selects y los grupos de botones,
+            // que disparan change al cambiar su campo oculto.
+            form.addEventListener('input', revisar);
+            form.addEventListener('change', revisar);
+            // Los grupos de opciones (tipo, clasificacion) escriben en un
+            // campo oculto por JS, que no dispara eventos solo.
+            form.addEventListener('click', function () { setTimeout(revisar, 0); });
+
+            revisar();
+        })();
 
         // Enter busca de inmediato en vez de enviar el formulario a medias.
         campoTit.addEventListener('keydown', function (e) {

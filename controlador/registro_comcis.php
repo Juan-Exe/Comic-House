@@ -1,10 +1,20 @@
 <?php
 
 if (!empty($_POST["btnregistrar"])) {
-    if (
-        !empty($_POST["titulo"]) && !empty($_POST["clasificacion"]) && !empty($_POST["editorial"]) && !empty($_POST["tipo"]) &&
-        !empty($_POST["descripcion"]) && !empty($_POST["anio"]) && !empty($_POST["genero"])
-    ) {
+    // Se comprueba sobre el texto YA recortado: !empty('   ') es true en
+    // PHP, asi que una editorial de solo espacios pasaba el filtro y se
+    // guardaba el comic sin editorial real.
+    $obligatorios = ['titulo', 'clasificacion', 'editorial', 'tipo',
+                     'descripcion', 'anio', 'genero'];
+    $completo = true;
+    foreach ($obligatorios as $campo) {
+        if (trim($_POST[$campo] ?? '') === '') {
+            $completo = false;
+            break;
+        }
+    }
+
+    if ($completo) {
 
         // NORMALIZACION AL INSERTAR (correccion 1 del Momento 1).
         // El titulo se limpia aqui, al escribir, y no con un TRIM dentro
