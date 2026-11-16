@@ -54,7 +54,8 @@ function numeroDeCapitulo(string $texto): ?int
  *
  * El campo es texto libre y en el catálogo aparece sobre todo como un
  * rango ('1 - 380'), así que el total es el ÚLTIMO número, no el
- * primero. Devuelve null si no hay ninguno.
+ * primero. Solo acepta un número o un rango numérico; «1 - en emisión»
+ * no declara un final y devuelve null.
  */
 function capitulosDeclarados(mysqli $conexion, int $comic_id): ?int
 {
@@ -65,10 +66,10 @@ function capitulosDeclarados(mysqli $conexion, int $comic_id): ?int
     $hay = $st->fetch();
     $st->close();
 
-    if (!$hay || !preg_match_all('/[0-9]+/', (string) $texto, $m)) {
+    if (!$hay || !preg_match('/^\s*(?:[0-9]+\s*[-–]\s*)?([0-9]+)\s*$/u', (string) $texto, $m)) {
         return null;
     }
-    $n = (int) end($m[0]);
+    $n = (int) $m[1];
     return $n > 0 ? $n : null;
 }
 
@@ -103,12 +104,8 @@ function revisarCapitulo(
                             mb_strtolower($tipo), FORMATOS_CAPITULO[$formato]));
     }
 
-    // Un recopilatorio no lleva número de capítulo.
-    if ($formato === 'tomo') {
-        return ['estado' => 'ok', 'mensaje' => '', 'desde' => 1, 'hasta' => 1];
-    }
-
-    $desde = numeroDeCapitulo($desde_txt);
+    // El recopilatorio usa 1 internamente y también debe comprobar solapes.
+    $desde = $formato === 'tomo' ? 1 : numeroDeCapitulo($desde_txt);
     if ($desde === null) {
         return $err('El número de capítulo solo admite dígitos, del 1 al 9999, '
                   . 'y sin ceros delante.');
@@ -146,14 +143,26 @@ function revisarCapitulo(
         return $err('Esos capítulos ya están en «' . $choca . '».');
     }
 
+    if ($formato === 'tomo') {
+        return ['estado' => 'ok', 'mensaje' => '', 'desde' => 1, 'hasta' => 1];
+    }
+
     // ¿Supera lo que la obra declara tener? Es un aviso, no un error:
     // una serie en publicación puede crecer más allá de lo registrado.
-    $total = capitulosDeclarados($conexion, $comic_id);
-    if ($total !== null && $hasta > $total) {
+    $st = $conexion->prepare('SELECT capitulo_desde, capitulo_hasta FROM comics WHERE id = ?');
+    $st->bind_param('i', $comic_id);
+    $st->execute();
+    $st->bind_result($inicio, $fin);
+    $st->fetch();
+    $st->close();
+    $inicio = (int) ($inicio ?: 1);
+    $total = $fin !== null ? (int) $fin : capitulosDeclarados($conexion, $comic_id);
+    if ($desde < $inicio || ($total !== null && $hasta > $total)) {
+        $rango = $total !== null ? "{$inicio}–{$total}" : "desde el $inicio";
+        $entrega = $desde === $hasta ? "el capítulo $desde" : "los capítulos {$desde}–{$hasta}";
         return [
             'estado' => 'aviso',
-            'mensaje' => "La obra tiene $total capítulos registrados y estás "
-                       . "subiendo hasta el $hasta.",
+            'mensaje' => "El rango publicado registrado es $rango y estás subiendo $entrega. Comprueba la numeración antes de continuar.",
             'desde' => $desde, 'hasta' => $hasta,
         ];
     }
@@ -293,6 +302,14 @@ function archivoPareceDeOtraObra(
         foreach ($palabrasDestino as $d) {
             if ($w === $d || str_contains($d, $w) || str_contains($w, $d)) {
                 return $nada;   // alguna palabra coincide: parece correcto
+            }
+            // Una sola letra en palabras largas no basta para sospechar otra
+            // obra: «Invencible» e «Invincible» difieren en una vocal. No se
+            // aplica a nombres cortos ni invalida la coincidencia exacta con
+            // otra obra del catálogo, que ya se comprobó más arriba.
+            if (min(strlen($w), strlen($d)) >= 7 && abs(strlen($w) - strlen($d)) <= 1
+                && levenshtein($w, $d) === 1) {
+                return $nada;
             }
         }
     }

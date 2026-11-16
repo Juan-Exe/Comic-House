@@ -8,7 +8,7 @@ if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
 }
 
 $comics = $conexion->query(
-    "SELECT id, titulo, portada, tipo, capitulos
+    "SELECT id, titulo, portada, tipo, capitulos, anio, editorial, estado_publicacion
        FROM comics ORDER BY titulo ASC"
 );
 $auto_comic_id = intval($_GET['comic_id'] ?? 0);
@@ -23,6 +23,8 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="admin/admin.css">
+    <link rel="stylesheet" href="admin/controles.css">
+    <link rel="stylesheet" href="admin/lote-capitulos.css">
     <style>
         /* Propio de esta pantalla: el selector de cómic, la zona de
            archivo y el progreso. Lo demás viene de admin/admin.css. */
@@ -96,7 +98,7 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
 
         .rejilla-campos {
             display: grid;
-            grid-template-columns: 1fr minmax(170px, auto);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0 20px;
         }
         .campo-ancho { grid-column: 1 / -1; }
@@ -367,8 +369,18 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             cursor: pointer;
         }
         .fila-tomo:hover { background: rgba(206, 70, 70, .1); }
+        .fila-tomo:disabled { opacity: .5; cursor: default; }
+        .tomos-opciones { padding: 12px 14px; border-bottom: 1px solid #2a2a30; }
+        .tomos-opciones label { display: block; margin-bottom: 7px; font-size: 12px; }
+        .tomos-opciones select {
+            width: 100%; padding: 9px; color: var(--texto); background: var(--papel);
+            border: 1px solid var(--linea); border-radius: 6px; font: inherit;
+        }
+        .tomos-aviso { padding: 10px 14px; color: #aaaab3; font-size: 12px; line-height: 1.5; }
+        .tomos-aviso p { margin: 0; }
         .ft-num {
-            flex: 0 0 68px;
+            flex: 0 0 96px;
+            white-space: nowrap;
             color: #ce4646;
             font-size: 12.5px;
             font-weight: bold;
@@ -383,19 +395,40 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
             text-overflow: ellipsis;
         }
         .ft-meta { color: #85858e; font-size: 11.5px; }
+        .fila-tomo.sin-titulo .ft-arco { color: #96969f; font-weight: 500; }
         .ft-usar { margin-left: auto; color: #4a4a52; font-size: 15px; }
         .fila-tomo:hover .ft-usar { color: #ce4646; }
 
         /* El tomo que coincide con el rango escrito. */
         .tomo-pista {
             grid-column: 1 / -1;
-            display: block;
-            margin: -4px 0 2px;
-            color: #c9a0a0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 0 0 20px;
+            padding: 11px 13px;
+            border: 1px solid var(--linea);
+            border-radius: var(--r);
+            background: rgba(255,255,255,.025);
+            color: var(--texto-medio);
             font-size: 12px;
-            line-height: 1.45;
+            line-height: 1.5;
         }
-        .tomo-pista strong { color: #e9c3c3; }
+        .tomo-pista[hidden] { display: none; }
+        .sugerencia-icono { color: #a6a6ae; margin-top: 1px; }
+        .sugerencia-datos { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .sugerencia-principal { display: flex; flex-wrap: wrap; gap: 5px 12px; }
+        .sugerencia-principal strong { color: #d5d5db; font-weight: 600; }
+        .sugerencia-fecha { color: #aaaab3; }
+        .sugerencia-fuente, .sugerencia-nota { font-size: 11px; color: #85858f; overflow-wrap: anywhere; }
+        .fila-tomo .ft-num { color: #bcbcc5; }
+        .fila-tomo.seleccionada { background: rgba(255,255,255,.045); }
+        .fila-tomo.seleccionada .ft-usar { color: #d5d5db; }
+        .rejilla-campos .campo input:focus {
+            border-color: #797981;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255,255,255,.04);
+        }
         /* Cuando no falta ninguno el aviso deja de ser rojo. */
         .cap-resumen:has(.res-completo) {
             border-left-color: #4fa06a;
@@ -542,6 +575,9 @@ $auto_comic_id = intval($_GET['comic_id'] ?? 0);
         .progress-pct { font-size: 26px; font-weight: 800; margin-top: 14px; }
         .progress-status { font-size: var(--t-nota); color: var(--texto-medio); margin-top: 3px; }
 
+        @media (max-width: 1000px) {
+            .dos-columnas { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+        }
         @media (max-width: 760px) {
             .rejilla-campos { grid-template-columns: 1fr; }
         }
@@ -581,6 +617,9 @@ require __DIR__ . '/admin/cabecera.php';
                      data-portada="<?= !empty($comic['portada']) ? 'uploads/' . htmlspecialchars($comic['portada']) : '' ?>"
                      data-tipo="<?= htmlspecialchars($comic['tipo'], ENT_QUOTES) ?>"
                      data-capitulos="<?= htmlspecialchars($comic['capitulos'], ENT_QUOTES) ?>"
+                     data-anio="<?= (int) $comic['anio'] ?>"
+                     data-editorial="<?= htmlspecialchars($comic['editorial'], ENT_QUOTES) ?>"
+                     data-estado="<?= htmlspecialchars($comic['estado_publicacion'], ENT_QUOTES) ?>"
                      onclick="selectComic(this)">
                     <?php if (!empty($comic['portada'])): ?>
                         <img src="<?= htmlspecialchars(miniatura($comic['portada'], 400)) ?>"
@@ -614,6 +653,22 @@ require __DIR__ . '/admin/cabecera.php';
                 </button>
             </div>
 
+            <section class="lote-panel" id="lote-panel" aria-labelledby="lote-titulo" hidden>
+                <div class="lote-cabecera">
+                    <h3 id="lote-titulo">Archivos del lote</h3>
+                    <button type="button" class="lote-enlace" id="lote-cerrar">Vaciar lista</button>
+                </div>
+                <p class="lote-ayuda">Revisa cada entrega antes de subir. Elige una fila para corregir sus datos abajo.</p>
+                <ol id="lote-lista" class="lote-lista" aria-label="Revisión de archivos"></ol>
+                <p id="lote-resumen" class="lote-resumen" role="status" aria-live="polite"></p>
+                <button type="button" class="lote-enlace" id="lote-comprobar">Volver a comprobar</button>
+                <div class="lote-edicion" id="lote-edicion">
+                    <span><i class="bi bi-pencil" aria-hidden="true"></i> Editando <strong id="lote-actual"></strong></span>
+                    <button type="button" class="lote-enlace" id="lote-reemplazar">Cambiar archivo</button>
+                    <input type="file" id="lote-archivo-nuevo" accept=".cbr,.cbz" hidden>
+                </div>
+            </section>
+
             <div class="rejilla-campos">
                 <div class="campo">
                     <label for="cap-titulo">Título del capítulo</label>
@@ -625,11 +680,20 @@ require __DIR__ . '/admin/cabecera.php';
 
                 <div class="campo">
                     <label for="fecha-display">Fecha de publicación <span class="suave">(opcional)</span></label>
+                    <div class="fecha-control">
                     <div class="fecha-caja">
                         <input type="text" id="fecha-display" placeholder="dd / mm / aaaa"
                                maxlength="14" autocomplete="off" oninput="maskFecha(this)">
-                        <i class="bi bi-calendar3"></i>
                         <input type="hidden" name="fecha_publicacion" id="fecha-hidden">
+                        <input type="hidden" name="fecha_publicacion_mes" id="fecha-mes-hidden">
+                    </div>
+                    <div class="fecha-precision">
+                        <select id="fecha-precision" data-personalizado data-menu-ancho="180" data-menu-alinear="derecha"
+                                aria-label="Precisión de la fecha" onchange="ajustarPrecisionFecha()">
+                            <option value="dia" data-resumen="Completa">Día, mes y año</option>
+                            <option value="mes">Mes y año</option>
+                        </select>
+                    </div>
                     </div>
                     <!-- Dice por que una fecha no vale. Antes el campo se
                          quedaba callado: aceptaba «32/32/2333» a la vista
@@ -643,7 +707,7 @@ require __DIR__ . '/admin/cabecera.php';
                 <div class="fila-numeracion">
                     <div class="campo">
                         <label for="cap-formato">Numeración</label>
-                        <select id="cap-formato" name="formato" onchange="ajustarFormato()">
+                        <select id="cap-formato" name="formato" data-personalizado onchange="ajustarFormato()">
                             <option value="grapa">Número suelto</option>
                             <option value="rango">Varios capítulos</option>
                             <option value="tomo">Recopilatorio</option>
@@ -679,16 +743,16 @@ require __DIR__ . '/admin/cabecera.php';
                 <div class="campo campo-ancho">
                     <label for="archivo-cap">Archivo del capítulo</label>
                     <label class="zona-archivo" id="upload-area">
-                        <input type="file" id="archivo-cap" name="cbr_file" accept=".cbr,.cbz"
+                        <input type="file" id="archivo-cap" name="cbr_file" accept=".cbr,.cbz" multiple
                                required onchange="handleUpload(this)">
                         <i class="bi bi-file-zip" id="up-icon"></i>
-                        <span id="up-label">Elegir un archivo .cbr o .cbz</span>
+                        <span id="up-label">Elegir archivos .cbr o .cbz</span>
                         <span id="up-count"></span>
                     </label>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-rojo" style="width:100%;margin-top:6px">
+            <button type="submit" class="btn btn-rojo" id="subir-capitulos" style="width:100%;margin-top:6px">
                 <i class="bi bi-cloud-upload"></i> Subir capítulo
             </button>
         </form>
@@ -734,11 +798,11 @@ require __DIR__ . '/admin/cabecera.php';
      Es un modal propio y no el confirm() del navegador: aquel aparecia
      SOBRE la pantalla de progreso, que ya decia «Subiendo capitulo…
      Procesando paginas» cuando todavia no se habia decidido nada. -->
-<div class="modal-obra" id="modal-obra">
+<div class="modal-obra" id="modal-obra" role="dialog" aria-modal="true" aria-labelledby="modal-aviso-titulo">
     <div class="modal-obra-box">
         <div class="modal-obra-cab">
             <i class="bi bi-exclamation-triangle-fill"></i>
-            <h3>Comprueba el cómic</h3>
+            <h3 id="modal-aviso-titulo">Comprueba el cómic</h3>
         </div>
         <p class="modal-obra-txt" id="modal-obra-txt"></p>
         <p class="modal-obra-nota">
@@ -756,8 +820,36 @@ require __DIR__ . '/admin/cabecera.php';
     </div>
 </div>
 
+<script src="js/select-personalizado.js"></script>
+<script src="js/fechas-capitulo.js"></script>
+<script src="js/tomos.js"></script>
 <script>
+let __turnoObra = 0;
+let __peticionesObra = null;
 function selectComic(card) {
+    if (window.colaCapitulos?.ocupada()) return;
+    window.colaCapitulos?.reiniciar();
+    ++__turnoObra;
+    if (__peticionesObra) __peticionesObra.abort();
+    __peticionesObra = new AbortController();
+    document.getElementById('form-capitulo').reset();
+    ['cap-titulo', 'fecha-display', 'cap-arco'].forEach(id => {
+        document.getElementById(id).dataset.delWiki = '0';
+    });
+    ['titulo-pista', 'tomo-pista', 'num-pista', 'fecha-aviso'].forEach(id => {
+        document.getElementById(id).hidden = true;
+    });
+    document.getElementById('fecha-display').classList.remove('date-ok', 'date-mal');
+    ajustarPrecisionFecha(false);
+    document.getElementById('cap-formato').removeAttribute('data-tocado');
+    document.getElementById('upload-area').classList.remove('cargado');
+    document.getElementById('up-label').style.display = '';
+    document.getElementById('up-count').style.display = 'none';
+    window.__capitulos = null;
+    window.__errorCapitulos = false;
+    __tomosWiki = null;
+    document.getElementById('lista-tomos').classList.remove('abierto');
+    document.getElementById('cap-resumen').hidden = true;
     document.querySelectorAll('.comic-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
 
@@ -774,6 +866,11 @@ function selectComic(card) {
 
     // El tipo manda sobre los formatos de numeración disponibles.
     window.__obra = {
+        id: card.dataset.id,
+        titulo: card.dataset.titulo,
+        anio: card.dataset.anio,
+        editorial: card.dataset.editorial,
+        estado: card.dataset.estado,
         tipo: card.dataset.tipo || 'Comic',
         capitulos: card.dataset.capitulos || ''
     };
@@ -786,9 +883,11 @@ function selectComic(card) {
     cargarCapitulos(card.dataset.id, card.dataset.titulo);
     cargarTitulosWiki(card.dataset.titulo);
     cargarTomosWiki(card.dataset.titulo);
+    window.colaCapitulos?.restaurar();
 }
 
 function backToPicker() {
+    if (window.colaCapitulos?.ocupada()) return;
     document.getElementById('paso-datos').style.display = 'none';
     document.getElementById('step-picker').style.display = 'block';
     document.querySelectorAll('.comic-card').forEach(c => c.classList.remove('selected'));
@@ -864,26 +963,26 @@ function resumirPendientes(caps) {
 
 
 function cargarCapitulos(comicId, comicNombre) {
+    const turno = __turnoObra;
     const list = document.getElementById('cap-list');
     const titulo = document.getElementById('cap-comic-nombre');
 
     titulo.textContent = comicNombre;
     list.innerHTML = '<p class="empty">Cargando…</p>';
 
-    fetch('controlador/get_capitulos.php?comic_id=' + comicId)
+    return fetch('controlador/get_capitulos.php?comic_id=' + comicId, { signal: __peticionesObra.signal })
         .then(r => r.json())
         .then(caps => {
+            if (turno !== __turnoObra) return;
             if (caps.length === 0) {
                 list.innerHTML = '<p class="empty">Este cómic todavía no tiene capítulos.</p>';
                 window.__capitulos = [];
                 resumirPendientes([]);
+                pintarTomos();
                 return;
             }
             list.innerHTML = caps.map((cap, i) => {
-                const fecha = cap.fecha_publicacion
-                    ? new Date(cap.fecha_publicacion).toLocaleDateString('es',
-                        { day: '2-digit', month: '2-digit', year: 'numeric' })
-                    : 'Sin fecha';
+                const fecha = mostrarFechaPublicacion(cap.fecha_publicacion, cap.fecha_publicacion_mes) || 'Sin fecha';
                 const n = cap.total_paginas || cap.imagenes.length;
 
                 // Las páginas se montan al desplegar, no antes: un
@@ -892,14 +991,14 @@ function cargarCapitulos(comicId, comicNombre) {
                 <div class="cap-item" data-caps="${i}">
                     <button type="button" class="cap-cab" onclick="alternarCapitulo(${i})">
                         <i class="bi bi-chevron-right cap-flecha"></i>
-                        <span class="cap-num">${cap.numero}</span>
+                        <span class="cap-num">${esc(cap.numero)}</span>
                         <span class="cap-centro">
-                            <span class="cap-titulo">${cap.titulo}</span>
+                            <span class="cap-titulo">${esc(cap.titulo)}</span>
                             <span class="cap-meta">${n} página${n === 1 ? '' : 's'} · ${fecha}</span>
                         </span>
                     </button>
                     <a href="editar_capitulo.php?id=${cap.id}" class="cap-editar"
-                       title="Editar los datos del capítulo" onclick="event.stopPropagation()">
+                       title="Editar datos o reemplazar el archivo del capítulo" aria-label="Editar datos o reemplazar el archivo del capítulo" onclick="event.stopPropagation()">
                         <i class="bi bi-pencil"></i>
                     </a>
                     <div class="cap-paginas" id="paginas-${i}"></div>
@@ -909,9 +1008,14 @@ function cargarCapitulos(comicId, comicNombre) {
             // Se guardan las páginas para montarlas al desplegar.
             window.__capitulos = caps;
             resumirPendientes(caps);
+            pintarTomos();
         })
         .catch(() => {
+            if (turno !== __turnoObra) return;
             list.innerHTML = '<p class="empty">No se pudieron cargar los capítulos.</p>';
+            window.__capitulos = null;
+            window.__errorCapitulos = true;
+            pintarTomos();
         });
 }
 
@@ -954,76 +1058,7 @@ function verPagina(src) {
 }
 
 
-function maskFecha(input) {
-    // Eliminar todo lo que no sea dígito
-    let val = input.value.replace(/\D/g, '');
-    let out = '';
-    if (val.length > 0) out += val.substring(0, 2);
-    if (val.length >= 3) out += ' / ' + val.substring(2, 4);
-    if (val.length >= 5) out += ' / ' + val.substring(4, 8);
-    input.value = out;
-
-    // Validar y alimentar el hidden
-    const hidden = document.getElementById('fecha-hidden');
-    const aviso  = document.getElementById('fecha-aviso');
-
-    function marcar(ok, texto) {
-        input.classList.toggle('date-ok', ok === true);
-        input.classList.toggle('date-mal', ok === false);
-        if (aviso) {
-            aviso.textContent = texto || '';
-            aviso.hidden = !texto;
-        }
-    }
-
-    if (val.length !== 8) {
-        hidden.value = '';
-        // A medio escribir no se avisa de nada: seria molestar por algo
-        // que la persona todavia esta tecleando.
-        marcar(null, '');
-        return;
-    }
-
-    const dd   = parseInt(val.substring(0, 2), 10);
-    const mm   = parseInt(val.substring(2, 4), 10);
-    const yyyy = parseInt(val.substring(4, 8), 10);
-
-    // new Date('2000-02-30') NO falla en JavaScript: se desborda al 1 de
-    // marzo. Por eso no basta con isNaN; hay que comprobar que el dia
-    // que queda es el mismo que se escribio.
-    const f = new Date(yyyy, mm - 1, dd);
-    const existe = f.getFullYear() === yyyy
-                && f.getMonth() === mm - 1
-                && f.getDate() === dd;
-
-    if (!existe) {
-        hidden.value = '';
-        marcar(false, 'Esa fecha no existe.');
-        return;
-    }
-
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    if (yyyy < 1900) {
-        hidden.value = '';
-        marcar(false, 'El año debe ser 1900 o posterior.');
-        return;
-    }
-    if (f > hoy) {
-        hidden.value = '';
-        marcar(false, 'La fecha no puede estar en el futuro.');
-        return;
-    }
-
-    const pad = n => String(n).padStart(2, '0');
-    hidden.value = `${yyyy}-${pad(mm)}-${pad(dd)}`;
-    marcar(true, '');
-}
-
-/* ---- Numeración según el tipo de obra ----
-   Un manga agrupa capítulos en arcos; un cómic publica grapas sueltas
-   o recopilatorios. El formulario muestra solo lo que tiene sentido
-   para la obra elegida. */
+// Fecha y validacion compartidas en js/fechas-capitulo.js.
 function ajustarFormato() {
     const obra = window.__obra || { tipo: 'Comic' };
     const esManga = obra.tipo === 'Manga';
@@ -1055,6 +1090,7 @@ function ajustarFormato() {
     if (etiqueta) {
         etiqueta.textContent = actual === 'rango' ? 'Desde el capítulo' : 'Capítulo';
     }
+    actualizarSelects();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1076,6 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function handleUpload(input) {
+    if (window.colaCapitulos?.recibir(input)) return;
     const area  = document.getElementById('upload-area');
     const icon  = document.getElementById('up-icon');
     const label = document.getElementById('up-label');
@@ -1087,6 +1124,8 @@ function handleUpload(input) {
         count.style.display = 'block';
         count.textContent = input.files[0].name;
         proponerNumeracion(input.files[0].name);
+        aplicarTomo();
+        proponerTitulo();
     }
 }
 
@@ -1166,16 +1205,20 @@ function proponerNumeracion(nombre) {
 let __titulosWiki = null;
 
 function cargarTitulosWiki(titulo) {
+    const turno = __turnoObra;
     __titulosWiki = null;
-    fetch('controlador/buscar_capitulos_wiki.php?titulo=' + encodeURIComponent(titulo))
+    fetch('controlador/buscar_capitulos_wiki.php?titulo=' + encodeURIComponent(titulo),
+          { signal: __peticionesObra.signal })
         .then(r => r.json())
         .then(d => {
+            if (turno !== __turnoObra) return;
             if (!d.ok || !d.datos) return;
             __titulosWiki = { mapa: {}, fuente: d.datos.fuente };
             d.datos.capitulos.forEach(c => {
                 if (c.titulo) __titulosWiki.mapa[c.numero] = c.titulo;
             });
             proponerTitulo();
+            document.dispatchEvent(new Event('entregas-actualizadas'));
         })
         .catch(() => { /* el wiki es opcional: su fallo no rompe nada */ });
 }
@@ -1193,6 +1236,8 @@ function proponerTitulo() {
     }
 
     const n = parseInt(campoNum.value, 10);
+    const hasta = parseInt(document.getElementById('cap-hasta').value, 10) || null;
+    if (tomoDe(n, hasta)?.titulo) return; // conserva el título traducido de la entrega
     const sug = __titulosWiki.mapa[n];
 
     if (!sug) { decir(''); return; }
@@ -1227,179 +1272,9 @@ function esc(s) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/* ---- Tomos del wiki (arco, fecha y rango) ----
-   Los capitulos no se suben de uno en uno: se suben TOMOS que agrupan
-   un rango de episodios, cada uno con su arco y su fecha. Todo eso se
-   tecleaba a mano mirando el wiki.
-
-   Se carga una vez al elegir la obra. Cuando el rango del formulario
-   coincide con el de un tomo, se rellenan arco y fecha solos. */
-let __tomosWiki = null;
-
-function cargarTomosWiki(titulo) {
-    __tomosWiki = null;
-    fetch('controlador/buscar_tomos_wiki.php?titulo=' + encodeURIComponent(titulo))
-        .then(r => r.json())
-        .then(d => {
-            if (!d.ok || !d.datos) return;
-            __tomosWiki = d.datos;
-            pintarTomos();
-        })
-        .catch(() => { /* el wiki es opcional */ });
-}
-
-/** Busca el tomo que cubre exactamente ese rango. */
-function tomoDe(desde, hasta) {
-    if (!__tomosWiki) return null;
-    return __tomosWiki.tomos.find(t =>
-        t.desde === desde && (hasta ? t.hasta === hasta : t.hasta === desde)) || null;
-}
-
-/** Rellena titulo y fecha cuando el rango coincide con un tomo. */
-function aplicarTomo() {
-    const cDesde = document.getElementById('cap-desde');
-    const cHasta = document.getElementById('cap-hasta');
-    const cTit   = document.getElementById('cap-titulo');
-    const cArco  = document.getElementById('cap-arco');
-    const cFecha = document.getElementById('fecha-display');
-    const pista  = document.getElementById('tomo-pista');
-    if (!cDesde) return;
-
-    function decir(txt) {
-        if (!pista) return;
-        pista.innerHTML = txt || '';
-        pista.hidden = !txt;
-    }
-
-    const d = parseInt(cDesde.value, 10);
-    const h = cHasta && cHasta.value ? parseInt(cHasta.value, 10) : null;
-    if (!d) { decir(''); return; }
-
-    const t = tomoDe(d, h);
-    if (!t) { decir(''); return; }
-
-    const puesto = [];
-
-    // El nombre del arco ES el titulo del capitulo: asi es como se
-    // nombran los tomos en el catalogo («Arco del Espadachin Negro»).
-    // El campo «arco» guardaba una copia del titulo y no se mostraba en
-    // ninguna parte del sitio, asi que se rellena por detras y se oculta.
-    if (cTit && t.arco && (!cTit.value.trim() || cTit.dataset.delWiki === '1')) {
-        cTit.value = t.arco;
-        cTit.dataset.delWiki = '1';
-        if (cArco) cArco.value = t.arco;
-        puesto.push('título');
-    }
-
-    if (cFecha && t.fecha && (!cFecha.value.trim() || cFecha.dataset.delWiki === '1')) {
-        const p = t.fecha.split('-');            // aaaa-mm-dd
-        cFecha.value = p[2] + ' / ' + p[1] + ' / ' + p[0];
-        cFecha.dataset.delWiki = '1';
-        if (typeof maskFecha === 'function') maskFecha(cFecha);
-        puesto.push('fecha');
-    }
-
-    decir('<strong>Tomo ' + t.tomo + '</strong> · capítulos ' +
-          t.desde + ' – ' + t.hasta +
-          (t.fecha ? ' · ' + t.fecha.split('-').reverse().join('/') : '') +
-          (puesto.length ? ' · se rellenó ' + puesto.join(' y ') : ''));
-}
-
-/** Lista desplegable con los tomos que faltan por subir. */
-function pintarTomos() {
-    const caja = document.getElementById('lista-tomos');
-    if (!caja || !__tomosWiki) return;
-
-    const cubierto = new Set();
-    (window.__capitulos || []).forEach(c => {
-        const d = parseInt(c.numero_desde, 10), h = parseInt(c.numero_hasta, 10);
-        if (!isNaN(d) && !isNaN(h)) for (let i = d; i <= h; i++) cubierto.add(i);
-    });
-
-    const faltan = __tomosWiki.tomos.filter(t => {
-        for (let i = t.desde; i <= t.hasta; i++) if (!cubierto.has(i)) return true;
-        return false;
-    });
-
-    if (!faltan.length) { caja.hidden = true; return; }
-
-    const fuente = __tomosWiki.fuente.split(' · ')[0];
-
-    caja.hidden = false;
-    caja.innerHTML =
-        '<button type="button" class="tomos-cab" id="tomos-cab">' +
-            '<i class="bi bi-chevron-right tomos-flecha"></i>' +
-            '<span class="tomos-tit">Tomos pendientes</span>' +
-            '<span class="tomos-cuenta">' + faltan.length + '</span>' +
-            '<span class="tomos-fuente">' + esc(fuente) + '</span>' +
-        '</button>' +
-        '<div class="tomos-cuerpo" id="tomos-cuerpo">' +
-            faltan.map(t =>
-                '<button type="button" class="fila-tomo" data-d="' + t.desde +
-                '" data-h="' + t.hasta + '">' +
-                    '<span class="ft-num">Tomo ' + t.tomo + '</span>' +
-                    '<span class="ft-centro">' +
-                        '<span class="ft-arco">' + esc(t.arco || 'Sin arco en el wiki') + '</span>' +
-                        '<span class="ft-meta">capítulos ' + t.desde + ' – ' + t.hasta +
-                            (t.fecha ? ' · ' + t.fecha.split('-').reverse().join('/') : '') +
-                        '</span>' +
-                    '</span>' +
-                    '<i class="bi bi-arrow-left-circle ft-usar" title="Usar este tomo"></i>' +
-                '</button>'
-            ).join('') +
-        '</div>';
-
-    const cab = document.getElementById('tomos-cab');
-    if (cab) cab.addEventListener('click', () => caja.classList.toggle('abierto'));
-
-    caja.querySelectorAll('.fila-tomo').forEach(b => {
-        b.addEventListener('click', () => usarTomo(+b.dataset.d, +b.dataset.h));
-    });
-}
-
-/** Deja el formulario listo para ese tomo. */
-function usarTomo(d, h) {
-    const sel    = document.getElementById('cap-formato');
-    const cDesde = document.getElementById('cap-desde');
-    const cHasta = document.getElementById('cap-hasta');
-
-    const esRango = h > d;
-    if (sel) {
-        sel.value = esRango ? 'rango' : 'grapa';
-        sel.dataset.tocado = '1';
-        if (typeof ajustarFormato === 'function') ajustarFormato();
-    }
-    if (cDesde) cDesde.value = d;
-    if (cHasta) cHasta.value = esRango ? h : '';
-
-    aplicarTomo();
-    if (typeof proponerTitulo === 'function') proponerTitulo();
-    if (cDesde) cDesde.focus();
-}
-
-(function () {
-    ['cap-desde', 'cap-hasta'].forEach(function (id) {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', aplicarTomo);
-    });
-    // Si se escriben a mano, dejan de considerarse del wiki.
-    ['cap-titulo', 'cap-arco', 'fecha-display'].forEach(function (id) {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', function () { el.dataset.delWiki = '0'; });
-    });
-})();
-
-// Interceptar submit del formulario con XHR + barra de progreso
-/**
- * Pregunta si subir un archivo que parece de otra obra.
- *
- * Sustituye al confirm() del navegador, que aparecia SOBRE la pantalla
- * de progreso: esa ya decia «Subiendo capitulo… Procesando paginas»
- * cuando todavia no se habia decidido nada.
- *
- * Llama a alSalir(true) si se continua, alSalir(false) si se revisa.
- */
-function preguntarObra(mensaje, alSalir) {
+// Las propuestas por obra y edición se gestionan en js/tomos.js.
+// Confirmación propia para archivos que parecen pertenecer a otra obra.
+function preguntarObra(mensaje, alSalir, fueraRango = false) {
     const caja    = document.getElementById('modal-obra');
     const texto   = document.getElementById('modal-obra-txt');
     const seguir  = document.getElementById('obra-seguir');
@@ -1413,6 +1288,12 @@ function preguntarObra(mensaje, alSalir) {
     }
 
     texto.textContent = mensaje;
+    document.getElementById('modal-aviso-titulo').textContent = fueraRango
+        ? 'Comprueba la numeración' : 'Comprueba el cómic';
+    caja.querySelector('.modal-obra-nota').textContent = fueraRango
+        ? 'El catálogo puede estar desactualizado. Si la numeración es correcta, puedes subirlo de todas formas.'
+        : 'Es una sospecha por el nombre del archivo, no una comprobación de su contenido. Si sabes que es correcto, continúa.';
+    const focoAnterior = document.activeElement;
     caja.classList.add('visible');
 
     function cerrar(resp) {
@@ -1420,12 +1301,19 @@ function preguntarObra(mensaje, alSalir) {
         seguir.removeEventListener('click', alSeguir);
         revisar.removeEventListener('click', alRevisar);
         document.removeEventListener('keydown', alTeclado);
+        focoAnterior?.focus();
         alSalir(resp);
     }
     function alSeguir()  { cerrar(true); }
     function alRevisar() { cerrar(false); }
     // Escape equivale a «Revisar»: la salida segura.
-    function alTeclado(ev) { if (ev.key === 'Escape') cerrar(false); }
+    function alTeclado(ev) {
+        if (ev.key === 'Escape') cerrar(false);
+        if (ev.key === 'Tab') {
+            ev.preventDefault();
+            (document.activeElement === revisar ? seguir : revisar).focus();
+        }
+    }
 
     seguir.addEventListener('click', alSeguir);
     revisar.addEventListener('click', alRevisar);
@@ -1437,10 +1325,13 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
     e.preventDefault();
 
     const form    = this;
+    if (form.dataset.enviando === '1') return;
     const comicId = document.getElementById('input-comic-id').value;
     const file    = document.querySelector('input[name="cbr_file"]').files[0];
 
     if (!comicId) return;
+    form.dataset.enviando = '1';
+    const confirmaciones = {};
 
     const overlay  = document.getElementById('progress-overlay');
     const fill     = document.getElementById('prog-fill');
@@ -1451,14 +1342,18 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
     // En una funcion para poder REENVIAR el mismo formulario cuando el
     // servidor avisa de que el archivo parece de otra obra y la persona
     // confirma que aun asi quiere subirlo.
-    function enviar(confirmado) {
+    function enviar() {
 
     filename.textContent = file ? file.name : '';
     overlay.classList.add('visible');
+    fill.classList.remove('processing');
+    fill.style.width = '0%';
+    pct.textContent = '0%';
+    status.textContent = 'Enviando archivo…';
 
     const xhr = new XMLHttpRequest();
     const fd  = new FormData(form);
-    if (confirmado) fd.append('confirmar_obra', '1');
+    Object.entries(confirmaciones).forEach(([clave, valor]) => fd.set(clave, valor));
 
     // Fase 1: progreso de upload (red)
     xhr.upload.addEventListener('progress', function(ev) {
@@ -1494,7 +1389,7 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                 // El servidor explica qué regla frenó la subida; se
                 // muestra tal cual en vez de un error genérico.
                 let msg;
-                if (res.error === 'posible_obra_distinta') {
+                if (res.error === 'posible_obra_distinta' || res.error === 'fuera_rango') {
                     // El archivo parece de otra obra. NO se bloquea: es
                     // una sospecha por el nombre, no una comprobacion del
                     // contenido, y puede llamarse como sea y estar bien.
@@ -1504,11 +1399,12 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                     // pregunta si hay que subirlo.
                     preguntarObra(res.mensaje, function (seguir) {
                         if (seguir) {
-                            enviar(true);   // reintento ya confirmado
+                            confirmaciones[res.error === 'fuera_rango' ? 'confirmar_rango' : 'confirmar_obra'] = '1';
+                            enviar();
                         } else {
-                            showError('Subida cancelada. Revisa el archivo o el cómic elegido.');
+                            form.dataset.enviando = '0';
                         }
-                    });
+                    }, res.error === 'fuera_rango');
                     return;
                 }
                 if (res.error === 'fecha') {
@@ -1519,20 +1415,25 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
                     msg = 'Ya existe un capítulo con ese número para este cómic.';
                 } else if (res.error === 'comic_inexistente') {
                     msg = 'El cómic elegido ya no está en el catálogo.';
+                } else if (['archivo_invalido', 'sin_archivo', 'fallo_insercion_paginas'].includes(res.error)) {
+                    msg = res.mensaje || 'No se pudo leer el archivo. Elige un CBR o CBZ válido.';
                 } else {
                     msg = 'Error al subir el capítulo. Intenta de nuevo.';
                 }
                 showError(msg);
+                form.dataset.enviando = '0';
             }
         } catch(err) {
             overlay.classList.remove('visible');
             showError('Error inesperado al procesar la respuesta.');
+            form.dataset.enviando = '0';
         }
     });
 
     xhr.addEventListener('error', function() {
         overlay.classList.remove('visible');
         showError('Error de red. Verifica tu conexión.');
+        form.dataset.enviando = '0';
     });
 
     xhr.open('POST', 'controlador/procesar_capitulo.php');
@@ -1540,7 +1441,7 @@ document.getElementById('form-capitulo').addEventListener('submit', function(e) 
 
     }   // fin de enviar()
 
-    enviar(false);
+    enviar();
 });
 
 // Auto-seleccionar cómic si viene ?comic_id= en la URL
@@ -1555,7 +1456,8 @@ function showError(msg) {
     const wrapper = document.querySelector('.pagina');
     const err = document.createElement('div');
     err.className = 'aviso aviso-error';
-    err.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i><span>' + msg + '</span>';
+    err.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i><span></span>';
+    err.querySelector('span').textContent = msg;
     wrapper.prepend(err);
     setTimeout(() => {
         err.style.transition = 'opacity 0.5s';
@@ -1564,5 +1466,6 @@ function showError(msg) {
     }, 4000);
 }
 </script>
+<script src="js/lote-capitulos.js"></script>
 </body>
 </html>

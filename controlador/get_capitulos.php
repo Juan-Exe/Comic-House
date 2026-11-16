@@ -14,7 +14,7 @@ $caps = $conexion->query("SELECT capitulos.*, comics.titulo AS comic_titulo
                           FROM capitulos
                           JOIN comics ON capitulos.comic_id = comics.id
                           WHERE capitulos.comic_id = $comic_id
-                          ORDER BY capitulos.numero ASC");
+                          ORDER BY capitulos.numero_desde ASC, capitulos.numero_hasta ASC, capitulos.id ASC");
 
 $resultado = [];
 while ($cap = $caps->fetch_assoc()) {

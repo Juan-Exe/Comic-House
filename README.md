@@ -12,7 +12,7 @@ Plataforma web para leer y gestionar cómics y mangas en formato digital. Permit
 
 - Catálogo de cómics y mangas con filtros por tipo, género y editorial
 - Lector de capítulos con soporte para páginas dobles
-- Subida de capítulos en formato CBR, CBZ, ZIP o imágenes sueltas
+- Subida de capítulos en formato CBR (RAR) o CBZ (ZIP), con validación de imágenes
 - Panel de administración para gestionar el contenido
 - Slider de destacados configurable
 - Sección "Comics Imprescindibles" (máximo 4)
@@ -67,6 +67,13 @@ http://localhost:8080
 
 La base de datos se crea automáticamente al primer arranque.
 
+La imagen instala [UnRAR desde Debian](https://packages.debian.org/trixie/unrar)
+(componente `non-free`) para comprobar la integridad de los CBR. Se sustituyó
+`unrar-free`: la prueba de un RAR con CRC incorrecto no era rechazada por ese
+extractor. Después de actualizar el Dockerfile, ejecutar
+`docker compose up -d --build web` para conservar esta dependencia al recrear
+el contenedor. No elimina el volumen de la base de datos.
+
 ---
 
 ## Credenciales por defecto
@@ -109,8 +116,67 @@ Una vez con rol admin, accede desde el menú de usuario → **Panel de Admin**.
 
 1. Panel → **Subir capítulo**
 2. Selecciona el cómic del catálogo visual
-3. Sube el archivo (`.cbr`, `.cbz`, `.zip`) o imágenes sueltas
-4. El sistema extrae las páginas automáticamente y detecta páginas dobles por dimensiones
+3. Elige uno o varios archivos `.cbr` o `.cbz`
+4. Si eliges varios, revisa la lista y selecciona una fila para corregir sus datos
+5. Sube los archivos listos; cada entrega conserva su estado y sus páginas dobles
+
+Si falla un archivo, los demás se conservan. Puedes cambiar el archivo dañado
+y continuar solo con los pendientes. Al recargar la misma pestaña se recuperan
+la lista y los datos; vuelve a elegir los archivos pendientes para reanudarlos.
+Los archivos ya guardados se reconocen aunque se haya perdido su respuesta.
+«Vaciar lista» o «Cerrar lote» no elimina capítulos de la base.
+
+La lista incluye los números sin título publicado. Un archivo como `#1-2.cbr`
+consulta ambos números sin convertirlo en un tomo completo. Cuando la fuente
+no trae título individual, usa el nombre del recopilatorio si se confirma qué
+números contiene y señala ese origen. Las traducciones se identifican como
+orientativas y conservan el nombre original. Si no hay un nombre verificable,
+propone uno descriptivo y lo indica; puedes cambiarlo.
+Para un archivo combinado se identifica la fecha del primer número incluido.
+
+La fecha de publicación admite **día/mes/año** o **mes/año**, según lo que se
+conozca. Esa precisión se conserva al guardar, editar y consultar el capítulo.
+Las instalaciones existentes deben aplicar
+[`database/migracion_02_fechas_parciales.sql`](database/migracion_02_fechas_parciales.sql)
+para incorporar las fechas mensuales. Las instalaciones nuevas incluyen este
+cambio en el esquema inicial.
+
+La subida múltiple requiere además
+[`database/migracion_03_subida_lotes.sql`](database/migracion_03_subida_lotes.sql),
+que añade los recibos de intento y la huella del comprimido. Está aplicada en
+la base local de esta revisión. El esquema inicial también la incluye.
+
+Verificación de lotes, con Docker activo y Python/Playwright:
+
+```powershell
+python tests/lote_capitulos.py
+```
+
+La prueba crea sus propios registros y archivos y los limpia al terminar.
+
+### Reemplazar el archivo de un capítulo
+
+1. En **Ya subidos**, abre el lápiz del capítulo.
+2. En **Reemplazar archivo del capítulo**, elige el CBR o CBZ nuevo.
+3. Pulsa **Revisar reemplazo**, comprueba el capítulo y el archivo y confirma.
+
+Se conservan el id, el título, la numeración y la fecha guardados. Si necesitas
+cambiarlos, guarda esos cambios antes de reemplazar el archivo. Las páginas
+anteriores se sustituyen por completo; si falla la validación o el guardado,
+se conserva la edición anterior. Un reintento con el mismo archivo reconoce el
+reemplazo ya completado. Si otra pestaña cambió el capítulo, debes recargar y revisarlo.
+
+Las instalaciones existentes necesitan
+[`database/migracion_04_reemplazos.sql`](database/migracion_04_reemplazos.sql).
+Está aplicada en la base local. Las instalaciones nuevas incluyen la tabla de
+recibos en el esquema inicial. Verificación con fixtures propios:
+
+```powershell
+python tests/reemplazo_capitulo.py
+```
+
+La [guía de operación y verificación](docs/OPERACION_Y_VERIFICACION.md) reúne
+los flujos, migraciones, pruebas y límites del plan.
 
 ### Destacar en el slider
 
@@ -126,7 +192,30 @@ Una vez con rol admin, accede desde el menú de usuario → **Panel de Admin**.
 ### Editoriales
 
 1. Panel → **Editoriales**
-2. Sube el logo y el nombre — aparece automáticamente en la sección de inicio
+2. Escribe el nombre y revisa las propuestas de logo de Wikipedia/Wikimedia.
+3. Selecciona el logo correcto o descártalo y sube una imagen manual.
+4. Guarda la editorial. Para mostrarla en el inicio, activa su destacado.
+
+Admite PNG, JPG, WebP y GIF, hasta **5 MB y 16 megapíxeles**, y guarda los nuevos
+logos como PNG. Los SVG de Wikimedia se proponen mediante su versión PNG.
+Los logos ya guardados se conservan. Si la búsqueda falla, puedes subir uno a mano.
+
+Los nombres existentes se reutilizan aunque cambien las mayúsculas, tildes o
+espacios. Los nombres parecidos requieren revisión antes de crear otra editorial.
+Desde el registro de un cómic también puedes crear su editorial y dejarla
+seleccionada sin perder los datos del formulario; allí el logo es opcional y
+puede añadirse después. Si la fuente indica una editorial, se ofrece crear esa.
+Si no la indica, puedes escribir el nombre manualmente.
+
+Verificación del asistente (Docker y Python/Playwright para la interfaz):
+
+```powershell
+docker exec comic_house_web php tests/editoriales.php
+python tests/editoriales_ui.py
+```
+
+La segunda prueba consulta y descarga el logo real de Kodansha desde Wikimedia;
+el resto usa editoriales temporales que se eliminan al terminar.
 
 ---
 
@@ -172,8 +261,9 @@ docker exec -i comic_house_db mariadb -ucomic_user -pcomic_pass_123 \
   comic_house < E1_integridad_rendimiento/benchmark/momento2_integridad.sql
 ```
 
-Informes: `Informe_Momento2_Comic_House.pdf` (documento completo, incluye la
-sección 09) y `E1_integridad_rendimiento/Informe_Rendimiento_Comic_House.pdf`.
+Los informes, capturas y materiales de entrega académica se conservan localmente
+y no se incluyen en este repositorio. Aquí se versionan el código, las pruebas,
+las migraciones y su documentación técnica.
 
 ---
 

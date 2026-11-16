@@ -1,6 +1,7 @@
 <?php
 session_start();
 include("../modelo/conexion.php");
+require_once __DIR__ . '/fecha_capitulo.php';
 
 if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
     header("Location: ../index.php");
@@ -9,16 +10,19 @@ if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
 
 $id       = intval($_POST['id']);
 $comic_id = intval($_POST['comic_id_sel'] ?? $_POST['comic_id']);
-$titulo   = $conexion->real_escape_string(trim($_POST['titulo']));
-$numero   = $conexion->real_escape_string(trim($_POST['numero']));
-$fecha    = $conexion->real_escape_string(trim($_POST['fecha_publicacion']));
+$titulo   = trim($_POST['titulo']);
+$numero   = trim($_POST['numero']);
+$fecha = validarFechaCapitulo(trim($_POST['fecha_publicacion'] ?? ''), trim($_POST['fecha_publicacion_mes'] ?? ''));
+if (!$fecha['ok']) {
+    header("Location: ../editar_capitulo.php?id=$id&error_fecha=1");
+    exit();
+}
 
-$conexion->query("UPDATE capitulos SET
-    comic_id = '$comic_id',
-    titulo = '$titulo',
-    numero = '$numero',
-    fecha_publicacion = " . ($fecha ? "'$fecha'" : "NULL") . "
-    WHERE id = $id");
+$stmt = $conexion->prepare('UPDATE capitulos SET comic_id = ?, titulo = ?, numero = ?,
+    fecha_publicacion = ?, fecha_publicacion_mes = ? WHERE id = ?');
+$stmt->bind_param('issssi', $comic_id, $titulo, $numero, $fecha['fecha'], $fecha['mes'], $id);
+$stmt->execute();
+$stmt->close();
 
 header("Location: ../subir_capitulo.php");
 exit();

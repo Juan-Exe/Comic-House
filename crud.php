@@ -32,6 +32,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="admin/admin.css">
+    <link rel="stylesheet" href="admin/editoriales-asistente.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -546,6 +547,7 @@ $editoriales = $conexion->query("SELECT * FROM editoriales ORDER BY nombre ASC")
             font-size: 12px;
             line-height: 1.4;
         }
+        .aviso-faltan[hidden] { display: none; }
         .aviso-faltan i { color: var(--rojo); font-size: 14px; }
 
         /* El boton sigue visible, pero se ve que no se puede pulsar. */
@@ -815,11 +817,12 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
                         $editoriales->data_seek(0);
                         while ($ed = $editoriales->fetch_assoc()):
                         ?>
-                            <option value="<?= htmlspecialchars($ed['nombre']) ?>"><?= htmlspecialchars($ed['nombre']) ?></option>
+                            <option value="<?= htmlspecialchars($ed['nombre']) ?>" data-id="<?= (int) $ed['id'] ?>"><?= htmlspecialchars($ed['nombre']) ?></option>
                         <?php endwhile; ?>
                     </select>
                     <i class="bi bi-chevron-down"></i>
                 </div>
+                <button type="button" class="ed-enlace" id="registro-crear-editorial">Crear una editorial</button>
             </div>
 
             <!-- Clasificación y tipo tienen pocas opciones excluyentes:
@@ -1013,6 +1016,7 @@ if (isset($msgs[$msg])): $m = $msgs[$msg];
     </main>
 </div>
 
+<script src="js/editoriales-asistente.js"></script>
 <script>
 /* ---- El formulario se adapta a lo que se registra ----
    El tipo de obra decide cómo se numera, y el estado de publicación
@@ -1312,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!sel) return [];
             return [...sel.options]
                 .filter(function (o) { return o.value; })
-                .map(function (o) { return { id: o.value, nombre: o.textContent.trim() }; });
+                .map(function (o) { return { id: o.dataset.id, nombre: o.textContent.trim() }; });
         }
 
         /** Tipo segun la editorial: las de manga publican manga. */
@@ -1391,7 +1395,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     '<button type="button" class="meta-crear" id="meta-crear-edit">' +
                     '<i class="bi bi-plus-lg"></i> Crear «' + esc(c.editorial) + '»</button>');
             } else {
-                h += fila('Editorial', 'no la trae la fuente', true);
+                h += fila('Editorial', 'No la trae la fuente. Puedes escribir su nombre.' +
+                    '<button type="button" class="meta-crear" id="meta-crear-edit">Escribir editorial</button>', true);
             }
 
             const rotuloEstado = {
@@ -1426,36 +1431,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         /** Crea la editorial que falta y la deja seleccionada. */
         async function crearEditorial(nombre, boton) {
-            boton.disabled = true;
-            boton.innerHTML = 'Creando…';
-            try {
-                const r = await fetch('controlador/crear_editorial.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'nombre=' + encodeURIComponent(nombre)
-                });
-                const d = await r.json();
-                if (!d.ok) {
-                    boton.disabled = false;
-                    boton.textContent = d.aviso || 'No se pudo crear';
-                    return;
-                }
-                // Agregar al desplegable del formulario y al candidato
-                const sel = document.getElementById('f-editorial');
-                if (sel && !sel.querySelector('option[value="' + d.id + '"]')) {
-                    const o = document.createElement('option');
-                    o.value = d.id;
-                    o.textContent = d.nombre;
-                    sel.appendChild(o);
-                }
+            const candidato = actual;
+            EditorEditorial.abrir({nombre:nombre || '', fijo:!!nombre, alGuardar:function(d) {
+                if (actual !== candidato) return;
                 actual.editorial_id = d.id;
                 actual.editorial = d.nombre;
+                actual.editorial_valor = d.nombre;
+                // No repintar clasificación/género: conserva las decisiones del modal.
                 pintarVerificado(actual);
-                aplicarSugerencias(actual);
-            } catch (e) {
-                boton.disabled = false;
-                boton.textContent = 'No se pudo crear';
-            }
+            }});
         }
 
         /** Botones de opcion (tipo, clasificacion). */
@@ -1999,6 +1983,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             lista.classList.remove('visible');
             lista.innerHTML = '';
+
+            // Asignar .value desde el modal no dispara input/change. Revisa el
+            // formulario completo cuando todos los datos confirmados ya están.
+            document.getElementById('form-registro').dispatchEvent(new Event('change', { bubbles: true }));
 
             if (c.ya_registrado) {
                 const yaReg = c.registrado_como || {};

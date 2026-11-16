@@ -1,0 +1,11 @@
+# Los PDF de ReportLab pueden parecer texto por su codificación ASCII85.
+# Mantener sus bytes exactos al publicar y al clonar en Windows.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.cbz binary
+*.cbr binary
+*.zip binary

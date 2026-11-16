@@ -1,0 +1,60 @@
+/* Desplegables y desplazamiento del panel, con los mismos tokens de admin.css. */
+.select-personalizado { position: relative; width: 100%; min-width: 0; }
+.select-personalizado .select-origen {
+    position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+    padding: 0; border: 0; clip-path: inset(50%);
+}
+.select-disparador {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; min-height: 40px; padding: 10px 12px; font: inherit; text-align: left;
+    color: var(--texto); background: var(--papel); border: 1px solid var(--linea);
+    border-radius: var(--r); cursor: pointer;
+}
+.select-disparador span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select-disparador > i { color: var(--texto-medio); font-size: 12px; flex-shrink: 0; }
+.select-disparador.sin-valor { color: var(--texto-medio); }
+.select-disparador:hover, .select-disparador[aria-expanded="true"] { border-color: var(--rojo-hondo); }
+.select-disparador:focus-visible { outline: 2px solid var(--rojo); outline-offset: 2px; }
+.select-disparador:disabled { opacity: .5; cursor: default; }
+.seleccion-lista {
+    position: fixed; z-index: 800; box-sizing: border-box; overflow-y: auto; padding: 5px;
+    background: var(--estante); border: 1px solid var(--rojo-linea); border-radius: var(--r);
+    box-shadow: 0 12px 30px rgba(0,0,0,.45); font: 13px Montserrat, sans-serif;
+}
+.seleccion-opcion {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px; border-radius: 5px; color: var(--texto); cursor: pointer;
+}
+.seleccion-opcion span { overflow-wrap: anywhere; }
+.seleccion-opcion > i { visibility: hidden; color: var(--rojo); }
+.seleccion-opcion[aria-selected="true"] > i { visibility: visible; }
+.seleccion-opcion.activa, .seleccion-opcion:hover { background: var(--rojo-tenue); }
+.seleccion-opcion[aria-selected="true"] { color: #ffb5b5; }
+.tomos-cuerpo, .seleccion-lista { scrollbar-width: thin; scrollbar-color: var(--rojo-hondo) var(--papel); }
+.tomos-cuerpo::-webkit-scrollbar, .seleccion-lista::-webkit-scrollbar { width: 7px; }
+.tomos-cuerpo::-webkit-scrollbar-track, .seleccion-lista::-webkit-scrollbar-track { background: var(--papel); }
+.tomos-cuerpo::-webkit-scrollbar-thumb, .seleccion-lista::-webkit-scrollbar-thumb { background: var(--rojo-hondo); border-radius: 10px; }
+.tomos-cuerpo::-webkit-scrollbar-button, .seleccion-lista::-webkit-scrollbar-button { display: none; }
+.fecha-precision { margin-bottom: 7px; }
+.fecha-precision .select-disparador { min-height: 30px; padding: 6px 9px; font-size: 12px; }
+
+/* El valor y su precisión forman un solo campo, alineado con el título. */
+.fecha-control {
+    display: flex; align-items: center; min-width: 0; min-height: 40px;
+    background: var(--papel); border: 1px solid var(--linea); border-radius: var(--r);
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+.fecha-control .fecha-caja, .fecha-control .date-input-wrap { flex: 1; min-width: 0; }
+.fecha-control .fecha-caja input, .fecha-control .date-input-wrap input {
+    width: 100%; min-height: 38px; padding: 10px; border: 0; margin: 0;
+    border-radius: var(--r) 0 0 var(--r); background: transparent; box-shadow: none !important;
+    font-size: 13px; outline: none;
+}
+.fecha-control .fecha-precision { flex: 0 0 100px; min-width: 0; margin: 0; }
+.fecha-control .fecha-precision .select-disparador {
+    border: 0; border-left: 1px solid var(--linea); border-radius: 0;
+    padding: 3px 9px; gap: 6px; min-height: 24px; font-size: 11px; background: transparent;
+}
+.fecha-control:focus-within { border-color: #797981; box-shadow: 0 0 0 2px rgba(255,255,255,.04); }
+.fecha-control .select-disparador:focus-visible { outline: 1px solid #8a8a8f; outline-offset: -2px; border-radius: 4px; }
+.fecha-control:has(.date-mal) { border-color: var(--rojo); }

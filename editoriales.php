@@ -6,6 +6,7 @@ if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
 }
 
 require_once __DIR__ . '/controlador/validar_editorial.php';
+require_once __DIR__ . '/controlador/editorial_servicio.php';
 
 // La portada coloca 5 logos por fila (contenedor de 1170px, logo de
 // 210px). Solo 5 y 10 llenan filas completas, asi que en vez de avisar
@@ -22,58 +23,19 @@ $error = ''; $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
 
     if ($_POST['accion'] === 'crear') {
-        $nombre = normalizarEditorial($_POST['nombre'] ?? '');
-
-        if ($nombre === '') {
-            header("Location: editoriales.php?err=vacio"); exit();
-        }
-
-        // Antes de guardar se contrasta contra el catalogo de editoriales
-        // conocidas y contra las ya registradas: un nombre mal escrito
-        // entra como una editorial distinta y parte el catalogo en dos.
-        $dictamen = revisarEditorial($conexion, $nombre);
-
-        if ($dictamen['estado'] === 'duplicada') {
-            header("Location: editoriales.php?err=duplicada&n=" . urlencode($dictamen['sugerencia']));
-            exit();
-        }
-
-        // Si se parece a una conocida y el usuario no ha confirmado,
-        // se le devuelve la sugerencia en vez de guardar.
-        if ($dictamen['estado'] === 'sugerencia' && empty($_POST['confirmar'])) {
-            header("Location: editoriales.php?err=sugerencia"
-                 . "&n=" . urlencode($nombre)
-                 . "&s=" . urlencode($dictamen['sugerencia']));
-            exit();
-        }
-
-        $imagen = '';
-        if (!empty($_FILES['imagen']['name'])) {
-            $ext = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
-                header("Location: editoriales.php?err=formato"); exit();
-            }
-            $imagen = 'editorial_' . time() . '.' . $ext;
-            move_uploaded_file($_FILES['imagen']['tmp_name'], "uploads/" . $imagen);
-        }
-
-        if ($imagen === '') {
-            header("Location: editoriales.php?err=vacio"); exit();
-        }
-
-        $stmt = $conexion->prepare(
-            "INSERT INTO editoriales (nombre, imagen, destacada) VALUES (?, ?, 0)"
-        );
-        $stmt->bind_param('ss', $nombre, $imagen);
         try {
-            $stmt->execute();
-            $destino = 'ok=creada';
-        } catch (mysqli_sql_exception $e) {
-            $destino = $e->getCode() === 1062 ? 'err=duplicada&n=' . urlencode($nombre)
-                                              : 'err=1';
+            $resultado = ComicHouse\Editoriales\altaEditorial($conexion,
+                array_replace($_POST, ['exigir_logo'=>'1']), $_FILES['imagen'] ?? []);
+            if (!$resultado['ok']) {
+                header('Location: editoriales.php?err=sugerencia&n=' . urlencode($_POST['nombre'] ?? '')
+                    . '&s=' . urlencode($resultado['sugerencia']['nombre'] ?? ''));
+            } else {
+                header('Location: editoriales.php?ok=' . ($resultado['reutilizada'] ? 'reutilizada' : 'creada'));
+            }
+        } catch (Throwable $e) {
+            header('Location: editoriales.php?err=logo');
         }
-        $stmt->close();
-        header("Location: editoriales.php?$destino"); exit();
+        exit();
 
     } elseif ($_POST['accion'] === 'destacar') {
         // Alternar el destacado. El limite de seis lo impone un trigger
@@ -178,10 +140,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
 
     } elseif ($_POST['accion'] === 'editar') {
         // Editar nombre y/o logo de una editorial ya registrada.
+        if ((int) $conexion->query("SELECT GET_LOCK('comic_house_editoriales',10)")->fetch_row()[0] !== 1) {
+            header('Location: editoriales.php?err=1'); exit();
+        }
         $id = (int) $_POST['id'];
         $nombre = normalizarEditorial($_POST['nombre'] ?? '');
 
-        if ($nombre === '') {
+        if ($nombre === '' || clave_editorial($nombre) === '' || mb_strlen($nombre) > 100) {
             header("Location: editoriales.php?err=vacio"); exit();
         }
 
@@ -199,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
 
         if ($nombre !== $fila['nombre']) {
             $dictamen = revisarEditorial($conexion, $nombre);
-            if ($dictamen['estado'] === 'duplicada') {
+            if ($dictamen['estado'] === 'duplicada' && $dictamen['sugerencia'] !== $fila['nombre']) {
                 header("Location: editoriales.php?err=duplicada&n=" . urlencode($nombre));
                 exit();
             }
@@ -212,20 +177,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
         }
 
         $imagen = $fila['imagen'];
-        if (!empty($_FILES['imagen']['name'])) {
-            $ext = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
-                header("Location: editoriales.php?err=formato_img"); exit();
-            }
-            $imagen = 'editorial_' . time() . '.' . $ext;
-            move_uploaded_file($_FILES['imagen']['tmp_name'], "uploads/" . $imagen);
+        try {
+            $png = ComicHouse\Editoriales\prepararLogo($_FILES['imagen'] ?? []);
+            if ($png !== null) $imagen = ComicHouse\Editoriales\guardarLogo($png);
+        } catch (Throwable $e) {
+            header('Location: editoriales.php?err=logo'); exit();
         }
 
-        $stmt = $conexion->prepare(
-            "UPDATE editoriales SET nombre = ?, imagen = ? WHERE id = ?"
-        );
-        $stmt->bind_param('ssi', $nombre, $imagen, $id);
+        $stmt = null;
         try {
+            $conexion->begin_transaction();
+            $stmt = $conexion->prepare(
+                "UPDATE editoriales SET nombre = ?, imagen = ? WHERE id = ?"
+            );
+            $stmt->bind_param('ssi', $nombre, $imagen, $id);
             $stmt->execute();
             // comics.editorial guarda el nombre como texto: si cambia,
             // hay que mantenerlo sincronizado hasta que esa columna
@@ -236,12 +201,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
             $sinc->bind_param('si', $nombre, $id);
             $sinc->execute();
             $sinc->close();
+            $conexion->commit();
             $destino = 'ok=editada';
-        } catch (mysqli_sql_exception $e) {
-            $destino = $e->getCode() === 1062
+        } catch (Throwable $e) {
+            $conexion->rollback();
+            if ($imagen !== $fila['imagen']) ComicHouse\Editoriales\retirarLogoNuevo($imagen);
+            $destino = $e instanceof mysqli_sql_exception && $e->getCode() === 1062
                 ? 'err=duplicada&n=' . urlencode($nombre) : 'err=1';
         }
-        $stmt->close();
+        if ($stmt) $stmt->close();
         header("Location: editoriales.php?$destino"); exit();
 
     } elseif ($_POST['accion'] === 'eliminar') {
@@ -302,6 +270,7 @@ foreach ($lista_destacadas as $d) {
 
 $avisos = [
     'creada'     => 'Editorial registrada correctamente.',
+    'reutilizada'=> 'Se reutilizó la editorial existente; no se creó un duplicado.',
     'destacada'  => 'Se actualizaron las editoriales destacadas.',
     'eliminada'  => 'Editorial eliminada.',
     'editada'    => 'Editorial actualizada.',
@@ -317,11 +286,12 @@ if (($_GET['ok'] ?? '') === 'formato_recorte') {
 }
 $errores = [
     'vacio'     => 'Completa el nombre y sube el logo.',
-    'formato'   => 'El logo debe ser PNG, JPG, WEBP o SVG.',
+    'formato'   => 'El logo debe ser PNG, JPG, WebP o GIF.',
+    'logo'      => 'Elige una imagen PNG, JPG, WebP o GIF válida, de hasta 5 MB y 16 megapíxeles.',
     'duplicada' => 'Esa editorial ya está registrada.',
     'limite'       => 'La portada está configurada para ' . $formato
                     . ' editoriales y ya están todas. Cambia el formato o quita una.',
-    'formato_img'  => 'El logo debe ser PNG, JPG, WEBP o SVG.',
+    'formato_img'  => 'El logo debe ser PNG, JPG, WebP o GIF.',
     'en_uso'    => 'No se puede eliminar: hay cómics publicados por esa editorial.',
     '1'         => 'Ocurrió un error.',
 ];
@@ -362,6 +332,7 @@ if (($_GET['err'] ?? '') === 'sug_edit') {
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="admin/admin.css">
+    <link rel="stylesheet" href="admin/editoriales-asistente.css">
     <style>
         /* Específico de esta pantalla. Todo lo demás —colores, botones,
            tarjetas, avisos— viene de admin/admin.css. */
@@ -671,7 +642,7 @@ require __DIR__ . '/admin/cabecera.php';
                 <h3>Registrar editorial</h3>
             </div>
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="alta-editorial">
                 <input type="hidden" name="accion" value="crear">
 
                 <div class="campo">
@@ -684,12 +655,13 @@ require __DIR__ . '/admin/cabecera.php';
                     <label for="logo-nuevo">Logo</label>
                     <label class="subir" id="lbl-editorial-img">
                         <input type="file" id="logo-nuevo" name="imagen"
-                               accept="image/*" required onchange="prevEditorial(this)">
-                        <img id="prev-editorial" src="" alt=""
+                               accept="image/png,image/jpeg,image/webp,image/gif" required>
+                        <img id="prev-editorial" class="ed-manual-previa" src="" alt="Vista previa del logo elegido"
                              style="display:none;max-height:54px;max-width:100%;object-fit:contain">
                         <i class="bi bi-image" id="icono-subir"></i>
                         <span id="texto-subir">Elegir imagen</span>
                     </label>
+                    <p class="ed-ayuda">PNG, JPG, WebP o GIF · hasta 5 MB. También puedes elegir un logo propuesto.</p>
                 </div>
 
                 <button type="submit" class="btn btn-rojo" style="width:100%;justify-content:center">
@@ -794,7 +766,7 @@ require __DIR__ . '/admin/cabecera.php';
                             <div class="campo">
                                 <label for="img-<?= $ed['id'] ?>">Logo nuevo (opcional)</label>
                                 <input type="file" id="img-<?= $ed['id'] ?>" name="imagen"
-                                       accept="image/*"
+                                       accept="image/png,image/jpeg,image/webp,image/gif"
                                        style="font-size:var(--t-nota);color:var(--texto-medio)">
                             </div>
 
@@ -819,6 +791,7 @@ require __DIR__ . '/admin/cabecera.php';
     </div>
 </main>
 
+<script src="js/editoriales-asistente.js"></script>
 <script>
 // ---- Intercambio de posiciones en la vista previa ----
 // Se pulsa una editorial (queda marcada) y luego otra: se permutan.
@@ -876,22 +849,6 @@ document.querySelectorAll('#aviso-flotante').forEach(t => {
     }, 4000);
 });
 
-// ---- Vista previa del logo al elegir archivo ----
-function prevEditorial(input) {
-    if (!input.files || !input.files[0]) return;
-    const prev = document.getElementById('prev-editorial');
-    const icono = document.getElementById('icono-subir');
-    const texto = document.getElementById('texto-subir');
-
-    const lector = new FileReader();
-    lector.onload = e => {
-        prev.src = e.target.result;
-        prev.style.display = 'block';
-        if (icono) icono.style.display = 'none';
-        if (texto) texto.textContent = input.files[0].name;
-    };
-    lector.readAsDataURL(input.files[0]);
-}
 </script>
 </body>
 </html>

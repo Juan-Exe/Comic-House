@@ -1,4 +1,9 @@
 <?php
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+if (!isset($_SESSION['usuario']) || ($_SESSION['rol'] ?? '') !== 'admin') {
+    http_response_code(403); exit('Acceso reservado al administrador.');
+}
+require_once __DIR__ . '/imagen_portada.php';
 
 if (!empty($_POST["btnmodificar"])) {
     if (
@@ -20,8 +25,7 @@ if (!empty($_POST["btnmodificar"])) {
         $genero = $_POST["genero"];
         // Manejo de la portada
         if (!empty($_FILES["portada"]["name"])) {
-            $portada = $_FILES["portada"]["name"];
-            $ruta_destino = "uploads/" . basename($portada);
+            $portada = '';
 
             // Crear directorio si no existe
             if (!is_dir("uploads")) {
@@ -29,20 +33,24 @@ if (!empty($_POST["btnmodificar"])) {
             }
 
             // Subir nueva portada
-            if (move_uploaded_file($_FILES["portada"]["tmp_name"], $ruta_destino)) {
+            try { $portada = guardarPortadaSubida($_FILES['portada']); }
+            catch (Throwable $e) { header('Location: crud.php?msg=upload_error'); exit; }
+            if ($portada !== '') {
                 // Actualizar con nueva portada
-                $sql = $conexion->query("UPDATE comics SET titulo='$titulo', clasificacion='$clasificacion', 
-                                    descripcion='$descripcion', capitulos='$capitulos', anio='$anio', 
-                                    genero='$genero', portada='$portada', editorial='$editorial', tipo='$tipo' WHERE id='$id'");
+                $stmt = $conexion->prepare('UPDATE comics SET titulo=?,clasificacion=?,descripcion=?,capitulos=?,anio=?,genero=?,portada=?,editorial=?,tipo=? WHERE id=?');
+                $stmt->bind_param('ssssissssi',$titulo,$clasificacion,$descripcion,$capitulos,$anio,$genero,$portada,$editorial,$tipo,$id);
+                $sql = $stmt->execute();
+                $stmt->close();
 
             } else {
                 echo "Error al subir la imagen.";
                 exit;
             }
         } else {
-            $sql = $conexion->query("UPDATE comics SET titulo='$titulo', clasificacion='$clasificacion', 
-                                    descripcion='$descripcion', capitulos='$capitulos', anio='$anio', 
-                                    genero='$genero', editorial='$editorial', tipo='$tipo' WHERE id='$id'");
+            $stmt = $conexion->prepare('UPDATE comics SET titulo=?,clasificacion=?,descripcion=?,capitulos=?,anio=?,genero=?,editorial=?,tipo=? WHERE id=?');
+            $stmt->bind_param('ssssisssi',$titulo,$clasificacion,$descripcion,$capitulos,$anio,$genero,$editorial,$tipo,$id);
+            $sql = $stmt->execute();
+            $stmt->close();
         }
 
         if ($sql == 1) {

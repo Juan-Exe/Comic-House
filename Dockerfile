@@ -4,8 +4,11 @@ FROM php:8.2-apache
 # 900x1400 reducida por el navegador a 165 px sale dentada, porque el
 # filtro rápido del escalado no promedia los píxeles. Redimensionarla
 # en el servidor da un resultado nítido y además pesa mucho menos.
-RUN apt-get update && apt-get install -y \
-    unrar-free \
+# UnRAR comprueba también el CRC de los RAR; unrar-free puede omitir ese error.
+# Debian distribuye este extractor en su componente non-free.
+RUN sed -i 's/Components: main$/Components: main non-free/' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y \
+    unrar \
     unzip \
     libzip-dev \
     libjpeg62-turbo-dev \

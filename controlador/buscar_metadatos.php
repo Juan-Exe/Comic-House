@@ -356,7 +356,8 @@ foreach ($resultados as $v) {
     // Estado de publicacion. La API no lo dice, pero se deduce: si el
     // ultimo numero publicado coincide con el total, la serie llego a
     // su final. Un solo numero es un tomo unico.
-    $ultimo = (int) ($v['last_issue']['issue_number'] ?? 0);
+    $ultimoTexto = trim((string) ($v['last_issue']['issue_number'] ?? ''));
+    $ultimo = preg_match('/^[1-9][0-9]{0,3}$/D', $ultimoTexto) ? (int) $ultimoTexto : null;
     if ($nIssues === 1) {
         $estado = 'Tomo unico';
     } elseif ($nIssues > 0 && $ultimo > 0 && $ultimo >= $nIssues - 1) {
@@ -376,7 +377,9 @@ foreach ($resultados as $v) {
         'descripcion' => $desc,
         'portada_url' => $v['image']['medium_url'] ?? ($v['image']['original_url'] ?? ''),
         'capitulo_desde' => $nIssues > 0 ? 1 : null,
-        'capitulo_hasta' => $nIssues > 0 ? $nIssues : null,
+        // La cantidad puede incluir el número cero o especiales: 145 fichas
+        // no significan que exista un #145. El límite es el último número.
+        'capitulo_hasta' => $nIssues === 1 ? 1 : $ultimo,
         'ya_registrado'  => isset($yaRegistrados[mb_strtolower($nombre)]),
         'registrado_como' => $yaRegistrados[mb_strtolower($nombre)] ?? null,
         'coincide_exacto'=> mb_strtolower($nombre) === mb_strtolower($titulo),

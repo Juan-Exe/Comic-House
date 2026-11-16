@@ -12,14 +12,27 @@ if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
 }
 
 require_once __DIR__ . '/validar_capitulo.php';
+require_once __DIR__ . '/fecha_capitulo.php';
+require_once __DIR__ . '/archivo_capitulo.php';
+require_once __DIR__ . '/recibo_subida.php';
 
-$comic_id = intval($_POST['comic_id']);
+$comic_id = intval($_POST['comic_id'] ?? 0);
 $titulo   = trim($_POST['titulo'] ?? '');
 $fecha    = trim($_POST['fecha_publicacion'] ?? '');
+$fecha_mes = trim($_POST['fecha_publicacion_mes'] ?? '');
 $formato  = trim($_POST['formato'] ?? 'grapa');
 $arco     = trim($_POST['arco'] ?? '');
 
 header('Content-Type: application/json');
+$clave = trim($_POST['subida_clave'] ?? '');
+if ($clave !== '' && !preg_match('/^[a-f0-9]{32}$/D', $clave)) {
+    echo json_encode(['ok' => false, 'error' => 'intento', 'mensaje' => 'El identificador del intento no es válido.']);
+    exit();
+}
+if ($titulo === '' || mb_strlen($titulo) > 255) {
+    echo json_encode(['ok' => false, 'error' => 'titulo', 'mensaje' => 'Escribe un título de hasta 255 caracteres.']);
+    exit();
+}
 
 // El tipo de obra decide qué numeración tiene sentido.
 $obra = $conexion->prepare("SELECT tipo FROM comics WHERE id = ?");
@@ -42,32 +55,26 @@ if (!$existe) {
 // tampoco ayudaba, porque new Date('2000-02-30') no falla en
 // JavaScript, se desborda al 1 de marzo. Aqui se comprueba que el dia
 // que se escribio es el mismo que queda despues de interpretarlo.
-if ($fecha !== '') {
-    // El «!» pone la hora a 00:00. Sin el, createFromFormat hereda la
-    // hora ACTUAL, y una fecha de hoy salia «mayor que hoy a las 00:00»
-    // y se rechazaba por futura.
-    $d = DateTime::createFromFormat('!Y-m-d', $fecha);
-    $errores = DateTime::getLastErrors();
-    $malFormada = !$d
-        || ($errores && ($errores['warning_count'] || $errores['error_count']))
-        || $d->format('Y-m-d') !== $fecha;
+$validacionFecha = validarFechaCapitulo($fecha, $fecha_mes);
+if (!$validacionFecha['ok']) {
+    echo json_encode(['ok'=>false, 'error'=>'fecha', 'mensaje'=>$validacionFecha['mensaje']], JSON_UNESCAPED_UNICODE);
+    exit();
+}
 
-    if ($malFormada) {
-        echo json_encode(['ok' => false, 'error' => 'fecha',
-                          'mensaje' => 'Esa fecha no existe. Revisa el día, el mes y el año.'],
-                         JSON_UNESCAPED_UNICODE);
-        exit();
+// Una respuesta perdida no obliga a volver a crear un capítulo ya confirmado.
+// El recibo exige los mismos datos Y el mismo contenido, no solo el nombre.
+$recibo = buscarReciboSubida($conexion, $clave, $_POST);
+if ($recibo) {
+    $mismoArchivo = ($_FILES['cbr_file']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
+        && hash_equals((string) $recibo['archivo_sha256'], hash_file('sha256', $_FILES['cbr_file']['tmp_name']));
+    if ($recibo['coincide'] && $mismoArchivo) {
+        echo json_encode(['ok' => true, 'ya_subido' => true, 'comic_id' => $comic_id,
+            'capitulo_id' => (int) $recibo['id'], 'paginas' => (int) $recibo['paginas']]);
+    } else {
+        echo json_encode(['ok' => false, 'error' => 'intento',
+            'mensaje' => 'Este intento ya guardó otro archivo o datos distintos. Revisa la entrega.']);
     }
-
-    // Un capitulo no puede haberse publicado en el futuro, ni antes de
-    // que existieran los comics.
-    $anio = (int) $d->format('Y');
-    if ($anio < 1900 || $d > new DateTime('today')) {
-        echo json_encode(['ok' => false, 'error' => 'fecha',
-                          'mensaje' => 'La fecha debe estar entre 1900 y hoy.'],
-                         JSON_UNESCAPED_UNICODE);
-        exit();
-    }
+    exit();
 }
 
 $dictamen = revisarCapitulo(
@@ -85,15 +92,22 @@ $desde = $dictamen['desde'];
 $hasta = $dictamen['hasta'];
 $numero = etiquetaCapitulo($formato, $desde, $hasta);
 
-// Verificar archivo subido
-if (empty($_FILES['cbr_file']['tmp_name'])) {
-    echo json_encode(['ok' => false, 'error' => 'sin_archivo']);
+// Los errores de PHP al recibir el archivo tampoco pueden crear un capítulo.
+$errorArchivo = $_FILES['cbr_file']['error'] ?? UPLOAD_ERR_NO_FILE;
+if ($errorArchivo !== UPLOAD_ERR_OK || empty($_FILES['cbr_file']['tmp_name'])) {
+    echo json_encode(['ok' => false, 'error' => 'sin_archivo', 'mensaje' =>
+        in_array($errorArchivo, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+            ? 'El archivo supera el tamaño permitido por el servidor.'
+            : 'No se recibió el archivo completo. Elige un CBR o CBZ y vuelve a intentarlo.'], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+if ($dictamen['estado'] === 'aviso' && ($_POST['confirmar_rango'] ?? '') !== '1') {
+    echo json_encode(['ok' => false, 'error' => 'fuera_rango',
+        'mensaje' => $dictamen['mensaje']], JSON_UNESCAPED_UNICODE);
     exit();
 }
 
 $archivo_tmp  = $_FILES['cbr_file']['tmp_name'];
-$archivo_nombre = strtolower($_FILES['cbr_file']['name']);
-$extension    = pathinfo($archivo_nombre, PATHINFO_EXTENSION);
 
 // ¿El nombre del archivo menciona OTRA obra del catálogo?
 //
@@ -105,7 +119,7 @@ $extension    = pathinfo($archivo_nombre, PATHINFO_EXTENSION);
 // .cbr no dice de qué obra es. Por eso se pide confirmación en vez de
 // bloquear — el archivo puede llamarse como sea y estar bien.
 $sosp = archivoPareceDeOtraObra($conexion, $comic_id, $_FILES['cbr_file']['name']);
-if ($sosp['sospecha'] && empty($_POST['confirmar_obra'])) {
+if ($sosp['sospecha'] && ($_POST['confirmar_obra'] ?? '') !== '1') {
     echo json_encode([
         'ok'      => false,
         'error'   => 'posible_obra_distinta',
@@ -123,162 +137,71 @@ if ($sosp['sospecha'] && empty($_POST['confirmar_obra'])) {
     exit();
 }
 
-// Insertar capítulo (sentencia preparada: evita inyección SQL)
-$stmt_cap = $conexion->prepare(
-    "INSERT INTO capitulos (comic_id, titulo, numero, fecha_publicacion,
-                            formato, numero_desde, numero_hasta, arco)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-);
-$fecha_val = ($fecha !== '') ? $fecha : null;
-$arco_val  = ($arco !== '') ? $arco : null;
-$stmt_cap->bind_param("issssiis", $comic_id, $titulo, $numero, $fecha_val,
-                      $formato, $desde, $hasta, $arco_val);
-
-// El resultado SE COMPRUEBA. Antes no: si la base rechazaba la fila
-// (numero repetido, o rango que se solapa con otro capitulo) el codigo
-// seguia adelante con insert_id = 0, creaba la carpeta paginas/cap_0/ y
-// metia ahi las imagenes de un capitulo que no existe.
-//
-// Esto es tambien lo que hace la subida repetible: si se reintenta un
-// capitulo que ya entro, la base lo rechaza y se responde que ya existe,
-// en vez de duplicarlo ni dejar basura en el disco.
-// En PHP 8 mysqli lanza EXCEPCIONES por defecto, no devuelve false, asi
-// que un simple if() no bastaria: el rechazo de la base salia como un
-// error 500 en vez de un JSON que la pantalla pueda mostrar.
+// Validar y extraer antes de crear registros o publicar las páginas.
+$preparado = null;
+$paginas_dir = null;
+$publicado = false;
+$transaccion = false;
+// También limpia si la petición termina por tiempo o por un error fatal.
+register_shutdown_function(function () use (&$preparado, &$paginas_dir, &$publicado) {
+    if ($preparado) borrarTemporalCapitulo($preparado['directorio']);
+    if (!$publicado && $paginas_dir) borrarTemporalCapitulo($paginas_dir);
+});
 try {
-    $stmt_cap->execute();
-} catch (mysqli_sql_exception $e) {
-    $stmt_cap->close();
-    // 1062 = UNIQUE repetido · 1644 = SIGNAL del trigger de solapamiento
-    $esDuplicado = in_array($e->getCode(), [1062, 1644], true);
-    echo json_encode([
-        'ok'      => false,
-        'error'   => $esDuplicado ? 'duplicado' : 'bd',
-        'mensaje' => $esDuplicado
-            ? 'Ese capítulo ya está subido en esta obra.'
-            : 'No se pudo guardar el capítulo.',
-    ]);
-    exit();
-}
+    $preparado = prepararArchivoCapitulo($archivo_tmp, $_FILES['cbr_file']['name']);
+    $sha256 = $clave !== '' ? hash_file('sha256', $archivo_tmp) : null;
+    $clave_val = $clave !== '' ? $clave : null;
+    $conexion->begin_transaction();
+    $transaccion = true;
+    $stmt = $conexion->prepare(
+        "INSERT INTO capitulos (comic_id,titulo,numero,fecha_publicacion,fecha_publicacion_mes,
+            formato,numero_desde,numero_hasta,arco,subida_clave,archivo_sha256) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+    );
+    $fecha_val = $validacionFecha['fecha'];
+    $mes_val = $validacionFecha['mes'];
+    $arco_val = $arco !== '' ? $arco : null;
+    $stmt->bind_param('isssssiisss', $comic_id, $titulo, $numero, $fecha_val, $mes_val,
+        $formato, $desde, $hasta, $arco_val, $clave_val, $sha256);
+    $stmt->execute();
+    $capitulo_id = $conexion->insert_id;
+    $stmt->close();
+    if ($capitulo_id <= 0) throw new RuntimeException('No se pudo guardar el capítulo.');
 
-$capitulo_id = $conexion->insert_id;
-$stmt_cap->close();
-
-if ($capitulo_id <= 0) {
-    echo json_encode(['ok' => false, 'error' => 'bd',
-                      'mensaje' => 'No se pudo guardar el capítulo.']);
-    exit();
-}
-
-// Carpeta destino de páginas
-$paginas_dir = dirname(__DIR__) . "/paginas/cap_{$capitulo_id}/";
-if (!is_dir($paginas_dir)) {
-    mkdir($paginas_dir, 0777, true);
-}
-
-$imagenes = [];
-
-if ($extension === 'cbz') {
-    // CBZ = ZIP
-    $zip = new ZipArchive();
-    if ($zip->open($archivo_tmp) === true) {
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $entry = $zip->getNameIndex($i);
-            $ext_entry = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-            // Solo archivos de imagen, ignorar carpetas y thumbs
-            if (in_array($ext_entry, ['jpg','jpeg','png','webp','gif']) && strpos(basename($entry), '.') !== 0) {
-                $contenido = $zip->getFromIndex($i);
-                $nombre_final = sprintf('%04d', $i) . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($entry));
-                $ruta_fisica = $paginas_dir . $nombre_final;
-                file_put_contents($ruta_fisica, $contenido);
-                $imagenes[] = ['nombre' => $nombre_final, 'orden' => $i];
-            }
+    $destino = dirname(__DIR__) . '/paginas/cap_' . $capitulo_id;
+    // Nunca reutiliza ni elimina una carpeta preexistente.
+    if (file_exists($destino) || !mkdir($destino, 0755)) {
+        throw new RuntimeException('No se pudieron guardar las páginas.');
+    }
+    $paginas_dir = $destino;
+    $filas = [];
+    foreach ($preparado['paginas'] as $i => $pagina) {
+        $ruta = $destino . '/' . $pagina['nombre'];
+        if (!rename($pagina['ruta'], $ruta) || !chmod($ruta, 0644)) {
+            throw new RuntimeException('No se pudieron guardar las páginas.');
         }
-        $zip->close();
+        $url = $conexion->real_escape_string('paginas/cap_' . $capitulo_id . '/' . $pagina['nombre']);
+        $orden = $i + 1;
+        $filas[] = "($capitulo_id, '$url', $orden, {$pagina['es_doble']})";
     }
-
-} elseif ($extension === 'cbr') {
-    // CBR = RAR — usar unrar-free del sistema
-    $archivo_tmp_safe = escapeshellarg($archivo_tmp);
-    $paginas_dir_safe = escapeshellarg($paginas_dir);
-
-    // Intentar con unrar-free (comando: unrar-free o unrar)
-    $cmds = ["unrar-free e -y $archivo_tmp_safe $paginas_dir_safe", "unrar e -y $archivo_tmp_safe $paginas_dir_safe"];
-    foreach ($cmds as $cmd) {
-        exec($cmd . " 2>&1", $output, $retval);
-        if ($retval === 0) break;
-    }
-
-    // Recoger imágenes extraídas
-    $archivos = glob($paginas_dir . "*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG}", GLOB_BRACE);
-    natsort($archivos);
-    $archivos = array_values($archivos);
-    foreach ($archivos as $i => $ruta) {
-        $imagenes[] = ['nombre' => basename($ruta), 'orden' => $i];
-    }
-}
-
-// Ordenar por nombre natural (ej. 001.jpg, 002.jpg...)
-usort($imagenes, fn($a, $b) => strnatcasecmp($a['nombre'], $b['nombre']));
-
-// ---------------------------------------------------------------------
-// Guardar páginas en BD.
-//
-// OPTIMIZACIÓN (ver E1_integridad_rendimiento/benchmark/):
-// antes se ejecutaba un INSERT por página dentro del bucle. Con un
-// capítulo de 220 páginas eso son 220 viajes a la base, cada uno con su
-// propio commit implícito (autocommit). Ahora se agrupan en lotes de 100
-// filas dentro de una sola transacción: ~54x más rápido medido.
-// La transacción además da atomicidad: si una página falla, no queda un
-// capítulo a medio cargar.
-// ---------------------------------------------------------------------
-const PAGINAS_POR_LOTE = 100;
-
-$filas = [];
-foreach ($imagenes as $idx => $img) {
-    $ruta_fisica = $paginas_dir . $img['nombre'];
-    $es_doble    = 0;
-
-    $size = @getimagesize($ruta_fisica);
-    if ($size && $size[0] > $size[1]) {  // ancho > alto = página horizontal/doble
-        $es_doble = 1;
-    }
-
-    $filas[] = [
-        'url'      => "paginas/cap_{$capitulo_id}/" . $img['nombre'],
-        'orden'    => $idx + 1,
-        'es_doble' => $es_doble,
-    ];
-}
-
-$conexion->begin_transaction();
-try {
-    $total = count($filas);
-    for ($i = 0; $i < $total; $i += PAGINAS_POR_LOTE) {
-        $lote   = array_slice($filas, $i, PAGINAS_POR_LOTE);
-        $tuplas = [];
-        foreach ($lote as $f) {
-            $url      = $conexion->real_escape_string($f['url']);
-            $tuplas[] = "({$capitulo_id}, '{$url}', {$f['orden']}, {$f['es_doble']})";
-        }
-        $sql = "INSERT INTO paginas (capitulo_id, imagen_url, orden, es_doble) VALUES "
-             . implode(',', $tuplas);
-        if (!$conexion->query($sql)) {
-            throw new RuntimeException($conexion->error);
-        }
+    // Conserva la inserción por lotes de 100; ahora incluye también al capítulo.
+    foreach (array_chunk($filas, 100) as $lote) {
+        $conexion->query('INSERT INTO paginas (capitulo_id,imagen_url,orden,es_doble) VALUES '
+            . implode(',', $lote));
     }
     $conexion->commit();
+    $transaccion = false;
+    $publicado = true;
+    echo json_encode(['ok' => true, 'comic_id' => $comic_id, 'capitulo_id' => $capitulo_id, 'paginas' => count($filas)]);
 } catch (Throwable $e) {
-    // Atomicidad: sin páginas no debe quedar el capítulo registrado
-    $conexion->rollback();
-    $del = $conexion->prepare("DELETE FROM capitulos WHERE id = ?");
-    $del->bind_param("i", $capitulo_id);
-    $del->execute();
-    $del->close();
-
-    echo json_encode(['ok' => false, 'error' => 'fallo_insercion_paginas']);
-    exit();
+    if ($transaccion) $conexion->rollback();
+    $duplicado = $e instanceof mysqli_sql_exception && in_array($e->getCode(), [1062, 1644], true);
+    $invalido = $e instanceof ArchivoCapituloInvalido;
+    if (!$duplicado && !$invalido) error_log('Subida de capítulo: ' . $e->getMessage());
+    echo json_encode(['ok' => false,
+        'error' => $invalido ? 'archivo_invalido' : ($duplicado ? 'duplicado' : 'fallo_insercion_paginas'),
+        'mensaje' => $invalido ? $e->getMessage() : ($duplicado
+            ? 'Ese capítulo ya está subido en esta obra.'
+            : 'No se pudo guardar el capítulo completo. No se conservó ninguna página; puedes reintentarlo.'),
+    ], JSON_UNESCAPED_UNICODE);
 }
-
-echo json_encode(['ok' => true, 'comic_id' => $comic_id, 'paginas' => count($filas)]);
 exit();

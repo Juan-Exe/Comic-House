@@ -12,28 +12,36 @@ $mensaje = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = isset($_POST["email"]) ? trim($_POST["email"]) : "";
     $confirm_email = isset($_POST["confirm_email"]) ? trim($_POST["confirm_email"]) : "";
-    $contraseña = isset($_POST["contraseña"]) ? trim($_POST["contraseña"]) : "";
-    $confirm_contraseña = isset($_POST["confirm_contraseña"]) ? trim($_POST["confirm_contraseña"]) : "";
+    $contraseña = $_POST["contraseña"] ?? "";
+    $confirm_contraseña = $_POST["confirm_contraseña"] ?? "";
     $usuario = isset($_POST["usuario"]) ? trim($_POST["usuario"]) : "";
 
-    if ($email !== $confirm_email) {
+    if (!filter_var($email,FILTER_VALIDATE_EMAIL) || strlen($email) > 191) {
+        $mensaje = "Escribe un correo electrónico válido.";
+    } elseif (mb_strlen($contraseña) < 8 || strlen($contraseña) > 72) {
+        $mensaje = "Usa una contraseña de al menos 8 caracteres y no demasiado larga.";
+    } elseif ($email !== $confirm_email) {
         $mensaje = "❌ Los correos electrónicos no coinciden.";
     } elseif ($contraseña !== $confirm_contraseña) {
         $mensaje = "❌ Las contraseñas no coinciden.";
-    } elseif (empty($usuario)) {
-        $mensaje = "❌ El nombre de usuario es obligatorio.";
+    } elseif ($usuario === '' || mb_strlen($usuario) > 100) {
+        $mensaje = "El nombre de usuario es obligatorio y admite hasta 100 caracteres.";
     } else {
         $contraseña_hash = password_hash($contraseña, PASSWORD_DEFAULT);
 
         $stmt = $conexion->prepare("INSERT INTO usuarios (Email, Contraseña, usuario) VALUES (?, ?, ?)");
         $stmt->bind_param("sss", $email, $contraseña_hash, $usuario);
 
-        if ($stmt->execute()) {
-            $_SESSION["usuario"] = $usuario;
+        try {
+            $stmt->execute();
+            session_regenerate_id(true);
+            $_SESSION = ['user_id'=>$conexion->insert_id,'user_email'=>$email,'usuario'=>$usuario,'rol'=>'usuario'];
             header("Location: ../index.php");
             exit();
-        } else {
-            $mensaje = "❌ Error al registrar el usuario: " . $conexion->error;
+        } catch (mysqli_sql_exception $e) {
+            $mensaje = $e->getCode() === 1062 ? "El correo o el nombre de usuario ya están registrados."
+                : "No se pudo completar el registro. Vuelve a intentarlo.";
+            if ($e->getCode() !== 1062) error_log('Registro de usuario: ' . $e->getMessage());
         }
 
         $stmt->close();
@@ -199,7 +207,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="registro">
             <form action="registro.php" method="POST">
                 <?php if (!empty($mensaje)): ?>
-                    <p style="color:white; background:#333; padding:10px; border-radius:10px"><?= $mensaje ?></p>
+                    <p role="alert" style="color:white; background:#333; padding:10px; border-radius:10px"><?= htmlspecialchars($mensaje,ENT_QUOTES,'UTF-8') ?></p>
                 <?php endif; ?>
 
                 <div class="Email">
@@ -217,7 +225,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="Contraseña">
                     <div class="lab">
                         <label>Contraseña</label>
-                        <input class="coso" type="password" name="contraseña" placeholder="Contraseña" required>
+                        <input class="coso" type="password" name="contraseña" placeholder="Contraseña" minlength="8" maxlength="72" required>
                     </div>
 
                     <div class="lab">

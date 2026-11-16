@@ -66,8 +66,25 @@ function clave_editorial(string $nombre): string
     $n = strtr($n, [
         'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
         'ü' => 'u', 'ñ' => 'n',
+        'à' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a',
+        'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ò' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o', 'ō' => 'o',
+        'ù' => 'u', 'û' => 'u', 'ç' => 'c',
     ]);
-    return (string) preg_replace('/[^a-z0-9 ]/', '', $n);
+    return (string) preg_replace('/[^\p{L}\p{N} ]/u', '', $n);
+}
+
+/** Un alias conocido identifica la misma editorial; una semejanza no lo hace. */
+function nombreCanonicoEditorial(string $nombre): string
+{
+    $nombre = normalizarEditorial($nombre);
+    $clave = clave_editorial($nombre);
+    foreach (CATALOGO_EDITORIALES as $canonico => $variantes) {
+        foreach (array_merge([$canonico], $variantes) as $variante) {
+            if ($clave === clave_editorial($variante)) return $canonico;
+        }
+    }
+    return $nombre;
 }
 
 /**
@@ -159,7 +176,7 @@ function revisarEditorial(mysqli $conexion, string $nombre): array
     }
 
     foreach ($registradas as $ya) {
-        if (clave_editorial($ya) === $clave) {
+        if (clave_editorial(nombreCanonicoEditorial($ya)) === clave_editorial(nombreCanonicoEditorial($nombre))) {
             return ['estado' => 'duplicada', 'sugerencia' => $ya];
         }
     }

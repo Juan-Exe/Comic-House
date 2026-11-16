@@ -10,7 +10,7 @@ session_start(); // Iniciar sesión
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST["Email"]);
-    $contraseña = trim($_POST["Contraseña"]);
+    $contraseña = $_POST["Contraseña"] ?? '';
 
     if (!empty($email) && !empty($contraseña)) {
         // Incluimos el campo 'rol' en la consulta
@@ -24,6 +24,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->fetch();
 
             if (password_verify($contraseña, $hashed_password)) {
+                session_regenerate_id(true);
+                $_SESSION = [];
                 // Guardar la sesión del usuario con su rol
                 $_SESSION["user_id"] = $id;
                 $_SESSION["user_email"] = $email;
@@ -40,10 +42,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 exit();
             } else {
-                $error = "Contraseña incorrecta.";
+                $error = "Correo o contraseña incorrectos.";
             }
         } else {
-            $error = "El usuario no existe.";
+            $error = "Correo o contraseña incorrectos.";
         }
         $stmt->close();
     } else {

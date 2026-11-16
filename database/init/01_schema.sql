@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS capitulos (
   -- de las columnas de numeración, no se escribe a mano.
   numero VARCHAR(50) NOT NULL,
   fecha_publicacion DATE DEFAULT NULL,
+  fecha_publicacion_mes CHAR(7) DEFAULT NULL,
   -- Un manga agrupa capítulos en arcos y un cómic publica grapas
   -- sueltas o recopilatorios: la numeración va estructurada para que
   -- la base pueda comprobar rangos, solapes y orden.
@@ -122,12 +123,23 @@ CREATE TABLE IF NOT EXISTS capitulos (
   numero_desde INT UNSIGNED NOT NULL,
   numero_hasta INT UNSIGNED NOT NULL,
   arco VARCHAR(120) DEFAULT NULL,
+  subida_clave CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  archivo_sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uq_capitulo_por_comic (comic_id, numero),
   UNIQUE KEY uq_capitulos_desde (comic_id, numero_desde),
+  UNIQUE KEY uq_capitulos_subida_clave (subida_clave),
   KEY idx_capitulos_comic_id (comic_id),
   KEY idx_capitulos_comic (comic_id, id),
   KEY idx_capitulos_orden (comic_id, numero_desde),
+  CONSTRAINT ck_capitulos_fecha_precision
+    CHECK (fecha_publicacion IS NULL OR fecha_publicacion_mes IS NULL),
+  CONSTRAINT ck_capitulos_fecha_mes CHECK (
+    fecha_publicacion_mes IS NULL OR (
+      fecha_publicacion_mes REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
+      AND CAST(LEFT(fecha_publicacion_mes, 4) AS UNSIGNED) >= 1900
+    )
+  ),
   CONSTRAINT ck_capitulos_desde_positivo CHECK (numero_desde >= 1),
   CONSTRAINT ck_capitulos_rango CHECK (numero_hasta >= numero_desde),
   CONSTRAINT ck_capitulos_tope CHECK (numero_hasta <= 9999),
@@ -156,6 +168,23 @@ CREATE TABLE IF NOT EXISTS paginas (
   CONSTRAINT fk_paginas_capitulo
     FOREIGN KEY (capitulo_id) REFERENCES capitulos (id)
     ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Recibos de reemplazo separados de los intentos de subida inicial.
+CREATE TABLE IF NOT EXISTS reemplazos_capitulo (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  clave CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  capitulo_id INT UNSIGNED NOT NULL,
+  version_anterior CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  version_nueva CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  archivo_sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  paginas INT UNSIGNED NOT NULL,
+  pendientes LONGTEXT DEFAULT NULL,
+  creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_reemplazos_clave (clave),
+  KEY idx_reemplazos_capitulo (capitulo_id),
+  CONSTRAINT fk_reemplazos_capitulo FOREIGN KEY (capitulo_id) REFERENCES capitulos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS usuarios (

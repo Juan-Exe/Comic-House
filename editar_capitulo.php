@@ -1,6 +1,8 @@
 <?php
 session_start();
 include_once("modelo/conexion.php");
+require_once __DIR__ . '/controlador/fecha_capitulo.php';
+require_once __DIR__ . '/controlador/reemplazo_capitulo.php';
 if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'admin') {
     header("Location: index.php");
     exit();
@@ -20,11 +22,15 @@ if (!$capitulo) {
 
 $comics = $conexion->query("SELECT id, titulo FROM comics ORDER BY titulo ASC");
 
-// Formatear fecha para mostrar dd / mm / aaaa
-$fecha_display = '';
-if (!empty($capitulo['fecha_publicacion'])) {
-    $fecha_display = date('d / m / Y', strtotime($capitulo['fecha_publicacion']));
-}
+$conexion->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
+$estadoReemplazo = estadoReemplazo($conexion,$id);
+$conexion->commit();
+if (!$estadoReemplazo) { header('Location: subir_capitulo.php'); exit(); }
+$capitulo = $estadoReemplazo['capitulo'];
+// La fecha y la confirmación corresponden a la misma revisión del capítulo.
+$fecha_display = mostrarFechaCapitulo($capitulo['fecha_publicacion'], $capitulo['fecha_publicacion_mes'] ?? null, true);
+$csrfReemplazo = $_SESSION['reemplazo_csrf'] ??= bin2hex(random_bytes(32));
+$nombreObra = $conexion->query('SELECT titulo FROM comics WHERE id=' . (int)$capitulo['comic_id'])->fetch_assoc()['titulo'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -36,6 +42,8 @@ if (!empty($capitulo['fecha_publicacion'])) {
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="admin/admin.css">
+    <link rel="stylesheet" href="admin/controles.css">
+    <link rel="stylesheet" href="admin/reemplazo-capitulo.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Montserrat, sans-serif; background: var(--papel); color: var(--texto); min-height: 100vh; }
@@ -117,10 +125,16 @@ require __DIR__ . '/admin/cabecera.php';
 ?>
 
 <div class="edit-wrapper">
+    <?php if (isset($_GET['error_fecha'])): ?>
+        <p class="aviso aviso-error" role="alert">No se guardaron los cambios. Revisa la fecha de publicación.</p>
+    <?php endif; ?>
     <div class="edit-cab">
         <h2><?= htmlspecialchars($capitulo['titulo']) ?></h2>
         <span>Capítulo #<?= $capitulo['id'] ?></span>
     </div>
+    <?php if (isset($_GET['reemplazado'])): ?>
+        <p class="aviso" role="status">Archivo reemplazado. Las páginas nuevas ya están disponibles.</p>
+    <?php endif; ?>
     <div>
             <form action="controlador/actualizar_capitulo.php" method="POST">
                 <input type="hidden" name="id" value="<?= $capitulo['id'] ?>">
@@ -129,7 +143,7 @@ require __DIR__ . '/admin/cabecera.php';
                 <div class="form-grid">
                     <div class="field field-full">
                         <label>Cómic</label>
-                        <select name="comic_id_sel">
+                        <select name="comic_id_sel" data-personalizado aria-label="Cómic">
                             <?php while ($comic = $comics->fetch_assoc()): ?>
                                 <option value="<?= $comic['id'] ?>" <?= $comic['id'] == $capitulo['comic_id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($comic['titulo']) ?>
@@ -150,14 +164,25 @@ require __DIR__ . '/admin/cabecera.php';
 
                     <div class="field">
                         <label>Fecha de publicación <span style="color:var(--texto-bajo);font-weight:400;text-transform:none">(opcional)</span></label>
+                        <div class="fecha-control">
                         <div class="date-input-wrap">
                             <input type="text" id="fecha-display" placeholder="dd / mm / aaaa"
                                 maxlength="14" autocomplete="off" oninput="maskFecha(this)"
                                 value="<?= htmlspecialchars($fecha_display) ?>">
-                            <i class="bi bi-calendar3 date-icon"></i>
                             <input type="hidden" name="fecha_publicacion" id="fecha-hidden"
                                 value="<?= htmlspecialchars($capitulo['fecha_publicacion'] ?? '') ?>">
+                            <input type="hidden" name="fecha_publicacion_mes" id="fecha-mes-hidden"
+                                value="<?= htmlspecialchars($capitulo['fecha_publicacion_mes'] ?? '') ?>">
                         </div>
+                        <div class="fecha-precision">
+                            <select id="fecha-precision" data-personalizado data-menu-ancho="180" data-menu-alinear="derecha"
+                                    aria-label="Precisión de la fecha" onchange="ajustarPrecisionFecha()">
+                                <option value="dia" data-resumen="Completa">Día, mes y año</option>
+                                <option value="mes" <?= !empty($capitulo['fecha_publicacion_mes']) ? 'selected' : '' ?>>Mes y año</option>
+                            </select>
+                        </div>
+                        </div>
+                        <small id="fecha-aviso" hidden></small>
                     </div>
                 </div>
 
@@ -166,47 +191,41 @@ require __DIR__ . '/admin/cabecera.php';
                         <i class="bi bi-x-lg"></i> Cancelar
                     </a>
                     <button type="submit" class="btn-guardar">
-                        <i class="bi bi-check-lg"></i> Guardar cambios
+                        <i class="bi bi-check-lg" aria-hidden="true"></i> Guardar cambios
                     </button>
                 </div>
             </form>
+            <section class="reemplazo-seccion" aria-labelledby="reemplazo-titulo">
+                <h3 id="reemplazo-titulo">Reemplazar archivo del capítulo</h3>
+                <p>El nuevo CBR o CBZ sustituirá las <?= count($estadoReemplazo['paginas']) ?> páginas actuales.
+                    Se conservarán el título, la numeración y la fecha guardados.
+                    Guarda primero los cambios que hayas hecho en el formulario.</p>
+                <form id="form-reemplazo" method="POST" action="controlador/reemplazar_capitulo.php" enctype="multipart/form-data" data-version="<?= htmlspecialchars($estadoReemplazo['version']) ?>"
+                    data-capitulo="<?= $id ?>" data-paginas="<?= count($estadoReemplazo['paginas']) ?>">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrfReemplazo) ?>">
+                    <label for="archivo-reemplazo">Nuevo archivo .cbr o .cbz</label>
+                    <input type="file" id="archivo-reemplazo" name="cbr_file" accept=".cbr,.cbz" required>
+                    <p id="reemplazo-estado" role="status" aria-live="polite"></p>
+                    <button type="submit" class="btn-guardar"><i class="bi bi-arrow-repeat"></i> Revisar reemplazo</button>
+                </form>
+                <dialog id="dialogo-reemplazo" aria-labelledby="confirmar-reemplazo-titulo">
+                    <h3 id="confirmar-reemplazo-titulo">Confirmar reemplazo</h3>
+                    <p><strong><?= htmlspecialchars($nombreObra) ?> · <?= htmlspecialchars($capitulo['numero']) ?></strong></p>
+                    <p id="reemplazo-resumen"></p>
+                    <p>El archivo sustituirá todas las páginas de este capítulo. Si no se puede completar, se conservarán las anteriores.</p>
+                    <div class="reemplazo-acciones">
+                        <button type="button" id="cancelar-reemplazo">Volver</button>
+                        <button type="button" id="confirmar-reemplazo">Reemplazar páginas</button>
+                    </div>
+                </dialog>
+            </section>
         </div>
     </div>
 </div>
 
-<script>
-function maskFecha(input) {
-    let val = input.value.replace(/\D/g, '');
-    let out = '';
-    if (val.length > 0) out += val.substring(0, 2);
-    if (val.length >= 3) out += ' / ' + val.substring(2, 4);
-    if (val.length >= 5) out += ' / ' + val.substring(4, 8);
-    input.value = out;
+<script src="js/select-personalizado.js"></script>
+<script src="js/fechas-capitulo.js"></script>
+<script src="js/reemplazo-capitulo.js"></script>
 
-    const hidden = document.getElementById('fecha-hidden');
-    if (val.length === 8) {
-        const dd = val.substring(0, 2);
-        const mm = val.substring(2, 4);
-        const yyyy = val.substring(4, 8);
-        const fecha = new Date(`${yyyy}-${mm}-${dd}`);
-        if (!isNaN(fecha.getTime())) {
-            hidden.value = `${yyyy}-${mm}-${dd}`;
-            input.classList.add('date-ok');
-        } else {
-            hidden.value = '';
-            input.classList.remove('date-ok');
-        }
-    } else {
-        hidden.value = '';
-        input.classList.remove('date-ok');
-    }
-}
-
-// Si la fecha ya viene pre-cargada, marcarla como válida
-document.addEventListener('DOMContentLoaded', () => {
-    const disp = document.getElementById('fecha-display');
-    if (disp.value.trim()) disp.classList.add('date-ok');
-});
-</script>
 </body>
 </html>

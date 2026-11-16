@@ -22,6 +22,7 @@ function tituloCapitulo(string $obra, string $capitulo): string
 }
 
 include("../modelo/conexion.php");
+require_once __DIR__ . '/../controlador/fecha_capitulo.php';
 session_start();
 
 // Establecer localización en español para fechas
@@ -264,7 +265,7 @@ $generosn = $conexion->query("SELECT DISTINCT genero FROM comics WHERE tipo = 'C
                         <a href="../Lector/lector.php?capitulo_id=<?= $cap['id'] ?>" data-capitulo="<?= $cap['id'] ?>">
                             <span><?= htmlspecialchars(tituloCapitulo($comic['titulo'], $cap['titulo'])) ?> <?= htmlspecialchars($cap['numero']) ?></span>
                             <span class="fecha">
-                                <?= $cap['fecha_publicacion'] ? date('d/m/Y', strtotime($cap['fecha_publicacion'])) : '' ?>
+                                <?= htmlspecialchars(mostrarFechaCapitulo($cap['fecha_publicacion'], $cap['fecha_publicacion_mes'] ?? null)) ?>
                             </span>
                         </a>
                     <?php endwhile; ?>

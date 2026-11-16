@@ -334,8 +334,9 @@ ComicVine **no publica** si una serie terminó, pero se deduce comparando el
 | `last_issue >= count_of_issues - 1` | Publicación terminada |
 | resto | En publicación |
 
-Verificado: *Invincible* tiene 145 números y `last_issue` es el #144 → terminada,
-que es correcto (acabó en 2018).
+Verificado: *Invincible* tiene 145 fichas, contando el #0, y `last_issue` es el
+#144. La numeración principal propuesta es **1–144**, no 1–145. El estado sigue
+siendo una inferencia que debe revisarse, no un campo publicado por la API.
 
 ### 5.5 · Editorial ausente
 
@@ -347,6 +348,33 @@ lo publicó sería guardar un dato falso. El modal lo explica:
 
 > *No está en tu catálogo. Es la editorial que publicó esta obra, así que no
 > puede sustituirse por otra.*
+
+**Actualización del Sprint 6:** «Crear» abre un diálogo que conserva el nombre
+de la fuente y busca propuestas de logo. No guarda ninguna hasta seleccionar
+una y confirmar. Se puede consultar su fuente, descartarla o subir un logo
+manual. Si la fuente no trae editorial, «Escribir editorial» permite introducir
+el nombre; también hay un acceso desde el formulario manual del registro.
+
+La creación deja el nombre seleccionado sin recargar el formulario ni restablecer
+género o clasificación. Se permite crear sin logo en este flujo y añadirlo más
+tarde. Si la editorial ya existe, incluso con tildes o alias diferentes, se
+reutiliza su id y logo. Los nombres parecidos requieren una decisión expresa.
+
+El servicio común está en `controlador/editorial_servicio.php` y los logos en
+`controlador/logo_editorial.php`; los endpoints de búsqueda y alta exigen rol
+administrador. Las imágenes remotas solo se descargan por HTTPS de los hosts
+`upload.wikimedia.org` y `thumb.wikimedia.org`. Se validan bytes y píxeles y
+se vuelven a codificar en PNG. Los archivos manuales aceptan PNG/JPG/WebP/GIF
+hasta 5 MB y 16 megapíxeles; los SVG remotos se obtienen como PNG de Wikimedia.
+El logo se obtiene de [P154 de Wikidata](https://www.wikidata.org/wiki/Property:P154)
+o del campo explícito de la ficha, y su miniatura mediante
+[Imageinfo](https://www.mediawiki.org/wiki/API:Imageinfo). No se usa la foto
+general de la página: en la prueba real de Kodansha esa foto era su sede.
+
+Evidencia: `tests/editoriales.php` (32 casos), `tests/editoriales_ui.py` (42 casos)
+y `tests/registro_validacion_ui.py` (10 casos). Incluyen los dos caminos de
+editorial ausente, conservación manual, concurrencia, fallo de fuente, subida
+manual, validación de imágenes, reutilización y limpieza tras un error SQL.
 
 ### 5.6 · Resumen de la descripción
 
@@ -609,3 +637,41 @@ Respuesta esperada del primero:
 *Todos los datos sobre las APIs de este documento se verificaron con consultas
 reales, no con suposiciones. Donde una fuente no sirve, se indica la prueba que
 lo demuestra.*
+
+## 12 · Operación y cierre del plan de editoriales y capítulos
+
+El plan `PLAN_Editoriales_Capitulos_Registro.md` completa registro obligatorio,
+creación editorial, propuestas por edición, numeración, fechas parciales,
+validación de comprimidos, lotes reanudables, logos y reemplazo explícito.
+La [guía de operación y verificación](docs/OPERACION_Y_VERIFICACION.md) reúne
+los pasos del administrador, las migraciones y las pruebas reproducibles.
+
+La subida usa **una transacción por entrega**, con validación completa antes de
+publicar imágenes. Los recibos de la migración 03 identifican datos y SHA-256 del
+intento para reconocer respuestas perdidas. El manifiesto del lote conserva datos
+en la pestaña y requiere volver a elegir los archivos pendientes tras una recarga.
+Los fallos no eliminan los capítulos del lote ya guardados.
+
+Los capítulos pueden guardar día/mes/año o solo mes/año mediante la migración 02.
+Los tomos y grapas conservan numeraciones distintas; las ediciones de una fuente
+no se mezclan. Cuando falta un título individual, un recopilatorio con contenido
+confirmado puede aportar su nombre, expresamente identificado. Se conserva el
+original y se señala la traducción orientativa; sin datos sigue el nombre
+descriptivo revisable. Una coincidencia de nombre no verifica el contenido del CBR.
+
+El reemplazo está en **Editar capítulo → Reemplazar archivo del capítulo**.
+Mantiene los metadatos guardados y sustituye todas las páginas tras confirmación.
+Prepara una carpeta nueva, elimina las filas anteriores antes de insertar y
+confirma la operación con un recibo independiente de la migración 04. Las imágenes
+antiguas se retiran después del commit, únicamente si no siguen referenciadas.
+Un fallo revierte filas y conserva imágenes anteriores. Las revisiones y el bloqueo
+de fila evitan sobrescrituras entre pestañas. Reintentar el mismo archivo recupera
+el recibo de reemplazo sin duplicar páginas; la subida normal sigue bloqueando solapes.
+
+La migración 04 está aplicada localmente y no altera capítulos existentes.
+`tests/reemplazo_capitulo.py` aporta 37 comprobaciones con CBR/CBZ reales,
+rollback, concurrencia, recibos, limpieza de archivos, cancelación y móvil.
+Los fixtures se retiran y se conserva el catálogo del usuario.
+La verificación de esta entrega suma 144 casos: reemplazo 37, subida 45,
+lotes 33 e interfaz/edición de fechas 29. Los criterios del plan están marcados
+con su evidencia; los asuntos fuera de alcance permanecen separados.

@@ -1,4 +1,9 @@
 <?php
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+if (!isset($_SESSION['usuario']) || ($_SESSION['rol'] ?? '') !== 'admin') {
+    http_response_code(403); exit('Acceso reservado al administrador.');
+}
+require_once __DIR__ . '/imagen_portada.php';
 
 if (!empty($_POST["btnregistrar"])) {
     // Se comprueba sobre el texto YA recortado: !empty('   ') es true en
@@ -91,13 +96,18 @@ if (!empty($_POST["btnregistrar"])) {
         }
 
         if ($subio_archivo) {
-            $portada = $_FILES["portada"]["name"];
-            $ruta_destino = "uploads/" . basename($portada);
-            $portada_lista = move_uploaded_file($_FILES["portada"]["tmp_name"], $ruta_destino);
+            try {
+                $portada = guardarPortadaSubida($_FILES['portada']);
+                $portada_lista = true;
+            } catch (Throwable $e) { $portada=''; $portada_lista=false; }
         } elseif ($portada_auto !== "") {
             // basename() evita que un nombre manipulado salga de uploads/
             $portada = basename($portada_auto);
             $portada_lista = is_file("uploads/" . $portada);
+            if ($portada_lista) {
+                try { ComicHouse\Editoriales\pngLogo(file_get_contents('uploads/' . $portada)); }
+                catch (Throwable $e) { $portada_lista=false; }
+            }
         } else {
             $portada = "";
             $portada_lista = false;
@@ -117,6 +127,7 @@ if (!empty($_POST["btnregistrar"])) {
             $buscar->close();
 
             if (!$existe) {
+                if ($subio_archivo && preg_match('/^portada_[a-f0-9]{32}\.png$/D',$portada)) @unlink(__DIR__ . '/../uploads/' . $portada);
                 header("Location: crud.php?msg=editorial_inexistente");
                 exit();
             }
@@ -134,15 +145,17 @@ if (!empty($_POST["btnregistrar"])) {
                 $estado, $cap_desde, $cap_hasta
             );
 
-            if ($stmt->execute()) {
+            try {
+                $stmt->execute();
                 $stmt->close();
                 header("Location: crud.php?msg=ok");
-            } else {
+            } catch (mysqli_sql_exception $e) {
                 // La base rechazo la fila. Se traduce el error del motor a un
                 // aviso concreto para la persona, en vez de un fallo generico.
-                $errno = $conexion->errno;
-                $error = $conexion->error;
+                $errno = $e->getCode();
+                $error = $e->getMessage();
                 $stmt->close();
+                if ($subio_archivo && preg_match('/^portada_[a-f0-9]{32}\.png$/D',$portada)) @unlink(__DIR__ . '/../uploads/' . $portada);
 
                 if ($errno === 1062) {               // UNIQUE (titulo)
                     $motivo = 'titulo_duplicado';

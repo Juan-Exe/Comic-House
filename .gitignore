@@ -27,3 +27,11 @@ guia_*.pdf
 # El original versionado vive en E1_integridad_rendimiento/
 /Informe_E1_Comic_House.pdf
 cache/
+__pycache__/
+*.pyc
+/Entrega_Momento3_Comic_House.zip
+
+# Entregas académicas privadas: permanecen locales, fuera del repositorio.
+*.pdf
+/Momento_3/
+/Entrega_Momento*.zip
